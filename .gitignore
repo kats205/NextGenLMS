@@ -1,0 +1,50 @@
+# General Editor and OS Files
+
+# Visual Studio Code
+.vscode/
+!.vscode/extensions.json
+*.code-workspace
+
+# Visual Studio
+.vs/
+*.sln
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# JetBrains / IntelliJ / Rider
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.directory
+
+# Python (common in many projects)
+__pycache__/
+*.py[cod]
+
+# Node
+node_modules/
+
+# Dotnet
+bin/
+obj/
+
+# Common Logs
+*.log
