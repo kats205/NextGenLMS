@@ -1,9 +1,9 @@
 # Logs
 logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# *.log handled by root
+# npm-debug.log* handled by root
+# yarn-debug.log* handled by root
+# yarn-error.log* handled by root
 pnpm-debug.log*
 lerna-debug.log*
 
@@ -101,7 +101,7 @@ dist
 .serverless/
 
 # FuseBox cache
-.fusebox/
+#.fusebox/
 
 # DynamoDB Local files
 .dynamodb/
@@ -123,13 +123,12 @@ dist
 dist-ssr
 *.local
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+# Editor/OS files handled by Root .gitignore
+# .vscode/*
+# .idea
+# .DS_Store
+# *.suo
+# *.ntvs*
+# *.njsproj
+# *.sln
+# *.sw?
