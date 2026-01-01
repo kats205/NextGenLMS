@@ -1,267 +1,159 @@
 <a id="readme-top"></a>
 
-# ✈️ Airline Reservation WinForm App
+# 🎓 NextGenLMS - University Learning Management System
 
 <!-- PROJECT SHIELDS -->
-<!--
-*** I'm using markdown "reference style" links for readability.
-*** Reference links are enclosed in brackets [ ] instead of parentheses ( ).
-*** See the bottom of this document for the declaration of the reference variables
-*** for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
-*** https://www.markdownguide.org/basic-syntax/#reference-style-links
--->
-[![Contributors][contributors-shield]][contributors-url]
-[![Forks][forks-shield]][forks-url]
-[![Stargazers][stars-shield]][stars-url]
-[![Issues][issues-shield]][issues-url]
-[![MIT License][license-shield]][license-url]
+[![React][react-shield]][react-url]
+[![.NET][dotnet-shield]][dotnet-url]
+[![TailwindCSS][tailwind-shield]][tailwind-url]
+[![SQL Server][sql-shield]][sql-url]
 
-
-
-<!-- PROJECT LOGO -->
 <br />
 <div align="center">
-  <a href="https://github.com/DuongDaiPhat/AirlineReservation_AR">
-    <img src="https://github.com/DuongDaiPhat/AirlineReservation_AR/blob/main/Images/finallogo.png" alt="Logo" width="350 px" height="120 px">
-  </a>
-
-  <h2 align="center">Airline-Reservation-System</h2>
+  <h2 align="center">NextGenLMS</h2>
 
   <p align="center">
-    Airline Reservation System is a complete solution that centrally manages flights, bookings, tickets, and passengers with accuracy and ease!
+    A modern, fast, and user-friendly Learning Management System tailored for universities.
     <br />
-    <a href="https://github.com/DuongDaiPhat/AirlineReservation_AR"><strong>Explore the docs »</strong></a>
+    Focused on superior user experience and high performance.
+    <br />
+    <a href="#features"><strong>Explore Features »</strong></a>
     <br />
     <br />
-    <a href="https://github.com/DuongDaiPhat/AirlineReservation_AR">View Demo</a>
+    <a href="#installation">Setup Demo</a>
     &middot;
-    <a href="https://github.com/DuongDaiPhat/AirlineReservation_AR/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
-    &middot;
-    <a href="https://github.com/DuongDaiPhat/AirlineReservation_AR/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
+    <a href="https://github.com/kats205/NextGenLMS/issues">Report Bug</a>
   </p>
 </div>
-
-
 
 <!-- TABLE OF CONTENTS -->
 <details>
   <summary>Table of Contents</summary>
   <ol>
+    <li><a href="#introduction">Introduction</a></li>
+    <li><a href="#tech-stack">Tech Stack</a></li>
+    <li><a href="#features">Key Features</a></li>
+    <li><a href="#structure">Project Structure</a></li>
     <li>
-      <a href="#about-the-project">About The Project</a>
-      <ul>
-        <li><a href="#built-with">Built With</a></li>
-      </ul>
-    </li>
-    <li>
-      <a href="#getting-started">Getting Started</a>
+      <a href="#installation">Getting Started</a>
       <ul>
         <li><a href="#prerequisites">Prerequisites</a></li>
-        <li><a href="#installation">Installation</a></li>
+        <li><a href="#backend">Backend Setup</a></li>
+        <li><a href="#frontend">Frontend Setup</a></li>
       </ul>
     </li>
-    <li><a href="#usage">Usage</a></li>
-    <!-- <li><a href="#roadmap">Roadmap</a></li> -->
-    <li><a href="#contributing">Contributing</a></li>
-    <li><a href="#license">License</a></li>
-    <li><a href="#contact">Contact</a></li>
-    <li><a href="#acknowledgments">Acknowledgments</a></li>
   </ol>
 </details>
 
-
-
 <!-- ABOUT THE PROJECT -->
-## 🎯 About The Project
+## 📖 Introduction
 
-[![Product Name Screen Shot][product-screenshot]](https://example.com)
+**NextGenLMS** is a project dedicated to building a next-generation Learning Management System (LMS), specifically designed for the higher education environment. Our goal is to eliminate the bloat of legacy systems, delivering a modern interface, rapid processing speeds, and robust scalability.
 
-Airline Reservation WinForm App is a Windows Forms application for managing airline ticket reservations.
-The goal of this project is to provide a flexible, user-friendly system that supports key operations such as:
-
-* Managing flights
-* Booking tickets
-* Handling payments and integrating payment gateways
-* Managing promotions
-* Managing users and roles
-* Sending notifications and emails
-
-The application aims to reduce repetitive tasks, allowing users to focus on delivering value while keeping the system easy to extend with future features.
-
-Licensed under **MIT**, this project is open for you to fork, contribute, and adapt to your own needs.
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
+This project serves Instructors, Students, and Administrators alike, simplifying the entire process of online teaching and learning.
 
 <!-- BUILT WITH -->
-### Built With
+## 🛠 Tech Stack
 
-This project was developed using the following frameworks, libraries, and technologies:
+The project is built upon a powerful and modern technology stack:
 
-* [![.NET][dotnet]][dotnet-url]  
-* [![C#][csharp]][csharp-url]  
-* [![WinForms][winforms]][winforms-url]  
-* [![SQL Server][sqlserver]][sqlserver-url]  
-* [![Entity Framework][ef]][ef-url]
+*   **Frontend**:
+    *   [![React][react-shield]][react-url]
+    *   [![Vite][vite-shield]][vite-url]
+    *   [![TailwindCSS][tailwind-shield]][tailwind-url]
+    *   **Framer Motion**: For smooth, fluid animations.
+*   **Backend**:
+    *   [![.NET][dotnet-shield]][dotnet-url] **ASP.NET Core Web API**
+    *   **Entity Framework Core**: Code-first ORM.
+*   **Database**:
+    *   [![SQL Server][sql-shield]][sql-url]
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+<!-- FEATURES -->
+## ✨ Key Features
 
+*   **📚 Course Management**:
+    *   Create and edit detailed syllabi.
+    *   Support for multimedia lectures (Video, PDF, Slides).
+*   **👥 Student Management**:
+    *   Track student profiles and learning progress.
+    *   Automated enrollment and class assignment systems.
+*   **📊 Dashboard & Analytics**:
+    *   Visual reports on learning performance.
+    *   Real-time statistics for Admins and Instructors.
+*   **🔐 Security & Permissions**:
+    *   Secure authentication system (JWT).
+    *   Granular Role-Based Access Control (RBAC) for Admins, Users, and Instructors.
 
+<!-- STRUCTURE -->
+## 📂 Project Structure
+
+The project is organized as a Monorepo:
+
+```
+NextGenLMS/
+├── LMS-API/            # Backend Source Code (ASP.NET Core)
+│   ├── src/            # Main source code
+│   └── appsettings.json
+├── LMS-Client/         # Frontend Source Code (React/Vite)
+│   ├── src/            # Components, Pages, Hooks
+│   ├── public/         # Static assets
+│   └── package.json
+└── README.md           # Project Documentation
+```
 
 <!-- GETTING STARTED -->
 ## 🚀 Getting Started
 
-Follow these steps to set up the project locally.
+To run this project locally, please follow these steps:
 
 ### Prerequisites
+*   [Node.js](https://nodejs.org/) (v18 or higher)
+*   [.NET SDK](https://dotnet.microsoft.com/download) (v8.0 or higher)
+*   [SQL Server](https://www.microsoft.com/sql-server)
 
-Make sure you have the following installed:
+### Backend Setup (`LMS-API`)
 
-* [.NET Desktop Runtime / SDK](https://dotnet.microsoft.com/en-us/download/dotnet) (8.0 or later recommended)  
+1.  Navigate to the API directory:
+    ```sh
+    cd LMS-API
+    ```
+2.  Configure your database connection string in `appsettings.json`.
+3.  Run migrations and update the database (if necessary):
+    ```sh
+    dotnet ef database update
+    ```
+4.  Start the server:
+    ```sh
+    dotnet run
+    ```
+    *The server will run at: `https://localhost:7000` (or similar port)*
 
-### Installation
+### Frontend Setup (`LMS-Client`)
 
-_Below is an example of how you can instruct your audience on installing and setting up your app. This template doesn't rely on any external dependencies or services._
+1.  Open a new terminal and navigate to the Client directory:
+    ```sh
+    cd LMS-Client
+    ```
+2.  Install dependencies:
+    ```sh
+    npm install
+    ```
+3.  Start the development server:
+    ```sh
+    npm run dev
+    ```
+4.  Access the address shown in the terminal (usually `http://localhost:5173`).
 
-1. **Clone the repository**
-   ```sh
-   git clone https://github.com/DuongDaiPhat/Airline-Reservation-.git
-   ```
-2. Open the solution in Visual Studio
-   ```sh
-   Airline-Reservation.sln
-   ```
-3. Restore NuGet packages in Package Manager Console
-   ```sh
-   dotnet restore
-   ```
+---
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- USAGE EXAMPLES -->
-<!-- Should add demo or code -->
-## 🖥️ Usage
-
-Once the project is installed and the database is set up, you can start using the application. 
-
-_For more examples, please refer to the [Documentation](https://example.com)_
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- ROADMAP -->
-<!-- ## Roadmap
-
-- [x] Add Changelog
-- [x] Add back to top links
-- [ ] Add Additional Templates w/ Examples
-- [ ] Add "components" document to easily copy & paste sections of the readme
-- [ ] Multi-language Support
-    - [ ] Chinese
-    - [ ] Spanish
-
-See the [open issues](https://github.com/othneildrew/Best-README-Template/issues) for a full list of proposed features (and known issues).
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p> -->
-
-
-
-<!-- CONTRIBUTING -->
-## 🤝 Contributing
-
-Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions made by all members are greatly appreciated.
-
-If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement". Don't forget to give the project a star! Thanks again!
-
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AirlineFeature`)
-3. Commit your Changes (`git commit -m 'Add some AirlineFeature'`)
-4. Push to the Branch (`git push origin feature/AirlineFeature`)
-5. Open a Pull Request
-
-### Top contributors:
-
-<a href="https://github.com/DuongDaiPhat/AirlineReservation_AR/graphs/contributors">
-  <img src="https://github.com/DuongDaiPhat/AirlineReservation_AR/blob/main/Images/team.png" alt="team image" width="330 px" height="70 px"/>
-</a>
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- LICENSE -->
-## 📜 License
-
-Distributed under the Unlicense License. See `LICENSE.txt` for more information.
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- CONTACT -->
-## 📬 Contact
-
-My Name - [DuongDaiPhat](https://github.com/DuongDaiPhat)  
-
-[![Email](https://img.shields.io/badge/Email-duongphat521%40gmail.com-red?style=for-the-badge&logo=gmail&logoColor=white)](mailto:duongphat521@gmail.com) 
-
-Project Link: [Airline Reservation on GitHub](https://github.com/DuongDaiPhat/AirlineReservation_AR)
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- ACKNOWLEDGMENTS -->
-## 🙌 Acknowledgments
-
-Resources and tools that were helpful during the development of this project:
-
-* [Microsoft Docs](https://learn.microsoft.com/) – Official .NET and SQL Server documentation  
-* [Entity Framework Core Documentation](https://learn.microsoft.com/ef/core/) – EF Core guides and references  
-* [MaterialSkin.2](https://github.com/IgnaceMaes/MaterialSkin) – Material Design library for WinForms  
-* [SQL Server Management Studio (SSMS)](https://aka.ms/ssmsfullsetup) – SQL Server database management tool  
-* [Visual Studio 2022](https://visualstudio.microsoft.com/) – IDE used for development  
-* [Shields.io](https://shields.io) – Badges for README  
-* [Choose an Open Source License](https://choosealicense.com) – License selection guide
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- MARKDOWN LINKS & IMAGES -->
-<!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[dotnet]: https://img.shields.io/badge/.NET-512BD4?style=for-the-badge&logo=dotnet&logoColor=white  
-[dotnet-url]: https://dotnet.microsoft.com/  
-
-[csharp]: https://img.shields.io/badge/C%23-239120?style=for-the-badge&logo=csharp&logoColor=white  
-[csharp-url]: https://learn.microsoft.com/dotnet/csharp/  
-
-[winforms]: https://img.shields.io/badge/WinForms-0078D4?style=for-the-badge&logo=windows10&logoColor=white  
-[winforms-url]: https://learn.microsoft.com/dotnet/desktop/winforms/  
-
-[sqlserver]: https://img.shields.io/badge/SQL%20Server-CC2927?style=for-the-badge&logo=microsoftsqlserver&logoColor=white  
-[sqlserver-url]: https://www.microsoft.com/sql-server  
-
-[ef]: https://img.shields.io/badge/Entity%20Framework-512BD4?style=for-the-badge&logo=dotnet&logoColor=white  
-[ef-url]: https://learn.microsoft.com/ef/  
-
-[contributors-shield]: https://img.shields.io/github/contributors/DuongDaiPhat/AirlineReservation_AR.svg?style=for-the-badge
-[contributors-url]: https://github.com/DuongDaiPhat/AirlineReservation_AR/graphs/contributors
-
-[forks-shield]: https://img.shields.io/github/forks/DuongDaiPhat/Airline-Reservation-.svg?style=for-the-badge
-[forks-url]: https://github.com/DuongDaiPhat/AirlineReservation_AR/network/members
-
-[stars-shield]: https://img.shields.io/github/stars/DuongDaiPhat/AirlineReservation_AR.svg?style=for-the-badge
-[stars-url]: https://github.com/DuongDaiPhat/AirlineReservation_AR/stargazers
-
-[issues-shield]: https://img.shields.io/github/issues/DuongDaiPhat/AirlineReservation_AR.svg?style=for-the-badge
-[issues-url]: https://github.com/DuongDaiPhat/AirlineReservation_AR/issues
-
-[license-shield]: https://img.shields.io/github/license/DuongDaiPhat/AirlineReservation_AR.svg?style=for-the-badge
-[license-url]: https://github.com/DuongDaiPhat/AirlineReservation_AR/blob/master/LICENSE
-
-[product-screenshot]: images/screenshot.png
+<!-- LINKS & IMAGES -->
+[react-shield]: https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
+[react-url]: https://reactjs.org/
+[vite-shield]: https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white
+[vite-url]: https://vitejs.dev/
+[tailwind-shield]: https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white
+[tailwind-url]: https://tailwindcss.com/
+[dotnet-shield]: https://img.shields.io/badge/.NET-512BD4?style=for-the-badge&logo=dotnet&logoColor=white
+[dotnet-url]: https://dotnet.microsoft.com/
+[sql-shield]: https://img.shields.io/badge/SQL_Server-CC2927?style=for-the-badge&logo=microsoft-sql-server&logoColor=white
+[sql-url]: https://www.microsoft.com/sql-server
