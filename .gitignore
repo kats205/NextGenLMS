@@ -7,7 +7,7 @@
 
 # Visual Studio
 .vs/
-*.sln
+# *.sln
 *.suo
 *.user
 *.userosscache
