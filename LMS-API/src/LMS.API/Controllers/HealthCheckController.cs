@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace LMS.API.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("v1/api/healthy")]
 public class HealthCheckController : ControllerBase
 {
     private readonly AppDbContext _context;
