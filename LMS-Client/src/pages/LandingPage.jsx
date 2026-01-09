@@ -1,10 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect} from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BookOpen, Users, BarChart3, Shield, ArrowRight, CheckCircle, Play, Bell, Search, Star, MoreVertical, FileText, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { getHealthy } from '../services/getHealthy.jsx';
 
 const LandingPage = () => {
     const navigate = useNavigate();
+    useEffect(() => {
+        healthy();
+    }, []);
+
     // Animation variants
     const fadeIn = {
         hidden: { opacity: 0, y: 30 },
@@ -46,6 +51,14 @@ const LandingPage = () => {
         }
     };
 
+    const healthy = async () => {
+        try {
+            const response = await getHealthy();
+            console.log("Healthy response:", response);
+        } catch (error) {
+            console.log("Error fetching healthy status:", error);
+        }
+    }
     return (
         <div className="min-h-screen bg-slate-50 font-sans text-slate-900 overflow-x-hidden selection:bg-blue-100 selection:text-blue-900">
             {/* Navigation */}
@@ -61,7 +74,7 @@ const LandingPage = () => {
                             </motion.div>
                             <span className="text-2xl font-extrabold tracking-tight text-slate-900">NextGen<span className="text-blue-600">LMS</span></span>
                         </div>
-
+                        
                         <div className="hidden md:flex space-x-10">
                             {['Tính năng', 'Về chúng tôi', 'Cộng đồng', 'Liên hệ'].map((item) => (
                                 <a key={item} href={`#${item.toLowerCase()}`} className="text-slate-600 hover:text-blue-600 font-medium transition-colors relative group">
