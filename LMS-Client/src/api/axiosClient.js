@@ -1,7 +1,6 @@
 import axios from "axios";
 import { toast } from "react-toastify";
 
-
 const instance = axios.create({
   baseURL: import.meta.env.VITE_URL_API,
   headers: { "Content-Type": "application/json" },
@@ -37,12 +36,12 @@ instance.interceptors.response.use(
 
     // Chỉ xử lý 401 cho requests KHÔNG PHẢI /refresh-token hoặc /logout
     if (
-      error.response?.status === 401 && 
+      error.response?.status === 401 &&
       !originalRequest._retry &&
       !originalRequest.url?.includes('/refresh-token') &&
       !originalRequest.url?.includes('/logout')
     ) {
-      
+
       if (isRefreshing) {
         return new Promise((resolve) => {
           subscribeTokenRefresh((token) => {
@@ -57,9 +56,9 @@ instance.interceptors.response.use(
 
       try {
         console.log(" Attempting to refresh access token...");
-        
+
         const res = await axios.post(
-            `${import.meta.env.VITE_URL_API}/login/refresh-token`,
+          `${import.meta.env.VITE_URL_API}/login/refresh-token`,
           {},
           { withCredentials: true }
         );
@@ -67,32 +66,32 @@ instance.interceptors.response.use(
         const newAccessToken = res.data.accessToken;
         localStorage.setItem("token", newAccessToken);
         instance.defaults.headers.Authorization = `Bearer ${newAccessToken}`;
-        
+
         console.log("Access token refreshed successfully");
-        
+
         onRefreshed(newAccessToken);
         isRefreshing = false;
 
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return instance(originalRequest);
-        
+
       } catch (refreshErr) {
         console.error(" Refresh token failed:", refreshErr);
         isRefreshing = false;
-        
+
         // KHÔNG GỌI logoutAPI() nữa - tránh vòng lặp
         // Chỉ xóa localStorage và redirect
         console.log("🚪 Clearing session and redirecting to login...");
-        
+
         toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!");
         localStorage.removeItem("token");
         localStorage.removeItem("user");
-        
+
         // Delay nhỏ để toast hiển thị
         setTimeout(() => {
           window.location.href = "/";
         }, 500);
-        
+
         return Promise.reject(refreshErr);
       }
     }
