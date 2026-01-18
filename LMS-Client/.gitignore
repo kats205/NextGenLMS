@@ -1,9 +1,9 @@
 # Logs
 logs
-# *.log handled by root
-# npm-debug.log* handled by root
-# yarn-debug.log* handled by root
-# yarn-error.log* handled by root
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
@@ -72,11 +72,6 @@ typings/
 # dotenv environment variables file
 .env
 .env.test
-.env.production
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
@@ -92,16 +87,17 @@ dist
 
 # Gatsby files
 .cache/
+# Comment in the public line in if your project uses Gatsby and not Next.js
 # public
 
-# Vuepress build output
+# vuepress build output
 .vuepress/dist
 
 # Serverless directories
 .serverless/
 
 # FuseBox cache
-#.fusebox/
+.fusebox/
 
 # DynamoDB Local files
 .dynamodb/
@@ -119,16 +115,19 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
-# Vite
-dist-ssr
-*.local
+# Windows thumbnail cache files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
 
-# Editor/OS files handled by Root .gitignore
-# .vscode/*
-# .idea
-# .DS_Store
-# *.suo
-# *.ntvs*
-# *.njsproj
-# *.sln
-# *.sw?
+# MacOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Project specific
+public/mockServiceWorker.js
