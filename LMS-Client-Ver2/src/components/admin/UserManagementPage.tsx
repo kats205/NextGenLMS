@@ -118,11 +118,11 @@ export function UserManagementPage({ user, onNavigate, onLogout }: UserManagemen
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Khoa/Bộ môn</label>
-                <input
-                  type="text"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  placeholder="Khoa Công nghệ Thông tin"
-                />
+                 <select className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
+                  <option value="student">Khoa Công Nghệ Thông tin</option>
+                  <option value="lecturer">Khoa Khoa học và Kỹ thuật</option>
+                  <option value="admin">Khoa Vận Tải</option>
+                </select>
               </div>
             </div>
             <div className="flex gap-2">
