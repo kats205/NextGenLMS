@@ -16,39 +16,47 @@ export function LoginPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
+    
 
     try {
       // Gọi API thật
-      const res: any = await axiosClient.post('/login', {
+      const res: any = await axiosClient.post('/api/auth/login', {
         email,
         password
       });
 
-      // Lưu token và user info
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('refreshToken', res.data.refreshToken);
+      if (res.success) {
+        const { token, refreshToken, fullName, role, userId } = res.data;
 
-      // Giả lập user object từ response (BE chưa trả về full user info thì tạm dùng cái này hoặc decode token)
-      // TODO: Cần BE trả về Role trong response login hoặc decode JWT
-      // Tạm thời fix cứng logic dựa trên email demo để test router
-      let role = 'student';
-      if (email.includes('admin')) role = 'admin';
-      if (email.includes('lecturer')) role = 'lecturer';
+        // Lưu token và user info
+        localStorage.setItem('token', token);
+        localStorage.setItem('refreshToken', refreshToken);
 
-      const user = {
-        email: email,
-        fullName: res.data.fullName || "User",
-        role: role
-      };
+        const user = {
+          userId,
+          email,
+          fullName,
+          role: role?.toLowerCase() || 'student'  // Normalize role to lowercase
+        };
 
-      localStorage.setItem('user', JSON.stringify(user));
+        localStorage.setItem('user', JSON.stringify(user));
 
-      toast.success(`Xin chào ${user.fullName}!`);
+        toast.success(`Xin chào ${fullName}!`);
 
-      // Điều hướng
-      if (role === 'admin') navigate('/admin/dashboard');
-      else if (role === 'lecturer') navigate('/lecturer/dashboard');
-      else navigate('/student/dashboard');
+        // Điều hướng theo role
+        console.log('Role từ API:', role, 'Type:', typeof role);
+        
+        const roleLower = user.role;
+        const roleMap: Record<string, string> = {
+          'admin': '/admin/dashboard',
+          'lecturer': '/lecturer/dashboard',
+          'student': '/student/dashboard'
+        };
+
+        const redirectUrl = roleMap[roleLower] || '/student/dashboard';
+        console.log('Redirect URL:', redirectUrl);
+        navigate(redirectUrl);
+      }
 
     } catch (err: any) {
       console.error(err);
@@ -82,9 +90,9 @@ export function LoginPage() {
           <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-sm font-medium text-blue-900 mb-2">Tài khoản demo:</p>
             <div className="space-y-1 text-xs text-blue-800">
-              <p>Admin: admin@university.edu.vn / admin123</p>
-              <p>GV: lecturer@university.edu.vn / lecturer123</p>
-              <p>SV: student@university.edu.vn / student123</p>
+              <p>Admin: admin@nextgenlms.local / 01012000</p>
+              <p>GV: gv001@school.edu.vn / 29012005</p>
+              <p>SV: sv001@school.edu.vn / 29012005</p>
             </div>
           </div>
 
