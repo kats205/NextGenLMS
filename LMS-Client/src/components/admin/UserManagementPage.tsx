@@ -187,9 +187,9 @@ export function UserManagementPage({ user }: UserManagementPageProps) {
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
                 <option value="all">Tất cả vai trò</option>
-                <option value="admin">Admin</option>
-                <option value="lecturer">Giảng viên</option>
-                <option value="student">Sinh viên</option>
+                <option value="Admin">Admin</option>
+                <option value="Lecturer">Giảng viên</option>
+                <option value="Student">Sinh viên</option>
               </select>
             </div>
           </div>
