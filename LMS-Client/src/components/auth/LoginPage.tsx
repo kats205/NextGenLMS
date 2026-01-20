@@ -16,17 +16,19 @@ export function LoginPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
-    
 
     try {
-      // Gọi API thật
-      const res: any = await axiosClient.post('/api/auth/login', {
+      // res là AxiosResponse, res.data mới là ApiResponse<T>
+      const response = await axiosClient.post('/api/auth/login', {
         email,
         password
       });
 
-      if (res.success) {
-        const { token, refreshToken, fullName, role, userId } = res.data;
+      // Lấy data từ response.data (ApiResponse)
+      const apiResponse = response.data;
+
+      if (apiResponse.success) {
+        const { token, refreshToken, fullName, role, userId } = apiResponse.data;
 
         // Lưu token và user info
         localStorage.setItem('token', token);
@@ -36,16 +38,13 @@ export function LoginPage() {
           userId,
           email,
           fullName,
-          role: role?.toLowerCase() || 'student'  // Normalize role to lowercase
+          role: role?.toLowerCase() || 'student'
         };
 
         localStorage.setItem('user', JSON.stringify(user));
-
         toast.success(`Xin chào ${fullName}!`);
 
         // Điều hướng theo role
-        console.log('Role từ API:', role, 'Type:', typeof role);
-        
         const roleLower = user.role;
         const roleMap: Record<string, string> = {
           'admin': '/admin/dashboard',
@@ -54,14 +53,18 @@ export function LoginPage() {
         };
 
         const redirectUrl = roleMap[roleLower] || '/student/dashboard';
-        console.log('Redirect URL:', redirectUrl);
         navigate(redirectUrl);
+      } else {
+        // Trường hợp success = false
+        setError(apiResponse.message || 'Đăng nhập thất bại');
+        toast.error(apiResponse.message || 'Đăng nhập thất bại!');
       }
 
     } catch (err: any) {
       console.error(err);
-      setError(err.response?.data?.message || 'Đăng nhập thất bại. Vui lòng thử lại.');
-      toast.error('Đăng nhập thất bại!');
+      const errorMessage = err.response?.data?.message || 'Đăng nhập thất bại. Vui lòng thử lại.';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

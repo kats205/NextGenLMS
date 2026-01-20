@@ -8,7 +8,7 @@ namespace LMS.API.Controllers
 {
     [Authorize(Roles = UserRoles.Admin)]
     [ApiController]
-    [Route("api/admin/user")]
+    [Route("api/admin/users")]
     public class AdminController: ControllerBase
     {
         private readonly IAdminUserService _service;

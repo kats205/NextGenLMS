@@ -38,15 +38,18 @@ export function UserManagementPage({ user }: UserManagementPageProps) {
            page, 
            pageSize,
            search: debouncedSearch || undefined,
-           role: roleFilter,
+           role: roleFilter !== 'all' ? roleFilter : undefined,
           });
         if(!ignore){
-          setUsers(res.items);
-          setTotalItems(res.totalItems);
-          setTotalPages(res.totalPages);
+          setUsers(res?.items || []);
+          setTotalItems(res?.totalItems || 0);
+          setTotalPages(res?.totalPages || 1);
         }
       } catch (error) {
         console.error("Failed to fetch users", error);
+        setUsers([]);
+        setTotalItems(0);
+        setTotalPages(1);
       } finally {
         if(!ignore) setLoading(false);
       }
@@ -195,6 +198,12 @@ export function UserManagementPage({ user }: UserManagementPageProps) {
         {/* Users Table */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
+            {users.length === 0 ? (
+              <div className="w-full py-12 text-center">
+                <p className="text-gray-500 text-lg">Không có dữ liệu người dùng</p>
+                <p className="text-gray-400 text-sm mt-2">Hãy thêm người dùng mới hoặc kiểm tra bộ lọc</p>
+              </div>
+            ) : (
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
@@ -237,10 +246,10 @@ export function UserManagementPage({ user }: UserManagementPageProps) {
                       {u.email}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {u.roles.toString()}
+                      {u.role.toString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {u.department}
+                      {u.department || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       {u.status === 'active' ? (
@@ -263,6 +272,7 @@ export function UserManagementPage({ user }: UserManagementPageProps) {
                 ))}
               </tbody>
             </table>
+            )}
           </div>
 
           {/* Pagination */}

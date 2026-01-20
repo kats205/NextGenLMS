@@ -48,7 +48,7 @@ namespace LMS.Infrastructure.Services
                     Id = u.Id,
                     FullName = u.FullName,
                     Email = u.Email,
-                    Role = u.Role.ToString(),
+                    Role = u.Role.RoleName.ToString(),
                     Department = u.Department.Name,
                     Status = u.IsActive ? "active" : "inactive"
                 }).ToListAsync();
