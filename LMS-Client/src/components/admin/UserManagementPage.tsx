@@ -4,6 +4,7 @@ import { Header } from '../shared/Header';
 import { Badge } from '../shared/Badge';
 import { ArrowLeft, Search, Plus, Upload, Download, Edit, Trash2, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { getAdminUsers, UserListItemDto } from '@/api/adminUser';
 // import axiosClient from '../../api/axiosClient';
 
 interface UserManagementPageProps {
@@ -12,53 +13,54 @@ interface UserManagementPageProps {
 
 export function UserManagementPage({ user }: UserManagementPageProps) {
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [isCreatingUser, setIsCreatingUser] = useState(false);
-  const [users, setUsers] = useState<any[]>([]); // TODO: Define User Interface
+  const [users, setUsers] = useState<UserListItemDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
 
+    useEffect(() => {
+      const t = setTimeout(() => setDebouncedSearch(searchTerm), 400);
+      return () => clearTimeout(t);
+    }, [searchTerm]);
+  
   useEffect(() => {
-    // Mock fetch users
+    let ignore = false;
     const fetchUsers = async () => {
+      setLoading(true);
       try {
-        setLoading(true);
-        // await axiosClient.get('/v1/api/users');
-        setUsers([
-          { id: '1', fullName: 'Nguyễn Văn Admin', email: 'admin@university.edu.vn', role: 'admin', department: 'Phòng Đào tạo', status: 'active' },
-          { id: '2', fullName: 'Trần Thị Hương', email: 'lecturer@university.edu.vn', role: 'lecturer', department: 'Khoa CNTT', status: 'active' },
-          { id: '3', fullName: 'Lê Minh Tuấn', email: 'student@university.edu.vn', role: 'student', department: 'Khoa CNTT', status: 'active' },
-          { id: '4', fullName: 'Phạm Văn Nam', email: 'nam.pham@university.edu.vn', role: 'lecturer', department: 'Khoa Toán', status: 'active' },
-          { id: '5', fullName: 'Hoàng Thị Lan', email: 'lan.hoang@university.edu.vn', role: 'student', department: 'Khoa CNTT', status: 'inactive' },
-        ]);
+        const res = await getAdminUsers({
+           page, 
+           pageSize,
+           search: debouncedSearch || undefined,
+           role: roleFilter !== 'all' ? roleFilter : undefined,
+          });
+        if(!ignore){
+          setUsers(res?.items || []);
+          setTotalItems(res?.totalItems || 0);
+          setTotalPages(res?.totalPages || 1);
+        }
       } catch (error) {
         console.error("Failed to fetch users", error);
+        setUsers([]);
+        setTotalItems(0);
+        setTotalPages(1);
       } finally {
-        setLoading(false);
+        if(!ignore) setLoading(false);
       }
     };
     fetchUsers();
-  }, []);
+    return() => {ignore = true;};
+  }, [page, pageSize, debouncedSearch, roleFilter]);
 
-  const filteredUsers = users.filter(u => {
-    const matchesSearch = u.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = roleFilter === 'all' || u.role === roleFilter;
-    return matchesSearch && matchesRole;
-  });
-
-  const getRoleBadge = (role: string) => {
-    switch (role) {
-      case 'admin':
-        return <Badge variant="danger">Admin</Badge>;
-      case 'lecturer':
-        return <Badge variant="primary">Giảng viên</Badge>;
-      case 'student':
-        return <Badge variant="success">Sinh viên</Badge>;
-      default:
-        return <Badge variant="secondary">{role}</Badge>;
-    }
-  };
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, roleFilter]);
 
   if (loading) {
     return (
@@ -67,6 +69,8 @@ export function UserManagementPage({ user }: UserManagementPageProps) {
       </div>
     );
   }
+
+
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -142,11 +146,11 @@ export function UserManagementPage({ user }: UserManagementPageProps) {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Khoa/Bộ môn</label>
-                <input
-                  type="text"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  placeholder="Khoa Công nghệ Thông tin"
-                />
+                 <select className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
+                  <option value="student">Khoa Công Nghệ Thông tin</option>
+                  <option value="lecturer">Khoa Khoa học và Kỹ thuật</option>
+                  <option value="admin">Khoa Vận Tải</option>
+                </select>
               </div>
             </div>
             <div className="flex gap-2">
@@ -170,7 +174,7 @@ export function UserManagementPage({ user }: UserManagementPageProps) {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
-                value={searchTerm}
+                value={debouncedSearch}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Tìm kiếm theo tên hoặc email..."
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -183,9 +187,9 @@ export function UserManagementPage({ user }: UserManagementPageProps) {
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
                 <option value="all">Tất cả vai trò</option>
-                <option value="admin">Admin</option>
-                <option value="lecturer">Giảng viên</option>
-                <option value="student">Sinh viên</option>
+                <option value="Admin">Admin</option>
+                <option value="Lecturer">Giảng viên</option>
+                <option value="Student">Sinh viên</option>
               </select>
             </div>
           </div>
@@ -194,6 +198,12 @@ export function UserManagementPage({ user }: UserManagementPageProps) {
         {/* Users Table */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
+            {users.length === 0 ? (
+              <div className="w-full py-12 text-center">
+                <p className="text-gray-500 text-lg">Không có dữ liệu người dùng</p>
+                <p className="text-gray-400 text-sm mt-2">Hãy thêm người dùng mới hoặc kiểm tra bộ lọc</p>
+              </div>
+            ) : (
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
@@ -218,7 +228,7 @@ export function UserManagementPage({ user }: UserManagementPageProps) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {filteredUsers.map(u => (
+                {users.map(u => (
                   <tr key={u.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -236,10 +246,10 @@ export function UserManagementPage({ user }: UserManagementPageProps) {
                       {u.email}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {getRoleBadge(u.role)}
+                      {u.role.toString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {u.department}
+                      {u.department || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       {u.status === 'active' ? (
@@ -262,20 +272,28 @@ export function UserManagementPage({ user }: UserManagementPageProps) {
                 ))}
               </tbody>
             </table>
+            )}
           </div>
 
           {/* Pagination */}
           <div className="flex items-center justify-between border-t border-gray-200 px-6 py-4">
             <div className="text-sm text-gray-500">
-              Hiển thị <span className="font-medium">{filteredUsers.length}</span> người dùng
+              Hiển thị <span className="font-medium">{users.length}</span> người dùng
             </div>
             <div className="flex gap-2">
-              <button className="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
+              <button
+                disabled={page <= 1}
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                className="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
                 Trước
               </button>
-              <button className="px-3 py-1 bg-primary-600 text-white rounded-lg text-sm">1</button>
-              <button className="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">2</button>
-              <button className="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
+              <button className="px-3 py-1 bg-primary-600 text-white text-sm">
+                Trang <b>{page}</b> / {totalPages}
+              </button>
+              <button 
+                disabled={page >= totalPages}
+                onClick = {() => setPage(p => Math.min(totalPages, p + 1))}
+                className="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
                 Sau
               </button>
             </div>

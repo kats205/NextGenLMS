@@ -1,0 +1,176 @@
+﻿{
+  "departments": [
+    {
+      "id": "44444444-4444-4444-4444-444444444444",
+      "name": "Công nghệ thông tin",
+      "code": "CNTT"
+    }
+  ],
+  "majors": [
+    {
+      "id": "55555555-5555-5555-5555-555555555555",
+      "name": "Kỹ thuật phần mềm",
+      "departmentId": "44444444-4444-4444-4444-444444444444"
+    }
+  ],
+  "academicYears": [
+    {
+      "id": "66666666-6666-6666-6666-666666666666",
+      "name": "2025-2026",
+      "startDate": "2025-09-01T00:00:00",
+      "endDate": "2026-08-31T23:59:59"
+    }
+  ],
+  "users": [
+    {
+      "id": "77777777-7777-7777-7777-777777777777",
+      "email": "admin@nextgenlms.local",
+      "fullName": "System Admin",
+      "phone": "0900000000",
+      "roleId": "11111111-1111-1111-1111-111111111111",
+      "departmentId": null,
+      "isFirstLogin": false,
+      "isActive": true,
+      "plainPassword": "01012000",
+      "studentCode": null
+    },
+    {
+      "id": "88888888-8888-8888-8888-888888888888",
+      "email": "gv001@school.edu.vn",
+      "fullName": "GV Nguyễn Văn A",
+      "phone": "0911111111",
+      "roleId": "22222222-2222-2222-2222-222222222222",
+      "departmentId": "44444444-4444-4444-4444-444444444444",
+      "isFirstLogin": true,
+      "isActive": true,
+      "plainPassword": "29012005",
+      "studentCode": null
+    },
+    {
+      "id": "12121212-1212-1212-1212-121212121212",
+      "email": "sv001@school.edu.vn",
+      "fullName": "SV Trần Văn B",
+      "phone": "0922222222",
+      "roleId": "33333333-3333-3333-3333-333333333333",
+      "departmentId": "44444444-4444-4444-4444-444444444444",
+      "isFirstLogin": true,
+      "isActive": true,
+      "plainPassword": "29012005",
+      "studentCode": "SV001"
+    }
+  ],
+  "courses": [
+    {
+      "id": "13131313-1313-1313-1313-131313131313",
+      "courseCode": "SE101",
+      "name": "Nhập môn Kỹ thuật phần mềm",
+      "description": "Course demo để test luồng LMS",
+      "thumbnailUrl": null,
+      "semesterId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "academicYearId": "66666666-6666-6666-6666-666666666666",
+      "majorId": "55555555-5555-5555-5555-555555555555",
+      "lecturerId": "88888888-8888-8888-8888-888888888888"
+    }
+  ],
+  "chapters": [
+    {
+      "id": "14141414-1414-1414-1414-141414141414",
+      "courseId": "13131313-1313-1313-1313-131313131313",
+      "title": "Chương 1: Tổng quan",
+      "orderIndex": 1
+    }
+  ],
+  "contents": [
+    {
+      "id": "15151515-1515-1515-1515-151515151515",
+      "chapterId": "14141414-1414-1414-1414-141414141414",
+      "title": "Bài giảng 1: Giới thiệu",
+      "type": 1,
+      "orderIndex": 1,
+      "fileUrl": null,
+      "fileType": null,
+      "fileSize": 0,
+      "durationSeconds": 120,
+      "contentHtml": "<p>Hello NextGenLMS</p>",
+      "openTime": null,
+      "closeTime": null,
+      "durationMinutes": null,
+      "shuffleQuestions": null,
+      "shuffleAnswers": null,
+      "dueDate": null,
+      "maxScore": null,
+      "assignmentDescription": null
+    },
+    {
+      "id": "16161616-1616-1616-1616-161616161616",
+      "chapterId": "14141414-1414-1414-1414-141414141414",
+      "title": "Quiz 1: OOP cơ bản",
+      "type": 2,
+      "orderIndex": 2,
+      "fileUrl": null,
+      "fileType": null,
+      "fileSize": null,
+      "durationSeconds": null,
+      "contentHtml": null,
+      "openTime": null,
+      "closeTime": null,
+      "durationMinutes": 15,
+      "shuffleQuestions": true,
+      "shuffleAnswers": true,
+      "dueDate": null,
+      "maxScore": null,
+      "assignmentDescription": null
+    }
+  ],
+  "topics": [
+    {
+      "id": "17171717-1717-1717-1717-171717171717",
+      "name": "OOP",
+      "lecturerId": "88888888-8888-8888-8888-888888888888"
+    }
+  ],
+  "questions": [
+    {
+      "id": "18181818-1818-1818-1818-181818181818",
+      "topicId": "17171717-1717-1717-1717-171717171717",
+      "contentText": "Tính chất nào KHÔNG thuộc OOP?",
+      "mediaUrl": null,
+      "type": 1
+    }
+  ],
+  "answers": [
+    {
+      "id": "19191919-1919-1919-1919-191919191919",
+      "questionId": "18181818-1818-1818-1818-181818181818",
+      "contentText": "Đóng gói",
+      "isCorrect": false
+    },
+    {
+      "id": "20202020-2020-2020-2020-202020202020",
+      "questionId": "18181818-1818-1818-1818-181818181818",
+      "contentText": "Kế thừa",
+      "isCorrect": false
+    },
+    {
+      "id": "21212121-2121-2121-2121-212121212121",
+      "questionId": "18181818-1818-1818-1818-181818181818",
+      "contentText": "Tối ưu hoá chỉ mục DB",
+      "isCorrect": true
+    }
+  ],
+  "quizQuestions": [
+    {
+      "id": "22222222-0000-0000-0000-000000000001",
+      "quizId": "16161616-1616-1616-1616-161616161616",
+      "questionId": "18181818-1818-1818-1818-181818181818",
+      "points": 1
+    }
+  ],
+  "courseStudents": [
+    {
+      "id": "23232323-2323-2323-2323-232323232323",
+      "courseId": "13131313-1313-1313-1313-131313131313",
+      "studentId": "12121212-1212-1212-1212-121212121212"
+    }
+  ]
+}
