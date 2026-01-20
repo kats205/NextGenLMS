@@ -121,6 +121,7 @@ namespace LMS.Infrastructure.Services
                     new Claim(ClaimTypes.Email, user.Email),
                     new Claim(ClaimTypes.Name, user.FullName),
                     new Claim(ClaimTypes.Role, user.Role?.RoleName ?? "Student"),
+                    new Claim("RoleId", user.RoleId.ToString()),
                     new Claim("StudentCode", user.StudentCode ?? "")
                 }),
                 Expires = DateTime.UtcNow.AddHours(8), // Token expire sau 8 giờ

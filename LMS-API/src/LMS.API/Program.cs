@@ -1,8 +1,10 @@
-﻿using LMS.Infrastructure.Data;
+﻿using LMS.Domain.Constant;
+using LMS.Infrastructure.Data;
 using LMS.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using System.Security.Claims;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -10,7 +12,34 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Description = "Nhập JWT token theo format: Bearer {token}"
+    });
+
+    options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
+
 
 // DB Context Setup
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -37,8 +66,32 @@ builder.Services.AddAuthentication(options =>
         ValidateAudience = true,
         ValidAudience = builder.Configuration["Jwt:Audience"],
         ValidateLifetime = true,
-        ClockSkew = TimeSpan.Zero
+        ClockSkew = TimeSpan.Zero,
+        RoleClaimType = ClaimTypes.Role
     };
+
+    options.Events = new JwtBearerEvents
+    {
+        OnAuthenticationFailed = context =>
+        {
+            Console.WriteLine($"[AUTH FAILED] {context.Exception.Message}");
+            return Task.CompletedTask;
+        },
+        OnTokenValidated = context =>
+        {
+            var claims = context.Principal?.Claims.Select(c => $"{c.Type}: {c.Value}");
+            Console.WriteLine($"[AUTH SUCCESS] Claims: {string.Join(", ", claims ?? Array.Empty<string>())}");
+            return Task.CompletedTask;
+        }
+    };
+});
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminOnly", policy => policy.RequireRole(UserRoles.Admin));
+    options.AddPolicy("LecturerOnly", policy => policy.RequireRole(UserRoles.Lecturer));
+    options.AddPolicy("StudentOnly", policy => policy.RequireRole(UserRoles.Student));
+    options.AddPolicy("AdminOrLecturer", policy => policy.RequireRole(UserRoles.Admin, UserRoles.Lecturer));
 });
 
 // CORS
@@ -88,6 +141,8 @@ if (app.Environment.IsDevelopment())
 //app.UseHttpsRedirection();
 
 app.UseCors("AllowClient");
+
+app.UseAuthentication();
 
 app.UseAuthorization();
 
