@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LMS.Application.Admin
+namespace LMS.Application.DTOs.Admin
 {
     public class PagedResultDto<T>
     {
