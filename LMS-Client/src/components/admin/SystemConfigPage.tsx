@@ -1,8 +1,18 @@
-import { useState } from 'react';
+// src/components/admin/SystemConfigPage.tsx
+import { useState, useEffect } from 'react';
 import { User } from '../../App';
 import { Header } from '../shared/Header';
-import { ArrowLeft, Save, Calendar, Upload, Mail, Database } from 'lucide-react';
+import { ArrowLeft, Calendar, Upload, Mail, Database, Save, Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import {
+  getSystemConfigs,
+  updateSystemConfigs,
+  backupNow,
+  testEmailConfig,
+  SystemConfigResponse,
+  SystemConfigUpdateRequest
+} from '@/api/systemConfig';
+import { toast } from 'react-toastify';
 
 interface SystemConfigPageProps {
   user: User;
@@ -10,19 +20,118 @@ interface SystemConfigPageProps {
 
 export function SystemConfigPage({ user }: SystemConfigPageProps) {
   const navigate = useNavigate();
-  const [academicYear, setAcademicYear] = useState('2025-2026');
-  const [semester, setSemester] = useState('HK1');
-  const [maxFileSize, setMaxFileSize] = useState('10');
-  const [smtpHost, setSmtpHost] = useState('smtp.gmail.com');
-  const [smtpPort, setSmtpPort] = useState('587');
-  const [smtpUser, setSmtpUser] = useState('noreply@university.edu.vn');
-  const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [config, setConfig] = useState<SystemConfigResponse>({
+    academicYear: {
+      currentAcademicYear: '',
+      currentSemester: ''
+    },
+    fileUpload: {
+      maxFileSizeMB: 10,
+      allowedFileTypes: []
+    },
+    email: {
+      smtpHost: '',
+      smtpPort: 587,
+      emailSender: '',
+      smtpPassword: '',
+      enableSsl: true
+    },
+    backup: {
+      autoBackupEnabled: false,
+      backupTime: '02:00'
+    }
+  });
 
-  const handleSave = () => {
-    // In real app, would save to backend
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+  const fileTypes = [
+    { id: 'pdf', label: 'PDF' },
+    { id: 'word', label: 'Word' },
+    { id: 'powerpoint', label: 'PowerPoint' },
+    { id: 'excel', label: 'Excel' },
+    { id: 'video', label: 'Video (MP4)' },
+    { id: 'image', label: 'Ảnh (PNG, JPG)' },
+    { id: 'zip', label: 'ZIP' },
+    { id: 'rar', label: 'RAR' }
+  ];
+
+  useEffect(() => {
+    loadConfigs();
+  }, []);
+
+  const loadConfigs = async () => {
+    setLoading(true);
+    try {
+      const data = await getSystemConfigs();
+      setConfig(data);
+    } catch (error: any) {
+      console.error('Error loading configs:', error);
+      toast.error(error.response?.data?.message || 'Không thể tải cấu hình');
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const request: SystemConfigUpdateRequest = {
+        academicYear: config.academicYear,
+        fileUpload: config.fileUpload,
+        email: config.email,
+        backup: config.backup
+      };
+
+      await updateSystemConfigs(request);
+      toast.success('Lưu cấu hình thành công!');
+    } catch (error: any) {
+      console.error('Error saving configs:', error);
+      toast.error(error.response?.data?.message || 'Lưu cấu hình thất bại');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleBackupNow = async () => {
+    try {
+      const fileName = await backupNow();
+      toast.success(`Sao lưu thành công! File: ${fileName}`);
+    } catch (error: any) {
+      console.error('Error backup:', error);
+      toast.error(error.response?.data?.message || 'Sao lưu thất bại');
+    }
+  };
+
+  const handleTestEmail = async () => {
+    try {
+      await testEmailConfig();
+      toast.success('Cấu hình email hợp lệ!');
+    } catch (error: any) {
+      console.error('Error testing email:', error);
+      toast.error(error.response?.data?.message || 'Không thể kết nối với SMTP server');
+    }
+  };
+
+  const toggleFileType = (type: string) => {
+    const types = config.fileUpload.allowedFileTypes;
+    const newTypes = types.includes(type)
+      ? types.filter(t => t !== type)
+      : [...types, type];
+    
+    setConfig({
+      ...config,
+      fileUpload: { ...config.fileUpload, allowedFileTypes: newTypes }
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-gray-500">Đang tải cấu hình...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -42,166 +151,190 @@ export function SystemConfigPage({ user }: SystemConfigPageProps) {
           <p className="text-gray-600">Quản lý các thiết lập chung của hệ thống LMS</p>
         </div>
 
-        {saved && (
-          <div className="mb-6 p-4 bg-success-50 border border-success-200 rounded-lg">
-            <p className="text-sm text-success-700">Cấu hình đã được lưu thành công!</p>
-          </div>
-        )}
-
         <div className="space-y-6">
-          {/* Academic Settings */}
+          {/* Academic Year & Semester */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-primary-600" />
+              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Calendar className="w-5 h-5 text-blue-600" />
               </div>
               <div>
                 <h3 className="font-semibold text-gray-900">Năm học & Học kỳ</h3>
-                <p className="text-sm text-gray-600">Cấu hình thời gian học</p>
+                <p className="text-sm text-gray-500">Cấu hình thời gian học</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label htmlFor="academicYear" className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Năm học hiện tại
                 </label>
                 <input
-                  id="academicYear"
                   type="text"
-                  value={academicYear}
-                  onChange={(e) => setAcademicYear(e.target.value)}
+                  value={config.academicYear.currentAcademicYear}
+                  onChange={(e) => setConfig({
+                    ...config,
+                    academicYear: { ...config.academicYear, currentAcademicYear: e.target.value }
+                  })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                   placeholder="2025-2026"
                 />
               </div>
 
               <div>
-                <label htmlFor="semester" className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Học kỳ hiện tại
                 </label>
                 <select
-                  id="semester"
-                  value={semester}
-                  onChange={(e) => setSemester(e.target.value)}
+                  value={config.academicYear.currentSemester}
+                  onChange={(e) => setConfig({
+                    ...config,
+                    academicYear: { ...config.academicYear, currentSemester: e.target.value }
+                  })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
-                  <option value="HK1">Học kỳ 1</option>
-                  <option value="HK2">Học kỳ 2</option>
-                  <option value="HK3">Học kỳ Hè</option>
+                  <option value="Học kỳ 1">Học kỳ 1</option>
+                  <option value="Học kỳ 2">Học kỳ 2</option>
+                  <option value="Học kỳ 3">Học kỳ 3</option>
+                  <option value="Học kỳ hè">Học kỳ hè</option>
                 </select>
               </div>
             </div>
           </div>
 
-          {/* Upload Settings */}
+          {/* File Upload Settings */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-warning-100 rounded-lg flex items-center justify-center">
-                <Upload className="w-5 h-5 text-warning-600" />
+              <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                <Upload className="w-5 h-5 text-orange-600" />
               </div>
               <div>
                 <h3 className="font-semibold text-gray-900">Cài đặt Upload</h3>
-                <p className="text-sm text-gray-600">Giới hạn kích thước và định dạng file</p>
+                <p className="text-sm text-gray-500">Giới hạn kích thước và định dạng file</p>
               </div>
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="maxFileSize" className="block text-sm font-medium text-gray-700 mb-2">
-                  Kích thước file tối đa (MB)
-                </label>
-                <input
-                  id="maxFileSize"
-                  type="number"
-                  value={maxFileSize}
-                  onChange={(e) => setMaxFileSize(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  placeholder="10"
-                />
-              </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Kích thước file tối đa (MB)
+              </label>
+              <input
+                type="number"
+                value={config.fileUpload.maxFileSizeMB}
+                onChange={(e) => setConfig({
+                  ...config,
+                  fileUpload: { ...config.fileUpload, maxFileSizeMB: parseInt(e.target.value) || 10 }
+                })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                min="1"
+                max="100"
+              />
+            </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Định dạng file cho phép
-                </label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {['PDF', 'Word', 'PowerPoint', 'Excel', 'Video (MP4)', 'Ảnh (PNG, JPG)', 'ZIP', 'RAR'].map((format) => (
-                    <label key={format} className="flex items-center gap-2">
-                      <input type="checkbox" defaultChecked className="w-4 h-4 text-primary-600" />
-                      <span className="text-sm text-gray-700">{format}</span>
-                    </label>
-                  ))}
-                </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Định dạng file cho phép
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {fileTypes.map(type => (
+                  <label key={type.id} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={config.fileUpload.allowedFileTypes.includes(type.label)}
+                      onChange={() => toggleFileType(type.label)}
+                      className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                    />
+                    <span className="text-sm text-gray-700">{type.label}</span>
+                  </label>
+                ))}
               </div>
             </div>
           </div>
 
-          {/* SMTP Settings */}
+          {/* Email Settings */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-success-100 rounded-lg flex items-center justify-center">
-                <Mail className="w-5 h-5 text-success-600" />
+              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                <Mail className="w-5 h-5 text-green-600" />
               </div>
               <div>
                 <h3 className="font-semibold text-gray-900">Cấu hình Email (SMTP)</h3>
-                <p className="text-sm text-gray-600">Thiết lập gửi email tự động</p>
+                <p className="text-sm text-gray-500">Thiết lập gửi email tự động</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label htmlFor="smtpHost" className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   SMTP Host
                 </label>
                 <input
-                  id="smtpHost"
                   type="text"
-                  value={smtpHost}
-                  onChange={(e) => setSmtpHost(e.target.value)}
+                  value={config.email.smtpHost}
+                  onChange={(e) => setConfig({
+                    ...config,
+                    email: { ...config.email, smtpHost: e.target.value }
+                  })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                   placeholder="smtp.gmail.com"
                 />
               </div>
 
               <div>
-                <label htmlFor="smtpPort" className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   SMTP Port
                 </label>
                 <input
-                  id="smtpPort"
-                  type="text"
-                  value={smtpPort}
-                  onChange={(e) => setSmtpPort(e.target.value)}
+                  type="number"
+                  value={config.email.smtpPort}
+                  onChange={(e) => setConfig({
+                    ...config,
+                    email: { ...config.email, smtpPort: parseInt(e.target.value) || 587 }
+                  })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                   placeholder="587"
                 />
               </div>
 
-              <div className="md:col-span-2">
-                <label htmlFor="smtpUser" className="block text-sm font-medium text-gray-700 mb-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Email gửi
                 </label>
                 <input
-                  id="smtpUser"
                   type="email"
-                  value={smtpUser}
-                  onChange={(e) => setSmtpUser(e.target.value)}
+                  value={config.email.emailSender}
+                  onChange={(e) => setConfig({
+                    ...config,
+                    email: { ...config.email, emailSender: e.target.value }
+                  })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                   placeholder="noreply@university.edu.vn"
                 />
               </div>
 
-              <div className="md:col-span-2">
-                <label htmlFor="smtpPassword" className="block text-sm font-medium text-gray-700 mb-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Mật khẩu SMTP
                 </label>
-                <input
-                  id="smtpPassword"
-                  type="password"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  placeholder="••••••••"
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={config.email.smtpPassword}
+                    onChange={(e) => setConfig({
+                      ...config,
+                      email: { ...config.email, smtpPassword: e.target.value }
+                    })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 pr-12"
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -210,55 +343,74 @@ export function SystemConfigPage({ user }: SystemConfigPageProps) {
                 <strong>Lưu ý:</strong> Để sử dụng Gmail SMTP, bạn cần bật "App Password" trong cài đặt Google Account.
               </p>
             </div>
-          </div>
 
-          {/* Database Settings */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-danger-100 rounded-lg flex items-center justify-center">
-                <Database className="w-5 h-5 text-danger-600" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900">Cơ sở dữ liệu</h3>
-                <p className="text-sm text-gray-600">Quản lý và sao lưu dữ liệu</p>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="font-medium text-gray-900">Sao lưu tự động</p>
-                  <p className="text-sm text-gray-600">Tự động sao lưu mỗi ngày lúc 2:00 AM</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" defaultChecked className="sr-only peer" />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
-                </label>
-              </div>
-
-              <button className="w-full flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
-                <Database className="w-4 h-4" />
-                Sao lưu ngay
+            <div className="mt-4">
+              <button
+                onClick={handleTestEmail}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+              >
+                Test cấu hình Email
               </button>
             </div>
           </div>
 
-          {/* Save Button */}
-          <div className="flex justify-end gap-4">
+          {/* Backup Settings */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                <Database className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">Cơ sở dữ liệu</h3>
+                <p className="text-sm text-gray-500">Quản lý và sao lưu dữ liệu</p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg mb-4">
+              <div>
+                <p className="font-medium text-gray-900">Sao lưu tự động</p>
+                <p className="text-sm text-gray-500">Tự động sao lưu mỗi ngày lúc 2:00 AM</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={config.backup.autoBackupEnabled}
+                  onChange={(e) => setConfig({
+                    ...config,
+                    backup: { ...config.backup, autoBackupEnabled: e.target.checked }
+                  })}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+              </label>
+            </div>
+
             <button
-              onClick={() => navigate('/admin/dashboard')}
-              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+              onClick={handleBackupNow}
+              className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2"
             >
-              Hủy
-            </button>
-            <button
-              onClick={handleSave}
-              className="flex items-center gap-2 px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium"
-            >
-              <Save className="w-5 h-5" />
-              Lưu cấu hình
+              <Database className="w-4 h-4" />
+              Sao lưu ngay
             </button>
           </div>
+        </div>
+
+        {/* Save Button */}
+        <div className="mt-8 flex justify-end gap-3">
+          <button
+            onClick={() => navigate('/admin/dashboard')}
+            className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+          >
+            Hủy
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Save className="w-5 h-5" />
+            {saving ? 'Đang lưu...' : 'Lưu cấu hình'}
+          </button>
         </div>
       </main>
     </div>
