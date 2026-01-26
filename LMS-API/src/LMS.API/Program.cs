@@ -110,6 +110,9 @@ builder.Services.AddCors(options =>
 //DI Service
 builder.Services.AddScoped<IAdminUserService, AdminUserService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<ISystemConfigService, SystemConfigService>();
+builder.Services.AddScoped<IAdminCourseService, AdminCourseService>();
+builder.Services.AddScoped<ICourseConfigService, CourseConfigService>();
 
 var app = builder.Build();
 

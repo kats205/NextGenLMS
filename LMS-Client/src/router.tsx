@@ -6,6 +6,7 @@ import { LecturerDashboard } from './components/lecturer/LecturerDashboard';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { UserManagementPage } from './components/admin/UserManagementPage';
 import { SystemConfigPage } from './components/admin/SystemConfigPage';
+import { CourseManagementPage } from './components/admin/CourseMangementPage';
 import { ProgressPage } from './components/student/ProgressPage';
 import { AssessmentListPage } from './components/student/AssessmentListPage';
 import { CoursePlayerPage } from './components/student/CoursePlayerPage';
@@ -107,6 +108,10 @@ export const router = createBrowserRouter([
             {
                 path: '/admin/system',
                 element: <SystemConfigPage user={JSON.parse(localStorage.getItem('user') || '{}')} />,
+            },
+            {
+                path: '/admin/courses',
+                element: <CourseManagementPage user={JSON.parse(localStorage.getItem('user') || '{}')} />,
             },
         ],
     },
