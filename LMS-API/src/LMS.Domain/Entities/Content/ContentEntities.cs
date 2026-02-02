@@ -49,4 +49,10 @@ namespace LMS.Domain.Entities.Content
         public int MaxScore { get; set; }
         public string? Description { get; set; }
     }
+
+    public class Announcement : CourseContent
+    {
+        public string? ContentHtml { get; set; }
+        public string? AttachmentsJson { get; set; } // JSON string for multiple file attachments
+    }
 }

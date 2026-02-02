@@ -32,7 +32,8 @@
       "isFirstLogin": false,
       "isActive": true,
       "plainPassword": "01012000",
-      "studentCode": null
+      "studentCode": null,
+      "teacherCode": null
     },
     {
       "id": "88888888-8888-8888-8888-888888888888",
@@ -44,7 +45,8 @@
       "isFirstLogin": true,
       "isActive": true,
       "plainPassword": "29012005",
-      "studentCode": null
+      "studentCode": null,
+      "teacherCode": "GV001"
     },
     {
       "id": "12121212-1212-1212-1212-121212121212",
@@ -56,7 +58,8 @@
       "isFirstLogin": true,
       "isActive": true,
       "plainPassword": "29012005",
-      "studentCode": "SV001"
+      "studentCode": "SV001",
+      "teacherCode": null
     }
   ],
   "courses": [
@@ -120,6 +123,15 @@
       "dueDate": null,
       "maxScore": null,
       "assignmentDescription": null
+    },
+    {
+      "id": "24242424-2424-2424-2424-242424242424",
+      "chapterId": "14141414-1414-1414-1414-141414141414",
+      "title": "Thông báo: Nghỉ Tết Nguyên Đán",
+      "type": 4,
+      "orderIndex": 0,
+      "contentHtml": "<p><strong>Thông báo nghỉ Tết:</strong> Lớp học sẽ nghỉ từ ngày 25/01/2026 đến hết ngày 05/02/2026. Chúc các em ăn Tết vui vẻ!</p>",
+      "attachmentsJson": "[]"
     }
   ],
   "topics": [

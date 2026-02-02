@@ -89,7 +89,7 @@ namespace LMS.Infrastructure.Services
                 DepartmentId = user.DepartmentId,
                 DepartmentName = user.Department?.Name,
                 IsActive = user.IsActive,
-                IsFirstLogin = user.IsFirstLogin,
+                IsFirstLogin = user.MustChangePassword,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
             };
@@ -136,8 +136,9 @@ namespace LMS.Infrastructure.Services
                 RoleId = role.Id,
                 DepartmentId = dto.DepartmentId,
                 StudentCode = dto.StudentCode,
+                // Duplicate StudentCode removed
                 IsActive = true,
-                IsFirstLogin = true,
+                MustChangePassword = true,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -160,7 +161,7 @@ namespace LMS.Infrastructure.Services
                 DepartmentId = newUser.DepartmentId,
                 DepartmentName = newUser.Department?.Name,
                 IsActive = newUser.IsActive,
-                IsFirstLogin = newUser.IsFirstLogin,
+                IsFirstLogin = newUser.MustChangePassword,
                 CreatedAt = newUser.CreatedAt
             };
 
@@ -230,7 +231,7 @@ namespace LMS.Infrastructure.Services
                 DepartmentId = user.DepartmentId,
                 DepartmentName = user.Department?.Name,
                 IsActive = user.IsActive,
-                IsFirstLogin = user.IsFirstLogin,
+                IsFirstLogin = user.MustChangePassword,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
             };
@@ -250,7 +251,7 @@ namespace LMS.Infrastructure.Services
             var hasEnrollments = await _db.Set<Domain.Entities.Courses.CourseStudent>()
                 .AnyAsync(cs => cs.StudentId == userId);
 
-            var hasManagedCourses = await _db.Set<Domain.Entities.Courses.Course>()
+            var hasManagedCourses = await _db.Set<Domain.Entities.Courses.CourseLecturer>()
                 .AnyAsync(c => c.LecturerId == userId);
 
             if (hasEnrollments || hasManagedCourses)
@@ -291,7 +292,7 @@ namespace LMS.Infrastructure.Services
 
             var newPassword = GenerateRandomPassword();
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
-            user.IsFirstLogin = true;
+            user.MustChangePassword = true;
             user.UpdatedAt = DateTime.UtcNow;
 
             await _db.SaveChangesAsync();
