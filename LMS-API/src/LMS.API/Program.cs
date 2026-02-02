@@ -1,6 +1,7 @@
 ﻿using LMS.Domain.Constant;
 using LMS.Infrastructure.Data;
 using LMS.Infrastructure.Services;
+using LMS.Application.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -113,6 +114,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ISystemConfigService, SystemConfigService>();
 builder.Services.AddScoped<IAdminCourseService, AdminCourseService>();
 builder.Services.AddScoped<ICourseConfigService, CourseConfigService>();
+builder.Services.AddScoped<IFileStorageService, CloudinaryService>();
 
 var app = builder.Build();
 

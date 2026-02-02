@@ -1,5 +1,5 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
-import { LoginPage } from './components/auth/LoginPage';
+import { Suspense, lazy } from 'react';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { StudentDashboard } from './components/student/StudentDashboard';
 import { LecturerDashboard } from './components/lecturer/LecturerDashboard';
@@ -14,6 +14,33 @@ import { AssessmentAttemptPage } from './components/student/AssessmentAttemptPag
 import { CourseDetailPage } from './components/lecturer/CourseDetailPage';
 import { ForgotPasswordPage } from './components/auth/ForgotPasswordPage';
 import { ProfilePage } from './components/auth/ProfilePage';
+import { LoadingFallback } from './components/ui/LoadingFallback';
+import { getStoredUser } from './utils/auth-helpers';
+
+// Lazy load components
+const LoginPage = lazy(() => import('./components/auth/LoginPage').then(module => ({ default: module.LoginPage })));
+const ForgotPasswordPage = lazy(() => import('./components/auth/ForgotPasswordPage').then(module => ({ default: module.ForgotPasswordPage })));
+const ProfilePage = lazy(() => import('./components/auth/ProfilePage').then(module => ({ default: module.ProfilePage })));
+
+// Student
+const StudentDashboard = lazy(() => import('./components/student/StudentDashboard').then(module => ({ default: module.StudentDashboard })));
+const ProgressPage = lazy(() => import('./components/student/ProgressPage').then(module => ({ default: module.ProgressPage })));
+const AssessmentListPage = lazy(() => import('./components/student/AssessmentListPage').then(module => ({ default: module.AssessmentListPage })));
+const AssessmentAttemptPage = lazy(() => import('./components/student/AssessmentAttemptPage').then(module => ({ default: module.AssessmentAttemptPage })));
+const CoursePlayerPage = lazy(() => import('./components/student/CoursePlayerPage').then(module => ({ default: module.CoursePlayerPage })));
+
+// Lecturer
+const LecturerDashboard = lazy(() => import('./components/lecturer/LecturerDashboard').then(module => ({ default: module.LecturerDashboard })));
+const CourseDetailPage = lazy(() => import('./components/lecturer/CourseDetailPage').then(module => ({ default: module.CourseDetailPage })));
+
+// Admin
+const AdminDashboard = lazy(() => import('./components/admin/AdminDashboard').then(module => ({ default: module.AdminDashboard })));
+const UserManagementPage = lazy(() => import('./components/admin/UserManagementPage').then(module => ({ default: module.UserManagementPage })));
+const SystemConfigPage = lazy(() => import('./components/admin/SystemConfigPage').then(module => ({ default: module.SystemConfigPage })));
+
+const SuspenseLayout = ({ children }: { children: React.ReactNode }) => (
+    <Suspense fallback={<LoadingFallback />}>{children}</Suspense>
+);
 
 export const router = createBrowserRouter([
     {
@@ -22,11 +49,19 @@ export const router = createBrowserRouter([
     },
     {
         path: '/login',
-        element: <LoginPage />,
+        element: (
+            <SuspenseLayout>
+                <LoginPage />
+            </SuspenseLayout>
+        ),
     },
     {
         path: '/forgot-password',
-        element: <ForgotPasswordPage />,
+        element: (
+            <SuspenseLayout>
+                <ForgotPasswordPage />
+            </SuspenseLayout>
+        ),
     },
     // Common Protected Routes
     {
@@ -34,7 +69,11 @@ export const router = createBrowserRouter([
         children: [
             {
                 path: '/profile',
-                element: <ProfilePage user={JSON.parse(localStorage.getItem('user') || '{}')} onProfileUpdate={() => { }} />,
+                element: (
+                    <SuspenseLayout>
+                        <ProfilePage user={getStoredUser()} onProfileUpdate={() => { }} />
+                    </SuspenseLayout>
+                ),
             },
         ],
     },
@@ -49,23 +88,43 @@ export const router = createBrowserRouter([
             },
             {
                 path: '/student/dashboard',
-                element: <StudentDashboard user={JSON.parse(localStorage.getItem('user') || '{}')} />,
+                element: (
+                    <SuspenseLayout>
+                        <StudentDashboard user={getStoredUser()} />
+                    </SuspenseLayout>
+                ),
             },
             {
                 path: '/student/progress',
-                element: <ProgressPage user={JSON.parse(localStorage.getItem('user') || '{}')} />,
+                element: (
+                    <SuspenseLayout>
+                        <ProgressPage user={getStoredUser()} />
+                    </SuspenseLayout>
+                ),
             },
             {
                 path: '/student/assessments',
-                element: <AssessmentListPage user={JSON.parse(localStorage.getItem('user') || '{}')} />,
+                element: (
+                    <SuspenseLayout>
+                        <AssessmentListPage user={getStoredUser()} />
+                    </SuspenseLayout>
+                ),
             },
             {
                 path: '/student/assessment/:assessmentId',
-                element: <AssessmentAttemptPage user={JSON.parse(localStorage.getItem('user') || '{}')} />,
+                element: (
+                    <SuspenseLayout>
+                        <AssessmentAttemptPage user={getStoredUser()} />
+                    </SuspenseLayout>
+                ),
             },
             {
                 path: '/student/courses/:courseId',
-                element: <CoursePlayerPage user={JSON.parse(localStorage.getItem('user') || '{}')} />,
+                element: (
+                    <SuspenseLayout>
+                        <CoursePlayerPage user={getStoredUser()} />
+                    </SuspenseLayout>
+                ),
             },
         ],
     },
@@ -80,11 +139,19 @@ export const router = createBrowserRouter([
             },
             {
                 path: '/lecturer/dashboard',
-                element: <LecturerDashboard user={JSON.parse(localStorage.getItem('user') || '{}')} />,
+                element: (
+                    <SuspenseLayout>
+                        <LecturerDashboard user={getStoredUser()} />
+                    </SuspenseLayout>
+                ),
             },
             {
                 path: '/lecturer/courses/:courseId',
-                element: <CourseDetailPage user={JSON.parse(localStorage.getItem('user') || '{}')} />,
+                element: (
+                    <SuspenseLayout>
+                        <CourseDetailPage user={getStoredUser()} />
+                    </SuspenseLayout>
+                ),
             },
         ],
     },
@@ -99,15 +166,27 @@ export const router = createBrowserRouter([
             },
             {
                 path: '/admin/dashboard',
-                element: <AdminDashboard user={JSON.parse(localStorage.getItem('user') || '{}')} />,
+                element: (
+                    <SuspenseLayout>
+                        <AdminDashboard user={getStoredUser()} />
+                    </SuspenseLayout>
+                ),
             },
             {
                 path: '/admin/users',
-                element: <UserManagementPage user={JSON.parse(localStorage.getItem('user') || '{}')} />,
+                element: (
+                    <SuspenseLayout>
+                        <UserManagementPage user={getStoredUser()} />
+                    </SuspenseLayout>
+                ),
             },
             {
                 path: '/admin/system',
-                element: <SystemConfigPage user={JSON.parse(localStorage.getItem('user') || '{}')} />,
+                element: (
+                    <SuspenseLayout>
+                        <SystemConfigPage user={getStoredUser()} />
+                    </SuspenseLayout>
+                ),
             },
             {
                 path: '/admin/courses',
