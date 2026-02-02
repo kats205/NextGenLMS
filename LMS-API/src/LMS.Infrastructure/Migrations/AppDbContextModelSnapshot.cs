@@ -498,29 +498,6 @@ namespace LMS.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Semesters");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
-                            CreatedAt = new DateTime(2026, 1, 19, 20, 23, 12, 482, DateTimeKind.Local).AddTicks(9757),
-                            IsDeleted = false,
-                            Name = "HK1"
-                        },
-                        new
-                        {
-                            Id = new Guid("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
-                            CreatedAt = new DateTime(2026, 1, 19, 20, 23, 12, 482, DateTimeKind.Local).AddTicks(9773),
-                            IsDeleted = false,
-                            Name = "HK2"
-                        },
-                        new
-                        {
-                            Id = new Guid("cccccccc-cccc-cccc-cccc-cccccccccccc"),
-                            CreatedAt = new DateTime(2026, 1, 19, 20, 23, 12, 482, DateTimeKind.Local).AddTicks(9776),
-                            IsDeleted = false,
-                            Name = "HK Hè"
-                        });
                 });
 
             modelBuilder.Entity("LMS.Domain.Entities.System.SystemConfig", b =>
@@ -549,16 +526,6 @@ namespace LMS.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("SystemConfigs");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("99999999-9999-9999-9999-999999999999"),
-                            ConfigKey = "CURRENT_SEMESTER_ID",
-                            ConfigValue = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-                            CreatedAt = new DateTime(2026, 1, 19, 20, 23, 12, 482, DateTimeKind.Local).AddTicks(9853),
-                            IsDeleted = false
-                        });
                 });
 
             modelBuilder.Entity("LMS.Domain.Entities.Users.AppRole", b =>
@@ -587,32 +554,6 @@ namespace LMS.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("AppRoles");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-111111111111"),
-                            CreatedAt = new DateTime(2026, 1, 19, 20, 23, 12, 482, DateTimeKind.Local).AddTicks(9550),
-                            Description = "Quản trị hệ thống",
-                            IsDeleted = false,
-                            RoleName = "Admin"
-                        },
-                        new
-                        {
-                            Id = new Guid("22222222-2222-2222-2222-222222222222"),
-                            CreatedAt = new DateTime(2026, 1, 19, 20, 23, 12, 482, DateTimeKind.Local).AddTicks(9565),
-                            Description = "Giảng viên",
-                            IsDeleted = false,
-                            RoleName = "Lecturer"
-                        },
-                        new
-                        {
-                            Id = new Guid("33333333-3333-3333-3333-333333333333"),
-                            CreatedAt = new DateTime(2026, 1, 19, 20, 23, 12, 482, DateTimeKind.Local).AddTicks(9568),
-                            Description = "Sinh viên",
-                            IsDeleted = false,
-                            RoleName = "Student"
-                        });
                 });
 
             modelBuilder.Entity("LMS.Domain.Entities.Users.AppUser", b =>

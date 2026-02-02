@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace LMS.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class init : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -378,7 +378,8 @@ namespace LMS.Infrastructure.Migrations
                     OpenTime = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CloseTime = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DurationMinutes = table.Column<int>(type: "int", nullable: false),
-                    ShuffleQuestions = table.Column<bool>(type: "bit", nullable: false)
+                    ShuffleQuestions = table.Column<bool>(type: "bit", nullable: false),
+                    ShuffleAnswers = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
