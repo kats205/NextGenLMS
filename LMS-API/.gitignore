@@ -193,4 +193,10 @@ ServiceFabricBackup/
 
 # Environment Variables
 .env
+# AppSettings and Environment Secrets
 appsettings.Development.json
+appsettings.Production.json
+appsettings.Staging.json
+appsettings.Local.json
+# Remove the # below if you want to ignore the base template (not recommended if it holds structure)
+# appsettings.json
