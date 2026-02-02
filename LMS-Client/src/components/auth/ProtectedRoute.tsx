@@ -1,4 +1,5 @@
 import { Navigate, Outlet } from 'react-router-dom';
+import { getStoredUser } from '../../utils/auth-helpers';
 
 interface ProtectedRouteProps {
     // allowedRoles: ('admin' | 'lecturer' | 'student')[]; // Tạm thời để string cho dễ test
@@ -7,8 +8,7 @@ interface ProtectedRouteProps {
 
 export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
     const token = localStorage.getItem('token');
-    const userStr = localStorage.getItem('user');
-    const user = userStr ? JSON.parse(userStr) : null;
+    const user = getStoredUser();
 
     if (!token) {
         return <Navigate to="/login" replace />;
