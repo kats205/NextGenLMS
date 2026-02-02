@@ -1,5 +1,10 @@
 # General Editor and OS Files
 
+# Agent skills and configuration
+.agent/*
+!.agent/rules/
+!.agent/workflows/
+
 # Visual Studio Code
 .vscode/
 !.vscode/extensions.json
