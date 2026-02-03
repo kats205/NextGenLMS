@@ -45,10 +45,16 @@ namespace LMS.Infrastructure.Services
             }
 
             // 3. Verify password
-            if (!PasswordHelper.Verify(user.PasswordHash, request.Password))
+            Console.WriteLine($"[AUTH] Verifying password for {user.Email}...");
+            var isPasswordValid = PasswordHelper.Verify(user.PasswordHash, request.Password);
+            
+            if (!isPasswordValid)
             {
+                Console.WriteLine($"[AUTH] Password validation failed for {user.Email}.");
+                Console.WriteLine($"[AUTH] Stored Hash: {user.PasswordHash}");
                 throw new UnauthorizedAccessException("Email hoặc mật khẩu không đúng");
             }
+            Console.WriteLine($"[AUTH] Password validation success for {user.Email}.");
 
             // 4. Generate tokens
             var token = GenerateJwtToken(user);
