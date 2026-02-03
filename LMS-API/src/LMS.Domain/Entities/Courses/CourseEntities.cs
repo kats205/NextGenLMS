@@ -15,15 +15,16 @@ namespace LMS.Domain.Entities.Courses
         public Guid SemesterId { get; set; }
         public Guid AcademicYearId { get; set; }
         public Guid MajorId { get; set; }
-        public Guid LecturerId { get; set; }
+        // public Guid LecturerId { get; set; } // Removed single lecturer support
 
         // Navigation
         public Semester? Semester { get; set; }
         public AcademicYear? AcademicYear { get; set; }
         public Major? Major { get; set; }
-        public AppUser? Lecturer { get; set; }
+        // public AppUser? Lecturer { get; set; } // Removed single lecturer navigation
 
         public ICollection<CourseStudent> Students { get; set; } = new List<CourseStudent>();
+        public ICollection<CourseLecturer> Lecturers { get; set; } = new List<CourseLecturer>();
         public ICollection<Chapter> Chapters { get; set; } = new List<Chapter>();
     }
 
@@ -32,10 +33,22 @@ namespace LMS.Domain.Entities.Courses
         public Guid CourseId { get; set; }
         public Guid StudentId { get; set; }
         public DateTime EnrolledDate { get; set; } = DateTime.UtcNow;
+        public string Source { get; set; } = "Manual"; // SIS, Manual, Import
 
         // Navigation
         public Course? Course { get; set; }
         public AppUser? Student { get; set; }
+    }
+
+    public class CourseLecturer : BaseEntity
+    {
+        public Guid CourseId { get; set; }
+        public Guid LecturerId { get; set; }
+        public bool IsPrimary { get; set; } = false;
+
+        // Navigation
+        public Course? Course { get; set; }
+        public AppUser? Lecturer { get; set; }
     }
 
     public class Chapter : BaseEntity

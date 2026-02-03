@@ -15,7 +15,8 @@ namespace LMS.Domain.Entities.Assessment
     {
         MultipleChoice = 1,
         Essay = 2,
-        TrueFalse = 3
+        TrueFalse = 3,
+        FillInTheBlank = 4
     }
 
     public class Question : BaseEntity
@@ -71,5 +72,39 @@ namespace LMS.Domain.Entities.Assessment
 
         public AppUser? Student { get; set; }
         public LMS.Domain.Entities.Content.Quiz? Quiz { get; set; }
+        
+        public DateTime? AutoSavedAt { get; set; }
+        public ICollection<AttemptQuestionSnapshot> Snapshots { get; set; } = new List<AttemptQuestionSnapshot>();
+    }
+
+    public class AttemptQuestionSnapshot : BaseEntity
+    {
+        public Guid QuizSubmissionId { get; set; }
+        public Guid QuestionId { get; set; }
+        public int OrderIndex { get; set; } // The order presented to student
+        public string QuestionTextSnapshot { get; set; } = string.Empty; // Store copy of question text
+        public string AnswersSnapshotJson { get; set; } = string.Empty; // Store shuffled answers order
+        public string? StudentAnswerJson { get; set; } // What student selected/typed
+        public double PointsAchieved { get; set; }
+        public bool IsCorrect { get; set; }
+
+        public QuizSubmission? QuizSubmission { get; set; }
+        public Question? Question { get; set; }
+    }
+
+    public class EssaySubmission : BaseEntity
+    {
+        public Guid QuizSubmissionId { get; set; }
+        public Guid QuestionId { get; set; }
+        public string? SubmissionText { get; set; }
+        public string? FileUrl { get; set; } // If file upload
+        
+        public double? Score { get; set; }
+        public string? Feedback { get; set; }
+        public DateTime? GradedAt { get; set; }
+        public Guid? GradedBy { get; set; }
+
+        public QuizSubmission? QuizSubmission { get; set; }
+        public Question? Question { get; set; }
     }
 }

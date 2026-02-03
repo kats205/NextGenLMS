@@ -200,3 +200,6 @@ appsettings.Staging.json
 appsettings.Local.json
 # Remove the # below if you want to ignore the base template (not recommended if it holds structure)
 # appsettings.json
+
+# Migrations
+Src/LMS.Infrastructure/Migrations/
