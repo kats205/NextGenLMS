@@ -60,4 +60,11 @@ namespace LMS.Application.Admin
             public Guid UserId { get; set; }
             public bool IsActive { get; set; }
         }
+
+        public class ImportUserResultDto
+        {
+            public int CreatedCount { get; set; }
+            public int UpdatedCount { get; set; }
+            public List<string> Errors { get; set; } = new List<string>();
+        }
 }

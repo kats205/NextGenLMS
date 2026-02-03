@@ -2,6 +2,7 @@
 using LMS.Domain.Constant;
 using LMS.Infrastructure.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using static LMS.Application.Common.ServiceResult;
 
@@ -189,6 +190,29 @@ namespace LMS.API.Controllers
                 Success = true,
                 Message = result.Message,
                 Data = result.Data // New password
+            });
+        }
+
+        [HttpPost("import")]
+        public async Task<IActionResult> ImportUsers(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest(new ApiResponse<object> { Success = false, Message = "Vui lòng chọn file Excel." });
+
+            if (!file.FileName.EndsWith(".xlsx"))
+                return BadRequest(new ApiResponse<object> { Success = false, Message = "Chỉ chấp nhận file .xlsx" });
+
+            using var stream = file.OpenReadStream();
+            var result = await _service.ImportUsersFromExcelAsync(stream);
+
+            if (!result.IsSuccess)
+                return BadRequest(new ApiResponse<object> { Success = false, Message = result.Message });
+
+            return Ok(new ApiResponse<ImportUserResultDto>
+            {
+                Success = true,
+                Message = result.Message,
+                Data = result.Data
             });
         }
     }

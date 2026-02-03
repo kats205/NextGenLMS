@@ -113,6 +113,7 @@ builder.Services.AddScoped<IAdminUserService, AdminUserService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IFileStorageService, CloudinaryService>();
 builder.Services.AddScoped<LMS.Application.Common.Interfaces.IEmailService, MockEmailService>();
+builder.Services.AddScoped<LMS.Application.Common.Interfaces.IMasterDataService, MasterDataService>();
 
 var app = builder.Build();
 

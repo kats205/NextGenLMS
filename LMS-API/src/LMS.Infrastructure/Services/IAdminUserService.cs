@@ -17,5 +17,6 @@ namespace LMS.Infrastructure.Services
         Task<ServiceResult<bool>> DeleteUserAsync(Guid userId);
         Task<ServiceResult<bool>> ToggleUserStatusAsync(ToggleUserStatusDto dto);
         Task<ServiceResult<string>> ResetPasswordAsync(Guid userId);
+        Task<ServiceResult<ImportUserResultDto>> ImportUsersFromExcelAsync(Stream fileStream);
     }
 }
