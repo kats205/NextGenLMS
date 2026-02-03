@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,6 +6,16 @@ using System.Threading.Tasks;
 
 namespace LMS.Application.DTOs.Admin
 {
+    public class CourseLecturerDto
+    {
+        public Guid Id { get; set; }
+        public string FullName { get; set; } = string.Empty;
+        public string? Email { get; set; }
+        public string? Phone { get; set; }
+        public string? AvatarUrl { get; set; }
+        public bool IsPrimary { get; set; }
+    }
+
     public class CourseDto
     {
         public Guid Id { get; set; }
@@ -19,17 +29,15 @@ namespace LMS.Application.DTOs.Admin
         public string AcademicYearName { get; set; } = string.Empty;
         public Guid MajorId { get; set; }
         public string MajorName { get; set; } = string.Empty;
-        public Guid LecturerId { get; set; }
-        public string LecturerName { get; set; } = string.Empty;
+        public Guid? PrimaryLecturerId { get; set; }
+        public string? PrimaryLecturerName { get; set; }
+        public List<CourseLecturerDto> Lecturers { get; set; } = new();
         public int StudentCount { get; set; }
         public DateTime CreatedAt { get; set; }
     }
 
     public class CourseDetailDto : CourseDto
     {
-        public string? LecturerEmail { get; set; }
-        public string? LecturerPhone { get; set; }
-        public string? LecturerAvatarUrl { get; set; }
         public List<StudentDto> Students { get; set; } = new();
         public int ChapterCount { get; set; }
         public int ContentCount { get; set; }
@@ -53,7 +61,7 @@ namespace LMS.Application.DTOs.Admin
         public Guid SemesterId { get; set; }
         public Guid AcademicYearId { get; set; }
         public Guid MajorId { get; set; }
-        public Guid? LecturerId { get; set; }
+        public List<Guid>? LecturerId { get; set; }
     }
 
     public class UpdateCourseDto
@@ -72,7 +80,7 @@ namespace LMS.Application.DTOs.Admin
         public Guid? SemesterId { get; set; }
         public Guid? AcademicYearId { get; set; }
         public Guid? MajorId { get; set; }
-        public Guid? LecturerId { get; set; }
+        public List<Guid>? LecturerId { get; set; }
         public int PageNumber { get; set; } = 1;
         public int PageSize { get; set; } = 10;
     }

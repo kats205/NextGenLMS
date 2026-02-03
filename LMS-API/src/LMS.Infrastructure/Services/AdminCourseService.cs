@@ -1,4 +1,3 @@
-﻿using Azure;
 using LMS.Application.DTOs.Admin;
 using LMS.Application.DTOs.Common;
 using LMS.Domain.Entities.Courses;
@@ -29,7 +28,8 @@ namespace LMS.Infrastructure.Services
                     .Include(c => c.Semester)
                     .Include(c => c.AcademicYear)
                     .Include(c => c.Major)
-                    .Include(c => c.Lecturer)
+                    .Include(c => c.Lecturers)
+                        .ThenInclude(cl => cl.Lecturer)
                     .Include(c => c.Students)
                     .Where(c => !c.IsDeleted)
                     .AsQueryable();
@@ -53,8 +53,8 @@ namespace LMS.Infrastructure.Services
                 if (filter.MajorId.HasValue)
                     query = query.Where(c => c.MajorId == filter.MajorId.Value);
 
-                if (filter.LecturerId.HasValue)
-                    query = query.Where(c => c.LecturerId == filter.LecturerId.Value);
+                if (filter.LecturerId != null && filter.LecturerId.Any())
+                    query = query.Where(c => c.Lecturers.Any(cl => filter.LecturerId.Contains(cl.LecturerId) && !cl.IsDeleted));
 
                 var totalCount = await query.CountAsync();
 
@@ -75,8 +75,29 @@ namespace LMS.Infrastructure.Services
                         AcademicYearName = c.AcademicYear!.Name,
                         MajorId = c.MajorId,
                         MajorName = c.Major!.Name,
-                        LecturerId = c.LecturerId,
-                        LecturerName = c.Lecturer!.FullName,
+                        PrimaryLecturerId = c.Lecturers
+                            .Where(cl => !cl.IsDeleted)
+                            .OrderByDescending(cl => cl.IsPrimary)
+                            .Select(cl => (Guid?)cl.LecturerId)
+                            .FirstOrDefault(),
+                        PrimaryLecturerName = c.Lecturers
+                            .Where(cl => !cl.IsDeleted)
+                            .OrderByDescending(cl => cl.IsPrimary)
+                            .Select(cl => cl.Lecturer!.FullName)
+                            .FirstOrDefault(),
+                        Lecturers = c.Lecturers
+                            .Where(cl => !cl.IsDeleted)
+                            .OrderByDescending(cl => cl.IsPrimary)
+                            .Select(cl => new CourseLecturerDto
+                            {
+                                Id = cl.LecturerId,
+                                FullName = cl.Lecturer!.FullName,
+                                Email = cl.Lecturer.Email,
+                                Phone = cl.Lecturer.Phone,
+                                AvatarUrl = cl.Lecturer.AvatarUrl,
+                                IsPrimary = cl.IsPrimary
+                            })
+                            .ToList(),
                         StudentCount = c.Students.Count(s => !s.IsDeleted),
                         CreatedAt = c.CreatedAt
                     })
@@ -86,7 +107,7 @@ namespace LMS.Infrastructure.Services
                 {
                     Items = items,
                     Page = filter.PageNumber,
-                    PageSize = filter.PageNumber,
+                    PageSize = filter.PageSize,
                     TotalItems = totalCount
                 };
 
@@ -109,7 +130,8 @@ namespace LMS.Infrastructure.Services
                     .Include(c => c.Semester)
                     .Include(c => c.AcademicYear)
                     .Include(c => c.Major)
-                    .Include(c => c.Lecturer)
+                    .Include(c => c.Lecturers)
+                        .ThenInclude(cl => cl.Lecturer)
                     .Include(c => c.Students)
                         .ThenInclude(cs => cs.Student)
                     .Include(c => c.Chapters)
@@ -135,11 +157,28 @@ namespace LMS.Infrastructure.Services
                     AcademicYearName = course.AcademicYear!.Name,
                     MajorId = course.MajorId,
                     MajorName = course.Major!.Name,
-                    LecturerId = course.LecturerId,
-                    LecturerName = course.Lecturer!.FullName,
-                    LecturerEmail = course.Lecturer.Email,
-                    LecturerPhone = course.Lecturer.Phone,
-                    LecturerAvatarUrl = course.Lecturer.AvatarUrl,
+                    PrimaryLecturerId = course.Lecturers
+                        .Where(cl => !cl.IsDeleted)
+                        .OrderByDescending(cl => cl.IsPrimary)
+                        .Select(cl => (Guid?)cl.LecturerId)
+                        .FirstOrDefault(),
+                    PrimaryLecturerName = course.Lecturers
+                        .Where(cl => !cl.IsDeleted)
+                        .OrderByDescending(cl => cl.IsPrimary)
+                        .Select(cl => cl.Lecturer!.FullName)
+                        .FirstOrDefault(),
+                    Lecturers = course.Lecturers
+                        .Where(cl => !cl.IsDeleted)
+                        .OrderByDescending(cl => cl.IsPrimary)
+                        .Select(cl => new CourseLecturerDto
+                        {
+                            Id = cl.LecturerId,
+                            FullName = cl.Lecturer!.FullName,
+                            Email = cl.Lecturer.Email,
+                            Phone = cl.Lecturer.Phone,
+                            AvatarUrl = cl.Lecturer.AvatarUrl,
+                            IsPrimary = cl.IsPrimary
+                        }).ToList(),
                     StudentCount = course.Students.Count(s => !s.IsDeleted),
                     CreatedAt = course.CreatedAt,
                     Students = course.Students
@@ -202,12 +241,33 @@ namespace LMS.Infrastructure.Services
                     return ServiceResult<CourseDto>.Failure("Ngành học không tồn tại");
                 }
 
-                if (dto.LecturerId.HasValue)
+                if (dto.LecturerId != null && dto.LecturerId.Any())
                 {
-                    var lecturer = await _context.AppUsers.FindAsync(dto.LecturerId.Value);
-                    if (lecturer == null || lecturer.IsDeleted)
+                    var distinctLecturerIds = dto.LecturerId.Distinct().ToList();
+                    var lecturers = await _context.AppUsers
+                        .Where(u => distinctLecturerIds.Contains(u.Id) && !u.IsDeleted)
+                        .Select(u => new { u.Id, u.RoleId })
+                        .ToListAsync();
+
+                    if (lecturers.Count != distinctLecturerIds.Count)
                     {
                         return ServiceResult<CourseDto>.Failure("Giảng viên không tồn tại");
+                    }
+
+                    var roleIds = lecturers.Select(l => l.RoleId).Distinct().ToList();
+                    var roleMap = await _context.AppRoles
+                        .Where(r => roleIds.Contains(r.Id))
+                        .Select(r => new { r.Id, r.RoleName })
+                        .ToDictionaryAsync(r => r.Id, r => r.RoleName);
+
+                    var invalid = lecturers
+                        .Where(l => !roleMap.TryGetValue(l.RoleId, out var roleName) || (roleName != "Lecturer" && roleName != "Admin"))
+                        .Select(l => l.Id)
+                        .ToList();
+
+                    if (invalid.Any())
+                    {
+                        return ServiceResult<CourseDto>.Failure("Danh sách giảng viên không hợp lệ (chỉ chấp nhận Lecturer/Admin)");
                     }
                 }
 
@@ -218,12 +278,27 @@ namespace LMS.Infrastructure.Services
                     Description = dto.Description,
                     SemesterId = dto.SemesterId,
                     AcademicYearId = dto.AcademicYearId,
-                    MajorId = dto.MajorId,
-                    LecturerId = dto.LecturerId ?? Guid.Empty
+                    MajorId = dto.MajorId
                 };
 
                 _context.Courses.Add(course);
                 await _context.SaveChangesAsync();
+
+                if (dto.LecturerId != null && dto.LecturerId.Any())
+                {
+                    var lecturerIds = dto.LecturerId.Distinct().ToList();
+                    for (var i = 0; i < lecturerIds.Count; i++)
+                    {
+                        _context.CourseLecturers.Add(new CourseLecturer
+                        {
+                            CourseId = course.Id,
+                            LecturerId = lecturerIds[i],
+                            IsPrimary = i == 0
+                        });
+                    }
+
+                    await _context.SaveChangesAsync();
+                }
 
                 var createdCourse = await GetCourseDtoAsync(course.Id);
                 return ServiceResult<CourseDto>.Success(createdCourse, "Tạo khóa học thành công");
@@ -327,7 +402,10 @@ namespace LMS.Infrastructure.Services
         {
             try
             {
-                var course = await _context.Courses.FindAsync(courseId);
+                var course = await _context.Courses
+                    .Include(c => c.Lecturers)
+                    .FirstOrDefaultAsync(c => c.Id == courseId && !c.IsDeleted);
+
                 if (course == null || course.IsDeleted)
                 {
                     return ServiceResult.Failure("Không tìm thấy khóa học");
@@ -346,7 +424,21 @@ namespace LMS.Infrastructure.Services
                     return ServiceResult.Failure("Người dùng không phải là giảng viên");
                 }
 
-                course.LecturerId = lecturerId;
+                var existing = course.Lecturers.FirstOrDefault(cl => cl.LecturerId == lecturerId && !cl.IsDeleted);
+                if (existing != null)
+                {
+                    return ServiceResult.Success("Giảng viên đã được phân quyền cho khóa học");
+                }
+
+                var hasPrimary = course.Lecturers.Any(cl => !cl.IsDeleted && cl.IsPrimary);
+
+                _context.CourseLecturers.Add(new CourseLecturer
+                {
+                    CourseId = courseId,
+                    LecturerId = lecturerId,
+                    IsPrimary = !hasPrimary
+                });
+
                 course.UpdatedAt = DateTime.UtcNow;
 
                 await _context.SaveChangesAsync();
@@ -411,7 +503,8 @@ namespace LMS.Infrastructure.Services
                 .Include(c => c.Semester)
                 .Include(c => c.AcademicYear)
                 .Include(c => c.Major)
-                .Include(c => c.Lecturer)
+                .Include(c => c.Lecturers)
+                    .ThenInclude(cl => cl.Lecturer)
                 .Include(c => c.Students)
                 .Where(c => c.Id == id && !c.IsDeleted)
                 .Select(c => new CourseDto
@@ -427,8 +520,29 @@ namespace LMS.Infrastructure.Services
                     AcademicYearName = c.AcademicYear!.Name,
                     MajorId = c.MajorId,
                     MajorName = c.Major!.Name,
-                    LecturerId = c.LecturerId,
-                    LecturerName = c.Lecturer!.FullName,
+                    PrimaryLecturerId = c.Lecturers
+                        .Where(cl => !cl.IsDeleted)
+                        .OrderByDescending(cl => cl.IsPrimary)
+                        .Select(cl => (Guid?)cl.LecturerId)
+                        .FirstOrDefault(),
+                    PrimaryLecturerName = c.Lecturers
+                        .Where(cl => !cl.IsDeleted)
+                        .OrderByDescending(cl => cl.IsPrimary)
+                        .Select(cl => cl.Lecturer!.FullName)
+                        .FirstOrDefault(),
+                    Lecturers = c.Lecturers
+                        .Where(cl => !cl.IsDeleted)
+                        .OrderByDescending(cl => cl.IsPrimary)
+                        .Select(cl => new CourseLecturerDto
+                        {
+                            Id = cl.LecturerId,
+                            FullName = cl.Lecturer!.FullName,
+                            Email = cl.Lecturer.Email,
+                            Phone = cl.Lecturer.Phone,
+                            AvatarUrl = cl.Lecturer.AvatarUrl,
+                            IsPrimary = cl.IsPrimary
+                        })
+                        .ToList(),
                     StudentCount = c.Students.Count(s => !s.IsDeleted),
                     CreatedAt = c.CreatedAt
                 })
