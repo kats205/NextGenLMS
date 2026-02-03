@@ -1,5 +1,5 @@
-﻿using LMS.Application.Admin;
-using LMS.Application.Common;
+﻿using LMS.Application.DTOs.Admin;
+using LMS.Application.DTOs.Common;
 using System;
 using System.Collections.Generic;
 using System.Linq;

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LMS.Application.Common
+namespace LMS.Application.DTOs.Common
 {
     public class ServiceResult<T>
     {

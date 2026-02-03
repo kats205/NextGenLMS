@@ -1,4 +1,4 @@
-﻿using LMS.Application.Authentication;
+﻿using LMS.Application.DTOs.Authentication;
 using LMS.Infrastructure.Data;
 using LMS.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;

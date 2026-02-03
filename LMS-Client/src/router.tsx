@@ -24,6 +24,7 @@ const CourseDetailPage = lazy(() => import('./components/lecturer/CourseDetailPa
 const AdminDashboard = lazy(() => import('./components/admin/AdminDashboard').then(module => ({ default: module.AdminDashboard })));
 const UserManagementPage = lazy(() => import('./components/admin/UserManagementPage').then(module => ({ default: module.UserManagementPage })));
 const SystemConfigPage = lazy(() => import('./components/admin/SystemConfigPage').then(module => ({ default: module.SystemConfigPage })));
+const CourseManagementPage = lazy(() => import('./components/admin/CourseMangementPage').then(module => ({ default: module.CourseManagementPage })));
 
 const SuspenseLayout = ({ children }: { children: React.ReactNode }) => (
     <Suspense fallback={<LoadingFallback />}>{children}</Suspense>
@@ -174,6 +175,10 @@ export const router = createBrowserRouter([
                         <SystemConfigPage user={getStoredUser()} />
                     </SuspenseLayout>
                 ),
+            },
+            {
+                path: '/admin/courses',
+                element: <CourseManagementPage user={JSON.parse(localStorage.getItem('user') || '{}')} />,
             },
         ],
     },

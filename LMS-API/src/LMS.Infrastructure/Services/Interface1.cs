@@ -1,4 +1,4 @@
-﻿using LMS.Application.Authentication;
+﻿using LMS.Application.DTOs.Authentication;
 using System;
 using System.Collections.Generic;
 using System.Linq;

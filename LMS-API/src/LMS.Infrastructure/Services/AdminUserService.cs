@@ -1,7 +1,8 @@
-﻿using LMS.Application.Admin;
-using LMS.Application.Common;
+﻿using LMS.Application.DTOs.Admin;
+using LMS.Application.DTOs.Common;
 using LMS.Domain.Entities.Users;
 using LMS.Infrastructure.Data;
+using LMS.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -125,7 +126,7 @@ namespace LMS.Infrastructure.Services
 
             // Generate password if not provided
             var password = dto.Password ?? GenerateRandomPassword();
-            var passwordHash = BCrypt.Net.BCrypt.HashPassword(password);
+            var passwordHash = PasswordHelper.Hash(password);
 
             var newUser = new AppUser
             {
