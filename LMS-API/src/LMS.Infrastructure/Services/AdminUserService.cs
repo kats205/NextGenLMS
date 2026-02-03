@@ -1,8 +1,9 @@
-using LMS.Application.Admin;
-using LMS.Application.Common;
+using LMS.Application.DTOs.Admin;
+using LMS.Application.DTOs.Common;
 using LMS.Application.Interfaces;
 using LMS.Domain.Entities.Users;
 using LMS.Infrastructure.Data;
+using LMS.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -10,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using OfficeOpenXml;
 
 namespace LMS.Infrastructure.Services
 {
@@ -129,7 +131,7 @@ namespace LMS.Infrastructure.Services
 
             // Generate password if not provided
             var password = dto.Password ?? GenerateRandomPassword();
-            var passwordHash = BCrypt.Net.BCrypt.HashPassword(password);
+            var passwordHash = PasswordHelper.Hash(password);
 
             var newUser = new Domain.Entities.Users.AppUser
             {
@@ -319,7 +321,7 @@ namespace LMS.Infrastructure.Services
 
         public async Task<ServiceResult<ImportUserResultDto>> ImportUsersFromExcelAsync(Stream fileStream)
         {
-            OfficeOpenXml.ExcelPackage.LicenseContext = OfficeOpenXml.LicenseContext.NonCommercial;
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
             var result = new ImportUserResultDto();
             var usersToCreate = new List<Domain.Entities.Users.AppUser>();

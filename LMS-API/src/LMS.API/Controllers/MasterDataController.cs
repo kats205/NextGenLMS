@@ -1,11 +1,10 @@
-using LMS.Application.Common;
 using LMS.Application.Interfaces;
 using LMS.Domain.Entities.System;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using static LMS.Application.Common.ServiceResult;
+using static LMS.Application.DTOs.Common.ServiceResult;
 
 namespace LMS.API.Controllers
 {
