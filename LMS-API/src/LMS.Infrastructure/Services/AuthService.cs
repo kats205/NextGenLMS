@@ -1,4 +1,5 @@
-﻿using LMS.Application.Authentication;
+using LMS.Application.Authentication;
+using LMS.Application.Interfaces;
 using LMS.Infrastructure.Data;
 using LMS.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
@@ -19,9 +20,9 @@ namespace LMS.Infrastructure.Services
     {
         private readonly AppDbContext _db;
         private readonly IConfiguration _config;
-        private readonly LMS.Application.Common.Interfaces.IEmailService _emailService;
+        private readonly IEmailService _emailService;
 
-        public AuthService(AppDbContext db, IConfiguration config, LMS.Application.Common.Interfaces.IEmailService emailService)
+        public AuthService(AppDbContext db, IConfiguration config, IEmailService emailService)
         {
             _db = db;
             _config = config;
@@ -281,4 +282,3 @@ namespace LMS.Infrastructure.Services
         }
     }
 }
-

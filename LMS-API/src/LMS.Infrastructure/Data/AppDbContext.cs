@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using LMS.Domain.Entities.System;
 using LMS.Domain.Entities.Users;
 using LMS.Domain.Entities.Courses;

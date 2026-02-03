@@ -1,4 +1,4 @@
-using LMS.Application.Common.Interfaces;
+using LMS.Application.Interfaces;
 using LMS.Domain.Entities.System;
 using LMS.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -21,12 +21,17 @@ namespace LMS.Infrastructure.Services
         #region Departments
         public async Task<List<Department>> GetDepartmentsAsync()
         {
-            return await _db.Departments.Include(d => d.Majors).ToListAsync();
+            return await _db.Departments
+                .Where(d => !d.IsDeleted)
+                .Include(d => d.Majors.Where(m => !m.IsDeleted))
+                .ToListAsync();
         }
 
         public async Task<Department?> GetDepartmentByIdAsync(Guid id)
         {
-            return await _db.Departments.Include(d => d.Majors).FirstOrDefaultAsync(d => d.Id == id);
+            return await _db.Departments
+                .Include(d => d.Majors.Where(m => !m.IsDeleted))
+                .FirstOrDefaultAsync(d => d.Id == id && !d.IsDeleted);
         }
 
         public async Task<Department> CreateDepartmentAsync(Department department)
@@ -63,12 +68,17 @@ namespace LMS.Infrastructure.Services
         #region Majors
         public async Task<List<Major>> GetMajorsAsync()
         {
-            return await _db.Majors.Include(m => m.Department).ToListAsync();
+            return await _db.Majors
+                .Include(m => m.Department)
+                .Where(m => !m.IsDeleted && !m.Department.IsDeleted)
+                .ToListAsync();
         }
 
         public async Task<List<Major>> GetMajorsByDepartmentAsync(Guid departmentId)
         {
-            return await _db.Majors.Where(m => m.DepartmentId == departmentId).ToListAsync();
+            return await _db.Majors
+                .Where(m => m.DepartmentId == departmentId && !m.IsDeleted)
+                .ToListAsync();
         }
 
         public async Task<Major> CreateMajorAsync(Major major)
@@ -105,7 +115,10 @@ namespace LMS.Infrastructure.Services
         #region Academic Years
         public async Task<List<AcademicYear>> GetAcademicYearsAsync()
         {
-            return await _db.AcademicYears.OrderByDescending(a => a.StartDate).ToListAsync();
+            return await _db.AcademicYears
+                .Where(a => !a.IsDeleted)
+                .OrderByDescending(a => a.StartDate)
+                .ToListAsync();
         }
 
         public async Task<AcademicYear> CreateAcademicYearAsync(AcademicYear year)
@@ -143,7 +156,9 @@ namespace LMS.Infrastructure.Services
         #region Semesters
         public async Task<List<Semester>> GetSemestersAsync()
         {
-            return await _db.Semesters.ToListAsync();
+            return await _db.Semesters
+                .Where(s => !s.IsDeleted)
+                .ToListAsync();
         }
 
         public async Task<Semester> CreateSemesterAsync(Semester semester)

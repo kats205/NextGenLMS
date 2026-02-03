@@ -1,10 +1,10 @@
-﻿using BCrypt.Net;
+using BCrypt.Net;
 
 namespace LMS.Infrastructure.Security;
 
 public static class PasswordHelper
 {
-    // Hash mật khẩu (dùng khi tạo user, seed data, reset password)
+    // Hash m?t kh?u (d�ng khi t?o user, seed data, reset password)
     public static string Hash(string plainPassword)
     {
         return BCrypt.Net.BCrypt.HashPassword(plainPassword);

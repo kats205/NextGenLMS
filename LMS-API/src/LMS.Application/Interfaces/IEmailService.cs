@@ -1,6 +1,6 @@
 using System.Threading.Tasks;
 
-namespace LMS.Application.Common.Interfaces
+namespace LMS.Application.Interfaces
 {
     public interface IEmailService
     {

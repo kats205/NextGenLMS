@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -72,7 +72,7 @@ namespace LMS.Application.Common
     }
 
     /// <summary>
-    /// ServiceResult không generic (cho các operation không trả về data)
+    /// ServiceResult kh�ng generic (cho c�c operation kh�ng tr? v? data)
     /// </summary>
     public class ServiceResult
     {
@@ -182,7 +182,7 @@ namespace LMS.Application.Common
         }
 
         /// <summary>
-        /// ApiResponse không generic
+        /// ApiResponse kh�ng generic
         /// </summary>
         public class ApiResponse
         {

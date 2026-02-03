@@ -1,4 +1,4 @@
-﻿using LMS.Domain.Entities.Assessment;
+using LMS.Domain.Entities.Assessment;
 using LMS.Domain.Entities.Content;
 
 public sealed class SeedDataset

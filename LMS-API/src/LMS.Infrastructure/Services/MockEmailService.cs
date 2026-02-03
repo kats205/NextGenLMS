@@ -1,6 +1,6 @@
-using LMS.Application.Common.Interfaces;
-using System;
+using LMS.Application.Interfaces;
 using System.Threading.Tasks;
+using System;
 
 namespace LMS.Infrastructure.Services
 {
@@ -8,12 +8,11 @@ namespace LMS.Infrastructure.Services
     {
         public Task SendEmailAsync(string to, string subject, string body)
         {
-            // Mock: Chỉ log ra console thay vì gửi thật
-            Console.WriteLine("================= SENDING EMAIL =================");
-            Console.WriteLine($"To: {to}");
+            Console.WriteLine("------------------------------------------");
+            Console.WriteLine($"[MOCK EMAIL SENT TO: {to}]");
             Console.WriteLine($"Subject: {subject}");
             Console.WriteLine($"Body: {body}");
-            Console.WriteLine("=================================================");
+            Console.WriteLine("------------------------------------------");
             return Task.CompletedTask;
         }
     }

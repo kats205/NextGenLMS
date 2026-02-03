@@ -2,7 +2,7 @@ using LMS.Domain.Entities.System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace LMS.Application.Common.Interfaces
+namespace LMS.Application.Interfaces
 {
     public interface IMasterDataService
     {

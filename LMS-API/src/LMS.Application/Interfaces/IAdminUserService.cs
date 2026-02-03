@@ -1,4 +1,4 @@
-﻿using LMS.Application.Admin;
+using LMS.Application.Admin;
 using LMS.Application.Common;
 using System;
 using System.Collections.Generic;
@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LMS.Infrastructure.Services
+namespace LMS.Application.Interfaces
 {
     public interface IAdminUserService
     {

@@ -1,6 +1,8 @@
-﻿using LMS.Application.Authentication;
-using LMS.Infrastructure.Services;
+using LMS.Application.Authentication;
+using LMS.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using System;
+using System.Threading.Tasks;
 
 namespace LMS.API.Controllers
 {
@@ -52,49 +54,27 @@ namespace LMS.API.Controllers
             try
             {
                 var response = await _authService.RefreshTokenAsync(request.RefreshToken);
-                return Ok(new
-                {
-                    success = true,
-                    data = response
-                });
+                return Ok(new { success = true, data = response });
             }
-            catch (Exception ex)
+            catch (UnauthorizedAccessException ex)
             {
-                return Unauthorized(new
-                {
-                    success = false,
-                    message = ex.Message
-                });
+                return Unauthorized(new { success = false, message = ex.Message });
             }
         }
 
         [HttpPost("revoke-token")]
         public async Task<IActionResult> RevokeToken([FromBody] RefreshTokenRequest request)
         {
-            if (string.IsNullOrEmpty(request.RefreshToken))
-            {
-                return BadRequest(new { success = false, message = "Token is required" });
-            }
-
             await _authService.RevokeTokenAsync(request.RefreshToken);
-            return Ok(new
-            {
-                success = true,
-                message = "Token revoked successfully (Logged out)"
-            });
+            return Ok(new { success = true, message = "Token revoked successfully (Logged out)" });
         }
 
         [HttpPost("validate-token")]
         public async Task<IActionResult> ValidateToken([FromBody] ValidateTokenRequest request)
         {
             var isValid = await _authService.ValidateTokenAsync(request.Token);
-            return Ok(new
-            {
-                success = true,
-                isValid = isValid
-            });
+            return Ok(new { success = true, isValid });
         }
-        
 
         [HttpPost("change-password")]
         [Microsoft.AspNetCore.Authorization.Authorize] // Require Login
@@ -102,13 +82,9 @@ namespace LMS.API.Controllers
         {
             try
             {
-                var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
-                if (userIdClaim == null) return Unauthorized();
-
-                var userId = Guid.Parse(userIdClaim.Value);
+                var userId = Guid.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!);
                 await _authService.ChangePasswordAsync(userId, request.CurrentPassword, request.NewPassword);
-
-                return Ok(new { success = true, message = "Đổi mật khẩu thành công" });
+                return Ok(new { success = true, message = "Đổi mật khẩu thành công." });
             }
             catch (Exception ex)
             {
@@ -119,9 +95,9 @@ namespace LMS.API.Controllers
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
         {
+            // Note: In real app, we always return Ok to prevent email enumeration
             await _authService.ForgotPasswordAsync(request.Email);
-            // Always return success to prevent email enumeration
-            return Ok(new { success = true, message = "Nếu email tồn tại, link đặt lại mật khẩu đã được gửi." });
+            return Ok(new { success = true, message = "Nếu email tồn tại, hệ thống đã gửi link đặt lại mật khẩu." });
         }
 
         [HttpPost("reset-password")]

@@ -1,10 +1,12 @@
-﻿using LMS.Application.Admin;
+using LMS.Application.Admin;
 using LMS.Application.Common;
+using LMS.Application.Interfaces;
 using LMS.Domain.Entities.Users;
 using LMS.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -20,7 +22,9 @@ namespace LMS.Infrastructure.Services
 
         public async Task<PagedResultDto<UserListItemDto>> GetUserAsync(UserQueryParams q)
         {
-            var query = _db.AppUsers.AsQueryable();
+            var query = _db.AppUsers
+                .Where(u => !u.IsDeleted)
+                .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(q.Search))
             {
@@ -69,7 +73,7 @@ namespace LMS.Infrastructure.Services
             var user = await _db.AppUsers
                 .Include(u => u.Role)
                 .Include(u => u.Department)
-                .FirstOrDefaultAsync(u => u.Id == userId);
+                .FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted);
 
             if (user == null)
             {
@@ -127,7 +131,7 @@ namespace LMS.Infrastructure.Services
             var password = dto.Password ?? GenerateRandomPassword();
             var passwordHash = BCrypt.Net.BCrypt.HashPassword(password);
 
-            var newUser = new AppUser
+            var newUser = new Domain.Entities.Users.AppUser
             {
                 Id = Guid.NewGuid(),
                 Email = dto.Email,
@@ -318,8 +322,8 @@ namespace LMS.Infrastructure.Services
             OfficeOpenXml.ExcelPackage.LicenseContext = OfficeOpenXml.LicenseContext.NonCommercial;
 
             var result = new ImportUserResultDto();
-            var usersToCreate = new List<AppUser>();
-            var usersToUpdate = new List<AppUser>();
+            var usersToCreate = new List<Domain.Entities.Users.AppUser>();
+            var usersToUpdate = new List<Domain.Entities.Users.AppUser>();
 
             using (var package = new OfficeOpenXml.ExcelPackage(fileStream))
             {
@@ -381,7 +385,10 @@ namespace LMS.Infrastructure.Services
                             existingUser.RoleId = role.Id;
                             existingUser.DepartmentId = deptId;
                             existingUser.DateOfBirth = dob;
+                            existingUser.IsDeleted = false; // Re-activate if was deleted
+                            existingUser.IsActive = true;
                             if (!string.IsNullOrEmpty(studentCode)) existingUser.StudentCode = studentCode;
+                            existingUser.UpdatedAt = DateTime.UtcNow;
                             
                             // Track for update (EF Core tracks automatically, but we can verify)
                             result.UpdatedCount++;
@@ -390,7 +397,7 @@ namespace LMS.Infrastructure.Services
                         {
                             // Create
                             var password = dob?.ToString("ddMMyyyy") ?? "12345678"; // Default password
-                            var newUser = new AppUser
+                            var newUser = new Domain.Entities.Users.AppUser
                             {
                                 Id = Guid.NewGuid(),
                                 Email = email,
