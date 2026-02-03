@@ -1,14 +1,17 @@
-﻿using LMS.Application.DTOs.Admin;
+using LMS.Application.DTOs.Admin;
 using LMS.Application.DTOs.Common;
+using LMS.Application.Interfaces;
 using LMS.Domain.Entities.Users;
 using LMS.Infrastructure.Data;
 using LMS.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using OfficeOpenXml;
 
 namespace LMS.Infrastructure.Services
 {
@@ -21,7 +24,9 @@ namespace LMS.Infrastructure.Services
 
         public async Task<PagedResultDto<UserListItemDto>> GetUserAsync(UserQueryParams q)
         {
-            var query = _db.AppUsers.AsQueryable();
+            var query = _db.AppUsers
+                .Where(u => !u.IsDeleted)
+                .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(q.Search))
             {
@@ -70,7 +75,7 @@ namespace LMS.Infrastructure.Services
             var user = await _db.AppUsers
                 .Include(u => u.Role)
                 .Include(u => u.Department)
-                .FirstOrDefaultAsync(u => u.Id == userId);
+                .FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted);
 
             if (user == null)
             {
@@ -128,7 +133,7 @@ namespace LMS.Infrastructure.Services
             var password = dto.Password ?? GenerateRandomPassword();
             var passwordHash = PasswordHelper.Hash(password);
 
-            var newUser = new AppUser
+            var newUser = new Domain.Entities.Users.AppUser
             {
                 Id = Guid.NewGuid(),
                 Email = dto.Email,
@@ -312,6 +317,122 @@ namespace LMS.Infrastructure.Services
             var random = new Random();
             return new string(Enumerable.Repeat(chars, 8)
                 .Select(s => s[random.Next(s.Length)]).ToArray());
+        }
+
+        public async Task<ServiceResult<ImportUserResultDto>> ImportUsersFromExcelAsync(Stream fileStream)
+        {
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
+            var result = new ImportUserResultDto();
+            var usersToCreate = new List<Domain.Entities.Users.AppUser>();
+            var usersToUpdate = new List<Domain.Entities.Users.AppUser>();
+
+            using (var package = new OfficeOpenXml.ExcelPackage(fileStream))
+            {
+                var worksheet = package.Workbook.Worksheets.FirstOrDefault();
+                if (worksheet == null)
+                    return ServiceResult<ImportUserResultDto>.Failure("File Excel không hợp lệ hoặc không có sheet nào.");
+
+                var rowCount = worksheet.Dimension.Rows;
+
+                // Load lookup data for performance
+                var existingUsers = await _db.AppUsers.ToDictionaryAsync(u => u.Email.ToLower());
+                var roles = await _db.AppRoles.ToDictionaryAsync(r => r.RoleName.ToLower());
+                var departments = await _db.Departments.ToDictionaryAsync(d => d.Code.ToLower());
+
+                for (int row = 2; row <= rowCount; row++)
+                {
+                    try
+                    {
+                        var email = worksheet.Cells[row, 1].Value?.ToString()?.Trim();
+                        var fullName = worksheet.Cells[row, 2].Value?.ToString()?.Trim();
+                        var roleName = worksheet.Cells[row, 3].Value?.ToString()?.Trim();
+                        var deptCode = worksheet.Cells[row, 4].Value?.ToString()?.Trim();
+                        var dobString = worksheet.Cells[row, 5].Value?.ToString()?.Trim();
+                        var studentCode = worksheet.Cells[row, 6].Value?.ToString()?.Trim();
+
+                        if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(fullName) || string.IsNullOrEmpty(roleName))
+                        {
+                            result.Errors.Add($"Dòng {row}: Thiếu thông tin bắt buộc (Email, FullName, Role).");
+                            continue;
+                        }
+
+                        if (!roles.TryGetValue(roleName.ToLower(), out var role))
+                        {
+                            result.Errors.Add($"Dòng {row}: Role '{roleName}' không tồn tại.");
+                            continue;
+                        }
+
+                        Guid? deptId = null;
+                        if (!string.IsNullOrEmpty(deptCode) && departments.TryGetValue(deptCode.ToLower(), out var dept))
+                        {
+                            deptId = dept.Id;
+                        }
+                        else if (!string.IsNullOrEmpty(deptCode))
+                        {
+                            result.Errors.Add($"Dòng {row}: Mã khoa '{deptCode}' không tồn tại.");
+                            continue;
+                        }
+
+                        DateTime? dob = null;
+                        if (DateTime.TryParse(dobString, out var date))
+                        {
+                            dob = date;
+                        }
+
+                        if (existingUsers.TryGetValue(email.ToLower(), out var existingUser))
+                        {
+                            // Update
+                            existingUser.FullName = fullName;
+                            existingUser.RoleId = role.Id;
+                            existingUser.DepartmentId = deptId;
+                            existingUser.DateOfBirth = dob;
+                            existingUser.IsDeleted = false; // Re-activate if was deleted
+                            existingUser.IsActive = true;
+                            if (!string.IsNullOrEmpty(studentCode)) existingUser.StudentCode = studentCode;
+                            existingUser.UpdatedAt = DateTime.UtcNow;
+                            
+                            // Track for update (EF Core tracks automatically, but we can verify)
+                            result.UpdatedCount++;
+                        }
+                        else
+                        {
+                            // Create
+                            var password = dob?.ToString("ddMMyyyy") ?? "12345678"; // Default password
+                            var newUser = new Domain.Entities.Users.AppUser
+                            {
+                                Id = Guid.NewGuid(),
+                                Email = email,
+                                FullName = fullName,
+                                PasswordHash = BCrypt.Net.BCrypt.HashPassword(password), // Should inject PasswordHelper but using BCrypt as before
+                                RoleId = role.Id,
+                                DepartmentId = deptId,
+                                DateOfBirth = dob,
+                                StudentCode = studentCode,
+                                MustChangePassword = true,
+                                IsActive = true,
+                                CreatedAt = DateTime.UtcNow
+                            };
+                            usersToCreate.Add(newUser);
+                            existingUsers.Add(email.ToLower(), newUser); // Prevent duplicates in same file
+                            result.CreatedCount++;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        result.Errors.Add($"Dòng {row}: Lỗi xử lý - {ex.Message}");
+                    }
+                }
+            }
+
+            if (usersToCreate.Any())
+            {
+                await _db.AppUsers.AddRangeAsync(usersToCreate);
+            }
+
+            await _db.SaveChangesAsync(); // Saves both updates and inserts
+
+            return ServiceResult<ImportUserResultDto>.Success(result, $"Import hoàn tất. Thêm mới: {result.CreatedCount}, Cập nhật: {result.UpdatedCount}, Lỗi: {result.Errors.Count}");
         }
     }
 }

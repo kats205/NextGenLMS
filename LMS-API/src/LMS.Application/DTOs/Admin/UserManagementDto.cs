@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -59,5 +59,12 @@ namespace LMS.Application.DTOs.Admin
         {
             public Guid UserId { get; set; }
             public bool IsActive { get; set; }
+        }
+
+        public class ImportUserResultDto
+        {
+            public int CreatedCount { get; set; }
+            public int UpdatedCount { get; set; }
+            public List<string> Errors { get; set; } = new List<string>();
         }
 }

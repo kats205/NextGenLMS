@@ -1,4 +1,4 @@
-ï»¿using LMS.Domain.Entities.Users;
+using LMS.Domain.Entities.Users;
 using LMS.Domain.Entities.Courses;
 using LMS.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -29,9 +29,9 @@ namespace LMS.Infrastructure.Data
             {
                 await _db.AppRoles.AddRangeAsync(new List<AppRole>
                 {
-                    new AppRole { Id = roleAdminId, RoleName = "Admin", Description = "Quáº£n trá»‹ viÃªn", CreatedAt = now },
-                    new AppRole { Id = roleLecturerId, RoleName = "Lecturer", Description = "Giáº£ng viÃªn", CreatedAt = now },
-                    new AppRole { Id = roleStudentId, RoleName = "Student", Description = "Sinh viÃªn", CreatedAt = now }
+                    new AppRole { Id = roleAdminId, RoleName = "Admin", Description = "Qu?n tr? viên", CreatedAt = now },
+                    new AppRole { Id = roleLecturerId, RoleName = "Lecturer", Description = "Gi?ng viên", CreatedAt = now },
+                    new AppRole { Id = roleStudentId, RoleName = "Student", Description = "Sinh viên", CreatedAt = now }
                 }, ct);
                 await _db.SaveChangesAsync(ct);
                 Console.WriteLine("  - Roles seeded.");
@@ -44,7 +44,7 @@ namespace LMS.Infrastructure.Data
                 await _db.Departments.AddAsync(new Department
                 {
                     Id = deptFitId,
-                    Name = "Khoa CÃ´ng nghá»‡ ThÃ´ng tin",
+                    Name = "Khoa Công ngh? Thông tin",
                     Code = "FIT",
                     CreatedAt = now
                 }, ct);
@@ -73,7 +73,7 @@ namespace LMS.Infrastructure.Data
                         Id = Guid.Parse("50ED565D-C2A9-4B86-81FF-D42C3290D4B8"),
                         Email = "gv01test@gmail.com",
                         PasswordHash = passwordHash,
-                        FullName = "Giáº£ng viÃªn 01",
+                        FullName = "Gi?ng viên 01",
                         TeacherCode = "GV001",
                         Status = "Active",
                         IsActive = true,
@@ -86,7 +86,7 @@ namespace LMS.Infrastructure.Data
                         Id = Guid.Parse("48C6A748-4B43-4EAA-9AA7-A610D3423139"),
                         Email = "sv01test@gmail.com",
                         PasswordHash = passwordHash,
-                        FullName = "Sinh viÃªn 01",
+                        FullName = "Sinh viên 01",
                         StudentCode = "SV001",
                         Status = "Active",
                         IsActive = true,

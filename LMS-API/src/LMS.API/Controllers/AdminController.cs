@@ -1,29 +1,36 @@
-﻿using LMS.Application.DTOs.Admin;
+using LMS.Application.DTOs.Admin;
 using LMS.Application.DTOs.Common;
+using LMS.Application.Interfaces;
 using LMS.Domain.Constant;
-using LMS.Domain.Entities.Users;
 using LMS.Infrastructure.Services;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Cors.Infrastructure;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using static LMS.Application.DTOs.Common.ServiceResult;
 
 namespace LMS.API.Controllers
 {
-    [Authorize(Roles = UserRoles.Admin)]
     [ApiController]
-    [Route("api/admin/users")]
-    public class AdminController: ControllerBase
+    [Route("api/admin")]
+    [Authorize(Policy = "AdminOnly")]
+    public class AdminController : ControllerBase
     {
         private readonly IAdminUserService _service;
 
         public AdminController(IAdminUserService service) => _service = service;
 
-        [HttpGet]
+        [HttpGet("users")]
         public async Task<IActionResult> GetUsers([FromQuery] UserQueryParams query)
         {
             var result = await _service.GetUserAsync(query);
-            return Ok(result);
+            return Ok(new ApiResponse<PagedResultDto<UserListItemDto>>
+            {
+                Success = true,
+                Data = result
+            });
         }
         [HttpGet("{userId}")]
         public async Task<IActionResult> GetUserById(Guid userId)
@@ -51,14 +58,7 @@ namespace LMS.API.Controllers
         public async Task<IActionResult> CreateUser([FromBody] CreateUserDto dto)
         {
             if (!ModelState.IsValid)
-            {
-                return BadRequest(new ApiResponse<object>
-                {
-                    Success = false,
-                    Message = "Dữ liệu không hợp lệ",
-                    Errors = ModelState
-                });
-            }
+                return BadRequest(new ApiResponse<object> { Success = false, Message = "D? li?u kh�ng h?p l?", Errors = ModelState });
 
             var result = await _service.CreateUserAsync(dto);
 
@@ -79,6 +79,29 @@ namespace LMS.API.Controllers
             });
         }
 
+        [HttpPost("users/import")]
+        public async Task<IActionResult> ImportUsers(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest(new ApiResponse<object> { Success = false, Message = "Vui l�ng ch?n file Excel." });
+
+            if (!file.FileName.EndsWith(".xlsx"))
+                return BadRequest(new ApiResponse<object> { Success = false, Message = "Ch? ch?p nh?n file .xlsx" });
+
+            using var stream = file.OpenReadStream();
+            var result = await _service.ImportUsersFromExcelAsync(stream);
+
+            if (!result.IsSuccess)
+                return BadRequest(new ApiResponse<object> { Success = false, Message = result.Message });
+
+            return Ok(new ApiResponse<ImportUserResultDto>
+            {
+                Success = true,
+                Message = result.Message,
+                Data = result.Data
+            });
+        }
+
         [HttpPut("{userId}")]
         public async Task<IActionResult> UpdateUser(Guid userId, [FromBody] UpdateUserDto dto)
         {
@@ -92,25 +115,12 @@ namespace LMS.API.Controllers
             }
 
             if (!ModelState.IsValid)
-            {
-                return BadRequest(new ApiResponse<object>
-                {
-                    Success = false,
-                    Message = "Dữ liệu không hợp lệ",
-                    Errors = ModelState
-                });
-            }
+                return BadRequest(new ApiResponse<object> { Success = false, Message = "D? li?u khng h?p l?", Errors = ModelState });
 
             var result = await _service.UpdateUserAsync(dto);
 
             if (!result.IsSuccess)
-            {
-                return BadRequest(new ApiResponse<UserDetailDto>
-                {
-                    Success = false,
-                    Message = result.Message
-                });
-            }
+            return BadRequest(new ApiResponse<object> { Success = false, Message = result.Message });
 
             return Ok(new ApiResponse<UserDetailDto>
             {
@@ -119,6 +129,7 @@ namespace LMS.API.Controllers
                 Data = result.Data
             });
         }
+
 
         [HttpDelete("{userId}")]
         public async Task<IActionResult> DeleteUser(Guid userId)
@@ -134,11 +145,10 @@ namespace LMS.API.Controllers
                 });
             }
 
-            return Ok(new ApiResponse<bool>
+            return Ok(new ApiResponse<object>
             {
                 Success = true,
-                Message = result.Message,
-                Data = true
+                Message = result.Message
             });
         }
 
@@ -155,21 +165,13 @@ namespace LMS.API.Controllers
             }
 
             var result = await _service.ToggleUserStatusAsync(dto);
-
             if (!result.IsSuccess)
-            {
-                return BadRequest(new ApiResponse<bool>
-                {
-                    Success = false,
-                    Message = result.Message
-                });
-            }
+                return BadRequest(new ApiResponse<object> { Success = false, Message = result.Message });
 
-            return Ok(new ApiResponse<bool>
+            return Ok(new ApiResponse<object>
             {
                 Success = true,
-                Message = result.Message,
-                Data = true
+                Message = result.Message
             });
         }
 
@@ -191,9 +193,10 @@ namespace LMS.API.Controllers
             {
                 Success = true,
                 Message = result.Message,
-                Data = result.Data // New password
+                Data = result.Data // M?t kh?u m?i
             });
         }
+
     }
     [Route("api/admin/system-config")]
     [ApiController]
