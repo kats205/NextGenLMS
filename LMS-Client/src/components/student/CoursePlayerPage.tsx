@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { User } from '../../App';
 import { Header } from '../shared/Header';
-import { mockCourses, mockChapters } from '../../data/mockData';
 import { CheckCircle2, Circle, FileText, Video, File, MessageSquare, ArrowLeft } from 'lucide-react';
 import { Badge } from '../shared/Badge';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useCourseDetail } from '../../hooks/useCourse';
 
 interface CoursePlayerPageProps {
   user: User;
@@ -13,18 +13,78 @@ interface CoursePlayerPageProps {
 export function CoursePlayerPage({ user }: CoursePlayerPageProps) {
   const navigate = useNavigate();
   const { courseId } = useParams<{ courseId: string }>();
-
-  const course = mockCourses.find(c => c.id === courseId);
-  const chapters = mockChapters.filter(c => c.courseId === courseId);
+  const { course, loading, error } = useCourseDetail(courseId);
+  
   const [completedItems, setCompletedItems] = useState<string[]>(['i1', 'i2']);
   const [selectedItemId, setSelectedItemId] = useState('i1');
   const [showFeedback, setShowFeedback] = useState(false);
 
-  if (!course) return <div>Course not found</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Header user={user} />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+            <div className="text-gray-500">Đang tải thông tin khóa học...</div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (error || !course) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Header user={user} />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <button
+            onClick={() => navigate('/student/dashboard')}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            Quay lại danh sách khóa học
+          </button>
+          <div className="text-center py-12">
+            <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500 mb-4">{error || 'Không tìm thấy khóa học'}</p>
+            <button
+              onClick={() => navigate('/student/dashboard')}
+              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+            >
+              Quay lại danh sách
+            </button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Mock data for content items since backend doesn't have this yet
+  const mockChapters = course.chapters.map(chapter => ({
+    id: chapter.id,
+    title: chapter.title,
+    courseId: course.id,
+    items: [
+      {
+        id: `${chapter.id}-item-1`,
+        title: `Bài giảng ${chapter.orderIndex}.1`,
+        type: 'lecture' as 'lecture' | 'assessment',
+        fileType: 'video' as const,
+        duration: 1800
+      },
+      {
+        id: `${chapter.id}-item-2`,
+        title: `Tài liệu ${chapter.orderIndex}.1`,
+        type: 'lecture' as 'lecture' | 'assessment',
+        fileType: 'pdf' as const
+      }
+    ]
+  }));
 
   // Find selected item
   let selectedItem = null;
-  for (const chapter of chapters) {
+  for (const chapter of mockChapters) {
     const item = chapter.items.find(i => i.id === selectedItemId);
     if (item) {
       selectedItem = item;
@@ -69,14 +129,14 @@ export function CoursePlayerPage({ user }: CoursePlayerPageProps) {
           <div className="lg:col-span-1">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden sticky top-4">
               <div className="p-4 bg-primary-50 border-b border-primary-200">
-                <h3 className="font-semibold text-gray-900">Mục lục</h3>
+                <h3 className="font-semibold text-gray-900">{course.name}</h3>
                 <p className="text-sm text-gray-600 mt-1">
-                  {completedItems.length}/{chapters.reduce((acc, ch) => acc + ch.items.length, 0)} hoàn thành
+                  {completedItems.length}/{mockChapters.reduce((acc, ch) => acc + ch.items.length, 0)} hoàn thành
                 </p>
               </div>
 
               <div className="max-h-[calc(100vh-250px)] overflow-y-auto">
-                {chapters.map(chapter => (
+                {mockChapters.map(chapter => (
                   <div key={chapter.id} className="border-b border-gray-200 last:border-b-0">
                     <div className="p-4 bg-gray-50">
                       <h4 className="text-sm font-medium text-gray-900">{chapter.title}</h4>

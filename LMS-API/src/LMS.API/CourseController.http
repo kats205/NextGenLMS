@@ -1,0 +1,92 @@
+### Variables
+@baseUrl = http://localhost:5000
+@token = your-jwt-token-here
+
+### 1. Tạo khóa học mới (Admin/Lecturer)
+POST {{baseUrl}}/api/Course
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "courseCode": "CS101",
+  "name": "Lập trình cơ bản",
+  "description": "Khóa học lập trình cơ bản cho sinh viên năm nhất",
+  "thumbnailUrl": "https://example.com/thumbnail.jpg",
+  "semesterId": "11111111-1111-1111-1111-111111111111",
+  "academicYearId": "22222222-2222-2222-2222-222222222222",
+  "majorId": "33333333-3333-3333-3333-333333333333",
+  "lecturerId": "44444444-4444-4444-4444-444444444444"
+}
+
+### 2. Cập nhật khóa học
+PUT {{baseUrl}}/api/Course/{{courseId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "courseCode": "CS101-Updated",
+  "name": "Lập trình cơ bản - Cập nhật",
+  "description": "Khóa học lập trình cơ bản cho sinh viên năm nhất - Đã cập nhật",
+  "thumbnailUrl": "https://example.com/thumbnail-updated.jpg",
+  "semesterId": "11111111-1111-1111-1111-111111111111",
+  "academicYearId": "22222222-2222-2222-2222-222222222222",
+  "majorId": "33333333-3333-3333-3333-333333333333",
+  "lecturerId": "44444444-4444-4444-4444-444444444444"
+}
+
+### 3. Lấy thông tin chi tiết khóa học
+GET {{baseUrl}}/api/Course/{{courseId}}
+Authorization: Bearer {{token}}
+
+### 4. Lấy tất cả khóa học (Admin only)
+GET {{baseUrl}}/api/Course
+Authorization: Bearer {{token}}
+
+### 5. Lấy khóa học theo giảng viên
+GET {{baseUrl}}/api/Course/lecturer/{{lecturerId}}
+Authorization: Bearer {{token}}
+
+### 6. Lấy khóa học của giảng viên hiện tại
+GET {{baseUrl}}/api/Course/my-courses
+Authorization: Bearer {{token}}
+
+### 7. Lấy khóa học theo sinh viên
+GET {{baseUrl}}/api/Course/student/{{studentId}}
+Authorization: Bearer {{token}}
+
+### 8. Lấy khóa học của sinh viên hiện tại
+GET {{baseUrl}}/api/Course/my-enrolled-courses
+Authorization: Bearer {{token}}
+
+### 9. Đăng ký sinh viên vào khóa học
+POST {{baseUrl}}/api/Course/{{courseId}}/enroll-students
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "studentIds": [
+    "55555555-5555-5555-5555-555555555555",
+    "66666666-6666-6666-6666-666666666666"
+  ]
+}
+
+### 10. Xóa sinh viên khỏi khóa học
+DELETE {{baseUrl}}/api/Course/{{courseId}}/students/{{studentId}}
+Authorization: Bearer {{token}}
+
+### 11. Xóa khóa học
+DELETE {{baseUrl}}/api/Course/{{courseId}}
+Authorization: Bearer {{token}}
+
+### 12. Kiểm tra khóa học có tồn tại không
+GET {{baseUrl}}/api/Course/{{courseId}}/exists
+Authorization: Bearer {{token}}
+
+### 13. Kiểm tra sinh viên có đăng ký khóa học không
+GET {{baseUrl}}/api/Course/{{courseId}}/students/{{studentId}}/enrolled
+Authorization: Bearer {{token}}
+
+### Variables for testing (replace with actual IDs)
+# @courseId = 12345678-1234-1234-1234-123456789012
+# @lecturerId = 44444444-4444-4444-4444-444444444444
+# @studentId = 55555555-5555-5555-5555-555555555555
