@@ -1,27 +1,25 @@
-﻿using Microsoft.AspNetCore.Identity;
+using BCrypt.Net;
 
 namespace LMS.Infrastructure.Security;
 
 public static class PasswordHelper
 {
-    private static readonly PasswordHasher<object> _hasher = new();
-
-    // Hash mật khẩu (dùng khi tạo user, seed data, reset password)
+    // Hash m?t kh?u (d�ng khi t?o user, seed data, reset password)
     public static string Hash(string plainPassword)
     {
-        return _hasher.HashPassword(null!, plainPassword);
+        return BCrypt.Net.BCrypt.HashPassword(plainPassword);
     }
 
     // Verify khi login
     public static bool Verify(string hashedPassword, string inputPassword)
     {
-        var result = _hasher.VerifyHashedPassword(
-            null!,
-            hashedPassword,
-            inputPassword
-        );
-
-        return result == PasswordVerificationResult.Success
-            || result == PasswordVerificationResult.SuccessRehashNeeded;
+        try
+        {
+            return BCrypt.Net.BCrypt.Verify(inputPassword, hashedPassword);
+        }
+        catch
+        {
+            return false;
+        }
     }
 }

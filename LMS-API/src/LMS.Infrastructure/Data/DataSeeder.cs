@@ -1,297 +1,106 @@
-Ôªøusing LMS.Domain.Entities.Assessment;
-using LMS.Domain.Entities.Content;
-using LMS.Domain.Entities.Courses;
-using LMS.Domain.Entities.System;
 using LMS.Domain.Entities.Users;
+using LMS.Domain.Entities.Courses;
 using LMS.Infrastructure.Data;
-using LMS.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
-using System.Text.Json;
+using LMS.Domain.Entities.System;
+using System.Linq;
 
-public sealed class DataSeeder
+namespace LMS.Infrastructure.Data
 {
-    private readonly AppDbContext _db;
-
-    public DataSeeder(AppDbContext db) => _db = db;
-
-    public async Task SeedAsync(string jsonPath, CancellationToken ct = default)
+    public sealed class DataSeeder
     {
-        if (!File.Exists(jsonPath))
+        private readonly AppDbContext _db;
+
+        public DataSeeder(AppDbContext db) => _db = db;
+
+        public async Task SeedAsync(CancellationToken ct = default)
         {
-            Console.WriteLine($"[SEED] File NOT FOUND!");
-            return;
-        }
+            Console.WriteLine("[SEED] Running database seeding...");
 
-        Console.WriteLine($"[SEED] File found, checking existing data...");
+            var now = DateTime.UtcNow;
+            var passwordHash = BCrypt.Net.BCrypt.HashPassword("123456");
 
-        // ƒêi·ªÅu ki·ªán ch·∫∑n seed l·∫∑p
-        if (await _db.AppUsers.AnyAsync(x => x.Email == "admin@nextgenlms.local", ct))
-        {
-            Console.WriteLine($"[SEED] Admin user already exists, skipping seed.");
-            return;
-        }
+            // 1. SEED ROLES
+            var roleAdminId = Guid.Parse("7F6A5FB8-10D6-4B31-9F64-0AE904225071");
+            var roleLecturerId = Guid.Parse("DDEB87B1-28F2-4B15-88D5-350CFF603FBA");
+            var roleStudentId = Guid.Parse("D06CDE01-4C8B-4F26-AD27-41E8DF3B64E7");
 
-        Console.WriteLine($"[SEED] Reading JSON file...");
-        var json = await File.ReadAllTextAsync(jsonPath, ct);
-
-        Console.WriteLine($"[SEED] Deserializing JSON...");
-        var dataset = JsonSerializer.Deserialize<SeedDataset>(json, new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true
-        });
-
-        if (dataset is null)
-        {
-            Console.WriteLine($"[SEED] Failed to deserialize JSON!");
-            return;
-        }
-
-        Console.WriteLine($"[SEED] Dataset loaded. Roles: {dataset.Roles.Count}, Users: {dataset.Users.Count}");
-
-        var now = DateTime.UtcNow;
-
-
-        // Roles
-        _db.AppRoles.AddRange(dataset.Roles.Select(x => new AppRole
-        {
-            Id = x.Id,
-            RoleName = x.RoleName,
-            Description = x.Description,
-            CreatedAt = now,
-            UpdatedAt = null,
-            IsDeleted = false
-        }));
-
-        // Departments
-        _db.Departments.AddRange(dataset.Departments.Select(x => new Department
-        {
-            Id = x.Id,
-            Name = x.Name,
-            Code = x.Code,
-            CreatedAt = now,
-            UpdatedAt = null,
-            IsDeleted = false
-        }));
-
-        // Majors
-        _db.Majors.AddRange(dataset.Majors.Select(x => new Major
-        {
-            Id = x.Id,
-            Name = x.Name,
-            DepartmentId = x.DepartmentId,
-            CreatedAt = now,
-            UpdatedAt = null,
-            IsDeleted = false
-        }));
-
-        // AcademicYears
-        _db.AcademicYears.AddRange(dataset.AcademicYears.Select(x => new AcademicYear
-        {
-            Id = x.Id,
-            Name = x.Name,
-            StartDate = x.StartDate,
-            EndDate = x.EndDate,
-            CreatedAt = now,
-            UpdatedAt = null,
-            IsDeleted = false
-        }));
-
-        // Semesters
-        _db.Semesters.AddRange(dataset.Semesters.Select(x => new Semester
-        {
-            Id = x.Id,
-            Name = x.Name,
-            CreatedAt = now,
-            UpdatedAt = null,
-            IsDeleted = false
-        }));
-
-        // SystemConfigs
-        _db.SystemConfigs.AddRange(dataset.SystemConfigs.Select(x => new SystemConfig
-        {
-            Id = x.Id,
-            ConfigKey = x.ConfigKey,
-            ConfigValue = x.ConfigValue,
-            CreatedAt = now,
-            UpdatedAt = null,
-            IsDeleted = false
-        }));
-
-        // Users
-        foreach (var u in dataset.Users)
-        {
-            var entity = new AppUser
+            if (!await _db.AppRoles.AnyAsync(ct))
             {
-                Id = u.Id,
-                Email = u.Email,
-                FullName = u.FullName,
-                Phone = u.Phone,
-                AvatarUrl = null,
-                Bio = null,
-                StudentCode = u.StudentCode,
-                IsFirstLogin = u.IsFirstLogin,
-                IsActive = u.IsActive,
-                RoleId = u.RoleId,
-                DepartmentId = u.DepartmentId,
-                CreatedAt = now,
-                UpdatedAt = null,
-                IsDeleted = false
-            };
-
-            entity.PasswordHash = PasswordHelper.Hash(u.PlainPassword);
-            _db.AppUsers.Add(entity);
-        }
-
-        // Courses
-        _db.Courses.AddRange(dataset.Courses.Select(x => new Course
-        {
-            Id = x.Id,
-            CourseCode = x.CourseCode,
-            Name = x.Name,
-            Description = x.Description,
-            ThumbnailUrl = x.ThumbnailUrl,
-            SemesterId = x.SemesterId,
-            AcademicYearId = x.AcademicYearId,
-            MajorId = x.MajorId,
-            LecturerId = x.LecturerId,
-            CreatedAt = now,
-            UpdatedAt = null,
-            IsDeleted = false
-        }));
-
-        // Chapters
-        _db.Chapters.AddRange(dataset.Chapters.Select(x => new Chapter
-        {
-            Id = x.Id,
-            CourseId = x.CourseId,
-            Title = x.Title,
-            OrderIndex = x.OrderIndex,
-            CreatedAt = now,
-            UpdatedAt = null,
-            IsDeleted = false
-        }));
-
-        // CourseContents (Polymorphic) - X·ª≠ l√Ω theo Type
-        foreach (var content in dataset.Contents)
-        {
-            switch (content.Type)
-            {
-                case ContentType.Lesson:
-                    _db.Lessons.Add(new Lesson
-                    {
-                        Id = content.Id,
-                        ChapterId = content.ChapterId,
-                        Title = content.Title,
-                        Type = content.Type,
-                        OrderIndex = content.OrderIndex,
-                        FileUrl = content.FileUrl,
-                        FileType = content.FileType,
-                        FileSize = content.FileSize ?? 0,
-                        DurationSeconds = content.DurationSeconds ?? 0,
-                        ContentHtml = content.ContentHtml,
-                        CreatedAt = now,
-                        UpdatedAt = null,
-                        IsDeleted = false
-                    });
-                    break;
-
-                case ContentType.Quiz:
-                    _db.Quizzes.Add(new Quiz
-                    {
-                        Id = content.Id,
-                        ChapterId = content.ChapterId,
-                        Title = content.Title,
-                        Type = content.Type,
-                        OrderIndex = content.OrderIndex,
-                        OpenTime = content.OpenTime,
-                        CloseTime = content.CloseTime,
-                        DurationMinutes = content.DurationMinutes ?? 0,
-                        ShuffleQuestions = content.ShuffleQuestions ?? false,
-                        ShuffleAnswers = content.ShuffleAnswers ?? false,
-                        CreatedAt = now,
-                        UpdatedAt = null,
-                        IsDeleted = false
-                    });
-                    break;
-
-                case ContentType.Assignment:
-                    _db.Set<Assignment>().Add(new Assignment
-                    {
-                        Id = content.Id,
-                        ChapterId = content.ChapterId,
-                        Title = content.Title,
-                        Type = content.Type,
-                        OrderIndex = content.OrderIndex,
-                        DueDate = content.DueDate,
-                        MaxScore = content.MaxScore ?? 0,
-                        Description = content.AssignmentDescription,
-                        CreatedAt = now,
-                        UpdatedAt = null,
-                        IsDeleted = false
-                    });
-                    break;
+                await _db.AppRoles.AddRangeAsync(new List<AppRole>
+                {
+                    new AppRole { Id = roleAdminId, RoleName = "Admin", Description = "Qu?n tr? viÍn", CreatedAt = now },
+                    new AppRole { Id = roleLecturerId, RoleName = "Lecturer", Description = "Gi?ng viÍn", CreatedAt = now },
+                    new AppRole { Id = roleStudentId, RoleName = "Student", Description = "Sinh viÍn", CreatedAt = now }
+                }, ct);
+                await _db.SaveChangesAsync(ct);
+                Console.WriteLine("  - Roles seeded.");
             }
+
+            // 2. SEED DEPARTMENTS
+            var deptFitId = Guid.Parse("68D2BA61-E3E8-42FE-BD96-542C0FC033C3");
+            if (!await _db.Departments.AnyAsync(ct))
+            {
+                await _db.Departments.AddAsync(new Department
+                {
+                    Id = deptFitId,
+                    Name = "Khoa CÙng ngh? ThÙng tin",
+                    Code = "FIT",
+                    CreatedAt = now
+                }, ct);
+                await _db.SaveChangesAsync(ct);
+                Console.WriteLine("  - Departments seeded.");
+            }
+
+            // 3. SEED USERS
+            if (!await _db.AppUsers.AnyAsync(u => u.Email == "admintest@gmail.com", ct))
+            {
+                var users = new List<AppUser>
+                {
+                    new AppUser
+                    {
+                        Id = Guid.Parse("F2CD183C-ECD7-4297-9237-BD306017E8AA"),
+                        Email = "admintest@gmail.com",
+                        PasswordHash = passwordHash,
+                        FullName = "System Admin",
+                        Status = "Active",
+                        IsActive = true,
+                        RoleId = roleAdminId,
+                        CreatedAt = now
+                    },
+                    new AppUser
+                    {
+                        Id = Guid.Parse("50ED565D-C2A9-4B86-81FF-D42C3290D4B8"),
+                        Email = "gv01test@gmail.com",
+                        PasswordHash = passwordHash,
+                        FullName = "Gi?ng viÍn 01",
+                        TeacherCode = "GV001",
+                        Status = "Active",
+                        IsActive = true,
+                        RoleId = roleLecturerId,
+                        DepartmentId = deptFitId,
+                        CreatedAt = now
+                    },
+                    new AppUser
+                    {
+                        Id = Guid.Parse("48C6A748-4B43-4EAA-9AA7-A610D3423139"),
+                        Email = "sv01test@gmail.com",
+                        PasswordHash = passwordHash,
+                        FullName = "Sinh viÍn 01",
+                        StudentCode = "SV001",
+                        Status = "Active",
+                        IsActive = true,
+                        RoleId = roleStudentId,
+                        DepartmentId = deptFitId,
+                        CreatedAt = now
+                    }
+                };
+                await _db.AppUsers.AddRangeAsync(users, ct);
+                await _db.SaveChangesAsync(ct);
+                Console.WriteLine("  - Users seeded.");
+            }
+
+            Console.WriteLine("[SEED] Completed successfully!");
         }
-
-        // Question bank
-        _db.QuestionTopics.AddRange(dataset.Topics.Select(x => new QuestionTopic
-        {
-            Id = x.Id,
-            Name = x.Name,
-            LecturerId = x.LecturerId,
-            CreatedAt = now,
-            UpdatedAt = null,
-            IsDeleted = false
-        }));
-
-        _db.Questions.AddRange(dataset.Questions.Select(x => new Question
-        {
-            Id = x.Id,
-            TopicId = x.TopicId,
-            ContentText = x.ContentText,
-            MediaUrl = x.MediaUrl,
-            Type = x.Type,
-            CreatedAt = now,
-            UpdatedAt = null,
-            IsDeleted = false
-        }));
-
-        _db.Answers.AddRange(dataset.Answers.Select(x => new Answer
-        {
-            Id = x.Id,
-            QuestionId = x.QuestionId,
-            ContentText = x.ContentText,
-            IsCorrect = x.IsCorrect,
-            CreatedAt = now,
-            UpdatedAt = null,
-            IsDeleted = false
-        }));
-
-        _db.QuizQuestions.AddRange(dataset.QuizQuestions.Select(x => new QuizQuestion
-        {
-            Id = x.Id,
-            QuizId = x.QuizId,
-            QuestionId = x.QuestionId,
-            Points = x.Points,
-            CreatedAt = now,
-            UpdatedAt = null,
-            IsDeleted = false
-        }));
-
-        // CourseStudents
-        _db.CourseStudents.AddRange(dataset.CourseStudents.Select(x => new CourseStudent
-        {
-            Id = x.Id,
-            CourseId = x.CourseId,
-            StudentId = x.StudentId,
-            EnrolledDate = now,
-            CreatedAt = now,
-            UpdatedAt = null,
-            IsDeleted = false
-        }));
-
-        Console.WriteLine($"[SEED] Saving to database...");
-        await _db.SaveChangesAsync(ct);
-        Console.WriteLine($"[SEED] Seed completed successfully!");
     }
 }

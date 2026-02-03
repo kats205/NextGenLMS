@@ -1,6 +1,7 @@
-﻿using AutoMapper;
+using AutoMapper;
 using LMS.Application.Interfaces;
 using LMS.Application.Lecturer;
+using LMS.Application.Interfaces;
 using LMS.Domain.Constant;
 using LMS.Infrastructure.Data;
 using LMS.Infrastructure.Services;
@@ -117,6 +118,12 @@ builder.Services.AddCors(options =>
 //DI Service
 builder.Services.AddScoped<IAdminUserService, AdminUserService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<ISystemConfigService, SystemConfigService>();
+builder.Services.AddScoped<IAdminCourseService, AdminCourseService>();
+builder.Services.AddScoped<ICourseConfigService, CourseConfigService>();
+builder.Services.AddScoped<IFileStorageService, CloudinaryService>();
+builder.Services.AddScoped<IEmailService, MockEmailService>();
+builder.Services.AddScoped<IMasterDataService, MasterDataService>();
 
 var app = builder.Build();
 
@@ -129,13 +136,11 @@ using (var scope = app.Services.CreateScope())
 
     try
     {
-        var jsonPath = Path.Combine(app.Environment.ContentRootPath, "Seed", "seed-data.json");
-        await seeder.SeedAsync(jsonPath);
+        await seeder.SeedAsync();
     }
     catch (Exception ex)
     {
         Console.WriteLine($"[ERROR] Seed failed: {ex.Message}");
-        Console.WriteLine($"[ERROR] Stack trace: {ex.StackTrace}");
     }
 }
 // Configure the HTTP request pipeline.

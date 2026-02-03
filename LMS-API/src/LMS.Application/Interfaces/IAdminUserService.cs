@@ -1,0 +1,22 @@
+using LMS.Application.DTOs.Admin;
+using LMS.Application.DTOs.Common;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace LMS.Application.Interfaces
+{
+    public interface IAdminUserService
+    {
+        Task<PagedResultDto<UserListItemDto>> GetUserAsync(UserQueryParams query);
+        Task<ServiceResult<UserDetailDto>> GetUserByIdAsync(Guid userId);
+        Task<ServiceResult<UserDetailDto>> CreateUserAsync(CreateUserDto dto);
+        Task<ServiceResult<UserDetailDto>> UpdateUserAsync(UpdateUserDto dto);
+        Task<ServiceResult<bool>> DeleteUserAsync(Guid userId);
+        Task<ServiceResult<bool>> ToggleUserStatusAsync(ToggleUserStatusDto dto);
+        Task<ServiceResult<string>> ResetPasswordAsync(Guid userId);
+        Task<ServiceResult<ImportUserResultDto>> ImportUsersFromExcelAsync(Stream fileStream);
+    }
+}

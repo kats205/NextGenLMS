@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using LMS.Domain.Entities.System;
 using LMS.Domain.Entities.Users;
 using LMS.Domain.Entities.Courses;
@@ -17,14 +17,26 @@ namespace LMS.Infrastructure.Data
         public DbSet<AcademicYear> AcademicYears { get; set; }
         public DbSet<Semester> Semesters { get; set; }
         public DbSet<SystemConfig> SystemConfigs { get; set; }
+        
+        // Logs
+        public DbSet<AuditLog> AuditLogs { get; set; }
+        public DbSet<ActivityLog> ActivityLogs { get; set; }
+        
+        // Notifications
+        public DbSet<EmailTemplate> EmailTemplates { get; set; }
+        public DbSet<EmailQueue> EmailQueues { get; set; }
+        public DbSet<EmailLog> EmailLogs { get; set; }
 
         // Users
-        public DbSet<AppUser> AppUsers { get; set; } // Renamed to avoid reserved keyword Users collision if needed
+        public DbSet<AppUser> AppUsers { get; set; } 
         public DbSet<AppRole> AppRoles { get; set; }
+        public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
 
         // Courses
         public DbSet<Course> Courses { get; set; }
         public DbSet<CourseStudent> CourseStudents { get; set; }
+        public DbSet<CourseLecturer> CourseLecturers { get; set; }
         public DbSet<Chapter> Chapters { get; set; }
 
         // Content (TPT)
@@ -32,6 +44,7 @@ namespace LMS.Infrastructure.Data
         public DbSet<Lesson> Lessons { get; set; }
         public DbSet<Quiz> Quizzes { get; set; }
         public DbSet<Assignment> Assignments { get; set; }
+        public DbSet<Announcement> Announcements { get; set; }
 
         // Assessment
         public DbSet<QuestionTopic> QuestionTopics { get; set; }
@@ -40,6 +53,8 @@ namespace LMS.Infrastructure.Data
         public DbSet<QuizQuestion> QuizQuestions { get; set; }
         public DbSet<LessonProgress> LessonProgresses { get; set; }
         public DbSet<QuizSubmission> QuizSubmissions { get; set; }
+        public DbSet<AttemptQuestionSnapshot> AttemptQuestionSnapshots { get; set; }
+        public DbSet<EssaySubmission> EssaySubmissions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -48,18 +63,29 @@ namespace LMS.Infrastructure.Data
             // TPT Configuration for CourseContent
             modelBuilder.Entity<CourseContent>().UseTptMappingStrategy();
 
-            // CourseStudent Composite Key or Index configuration if needed
-            // But we used BaseEntity which has Id, so it's fine. 
-            // Better to enforce uniqueness:
+            // CourseStudent Composite Key
             modelBuilder.Entity<CourseStudent>()
                 .HasIndex(cs => new { cs.CourseId, cs.StudentId })
                 .IsUnique();
             
+            // CourseLecturer Composite Key
+            modelBuilder.Entity<CourseLecturer>()
+                .HasIndex(cl => new { cl.CourseId, cl.LecturerId })
+                .IsUnique();
+
             // Relationships
-            modelBuilder.Entity<Course>()
-                .HasOne(c => c.Lecturer)
-                .WithMany(u => u.ManagedCourses)
-                .HasForeignKey(c => c.LecturerId)
+            
+            // Course - Lecturer Many-to-Many
+            modelBuilder.Entity<CourseLecturer>()
+                .HasOne(cl => cl.Course)
+                .WithMany(c => c.Lecturers)
+                .HasForeignKey(cl => cl.CourseId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<CourseLecturer>()
+                .HasOne(cl => cl.Lecturer)
+                .WithMany(u => u.CoLecturedCourses)
+                .HasForeignKey(cl => cl.LecturerId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<CourseStudent>()
@@ -72,6 +98,12 @@ namespace LMS.Infrastructure.Data
                 .HasOne(lp => lp.User)
                 .WithMany(u => u.LessonProgresses)
                 .HasForeignKey(lp => lp.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+                
+            modelBuilder.Entity<AttemptQuestionSnapshot>()
+                .HasOne(s => s.QuizSubmission)
+                .WithMany(qs => qs.Snapshots)
+                .HasForeignKey(s => s.QuizSubmissionId)
                 .OnDelete(DeleteBehavior.Cascade);
         }
     }

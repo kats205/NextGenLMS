@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,12 +8,12 @@ namespace LMS.Domain.Constant
 {
     public static class UserRoles
     {
-        // Role Names (dùng cho Authorization)
+        // Role Names (d�ng cho Authorization)
         public const string Admin = "Admin";
         public const string Student = "Student";
         public const string Lecturer = "Lecturer";
 
-        // Role IDs (dùng cho database queries nếu cần)
+        // Role IDs (d�ng cho database queries n?u c?n)
         public static class Ids
         {
             public static readonly Guid Admin = Guid.Parse("11111111-1111-1111-1111-111111111111");
