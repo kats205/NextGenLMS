@@ -85,12 +85,13 @@ namespace LMS.Infrastructure.Services
                 Phone = user.Phone,
                 AvatarUrl = user.AvatarUrl,
                 StudentCode = user.StudentCode,
+                TeacherCode = user.TeacherCode,
                 RoleName = user.Role?.RoleName ?? string.Empty,
                 RoleId = user.RoleId,
                 DepartmentId = user.DepartmentId,
                 DepartmentName = user.Department?.Name,
                 IsActive = user.IsActive,
-                IsFirstLogin = user.IsFirstLogin,
+                MustChangePassword = user.MustChangePassword,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
             };
@@ -137,8 +138,9 @@ namespace LMS.Infrastructure.Services
                 RoleId = role.Id,
                 DepartmentId = dto.DepartmentId,
                 StudentCode = dto.StudentCode,
+                TeacherCode = dto.TeacherCode,
                 IsActive = true,
-                IsFirstLogin = true,
+                MustChangePassword = true,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -156,12 +158,13 @@ namespace LMS.Infrastructure.Services
                 FullName = newUser.FullName,
                 Phone = newUser.Phone,
                 StudentCode = newUser.StudentCode,
+                TeacherCode = newUser.TeacherCode,
                 RoleName = newUser.Role?.RoleName ?? string.Empty,
                 RoleId = newUser.RoleId,
                 DepartmentId = newUser.DepartmentId,
                 DepartmentName = newUser.Department?.Name,
                 IsActive = newUser.IsActive,
-                IsFirstLogin = newUser.IsFirstLogin,
+                MustChangePassword = newUser.MustChangePassword,
                 CreatedAt = newUser.CreatedAt
             };
 
@@ -210,6 +213,7 @@ namespace LMS.Infrastructure.Services
             user.RoleId = role.Id;
             user.DepartmentId = dto.DepartmentId;
             user.StudentCode = dto.StudentCode;
+            user.TeacherCode = dto.TeacherCode;
             user.IsActive = dto.IsActive;
             user.UpdatedAt = DateTime.UtcNow;
 
@@ -226,12 +230,13 @@ namespace LMS.Infrastructure.Services
                 FullName = user.FullName,
                 Phone = user.Phone,
                 StudentCode = user.StudentCode,
+                TeacherCode = user.TeacherCode,
                 RoleName = user.Role?.RoleName ?? string.Empty,
                 RoleId = user.RoleId,
                 DepartmentId = user.DepartmentId,
                 DepartmentName = user.Department?.Name,
                 IsActive = user.IsActive,
-                IsFirstLogin = user.IsFirstLogin,
+                MustChangePassword = user.MustChangePassword,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
             };
@@ -251,7 +256,7 @@ namespace LMS.Infrastructure.Services
             var hasEnrollments = await _db.Set<Domain.Entities.Courses.CourseStudent>()
                 .AnyAsync(cs => cs.StudentId == userId);
 
-            var hasManagedCourses = await _db.Set<Domain.Entities.Courses.Course>()
+            var hasManagedCourses = await _db.Set<Domain.Entities.Courses.CourseLecturer>()
                 .AnyAsync(c => c.LecturerId == userId);
 
             if (hasEnrollments || hasManagedCourses)
@@ -291,8 +296,8 @@ namespace LMS.Infrastructure.Services
             }
 
             var newPassword = GenerateRandomPassword();
-            user.PasswordHash = PasswordHelper.Hash(newPassword);
-            user.IsFirstLogin = true;
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+            user.MustChangePassword = true;
             user.UpdatedAt = DateTime.UtcNow;
 
             await _db.SaveChangesAsync();

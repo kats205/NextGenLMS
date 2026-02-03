@@ -65,7 +65,8 @@ namespace LMS.Infrastructure.Services
                 FullName = user.FullName,
                 Email = user.Email,
                 Role = user.Role?.RoleName ?? "Student",
-                UserId = user.Id
+                UserId = user.Id,
+                MustChangePassword = user.MustChangePassword
             };
         }
 

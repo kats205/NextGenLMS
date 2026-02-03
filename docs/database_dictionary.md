@@ -1,6 +1,6 @@
 # TỪ ĐIỂN DỮ LIỆU (DATA DICTIONARY)
 
-Tài liệu mô tả chi tiết 20 bảng dữ liệu trong hệ thống NextGenLMS.
+Tài liệu mô tả chi tiết các bảng dữ liệu trong hệ thống NextGenLMS.
 
 ---
 
@@ -66,10 +66,21 @@ Tất cả các bảng bên dưới đều mặc định bao gồm 4 cột kế 
 | `PasswordHash` | `NVARCHAR` | Mật khẩu đã mã hóa. |
 | `FullName` | `NVARCHAR` | Họ và tên. |
 | `StudentCode` | `NVARCHAR` | Mã sinh viên (Null nếu là Giảng viên). |
+| `TeacherCode` | `NVARCHAR` | Mã giảng viên (Null nếu là Sinh viên). |
+| `DateOfBirth` | `DATETIME2` | Ngày sinh. |
 | `AvatarUrl` | `NVARCHAR` | Đường dẫn ảnh đại diện. |
 | `RoleId` | `GUID (FK)` | Vai trò người dùng (`AppRoles`). |
 | `DepartmentId` | `GUID (FK)` | Thuộc khoa nào (`Departments`). |
-| `IsFirstLogin` | `BIT` | Cờ đánh dấu lần đầu đăng nhập. |
+| `MustChangePassword` | `BIT` | Yêu cầu đổi mật khẩu lần đầu (Thay thế `IsFirstLogin`). |
+| `Status` | `NVARCHAR` | Trạng thái (`Active`, `Inactive`, `Suspended`). |
+
+### 3.3. PasswordResetTokens
+| Tên Cột | Kiểu Dữ Liệu | Mô Tả |
+| :--- | :--- | :--- |
+| `Email` | `NVARCHAR` | Email yêu cầu reset. |
+| `Token` | `NVARCHAR` | Mã token xác thực. |
+| `ExpiryDate` | `DATETIME2` | Thời gian hết hạn token. |
+| `IsUsed` | `BIT` | Token đã được sử dụng chưa. |
 
 ---
 
@@ -80,22 +91,31 @@ Tất cả các bảng bên dưới đều mặc định bao gồm 4 cột kế 
 | :--- | :--- | :--- |
 | `CourseCode` | `NVARCHAR` | Mã lớp học phần (VD: NET101_FALL24). |
 | `Name` | `NVARCHAR` | Tên môn học hiển thị. |
+| `Description` | `NVARCHAR` | Mô tả khóa học. |
+| `ThumbnailUrl` | `NVARCHAR` | Ảnh đại diện khóa học. |
 | `SemesterId` | `GUID (FK)` | Học kỳ (`Semesters`). |
 | `AcademicYearId` | `GUID (FK)` | Niên khóa (`AcademicYears`). |
 | `MajorId` | `GUID (FK)` | Ngành học (`Majors`). |
-| `LecturerId` | `GUID (FK)` | Giảng viên phụ trách (`AppUsers`). |
 
-### 4.2. Chapters
+### 4.2. CourseLecturers (Many-to-Many)
+| Tên Cột | Kiểu Dữ Liệu | Mô Tả |
+| :--- | :--- | :--- |
+| `CourseId` | `GUID (FK)` | Khóa học (`Courses`). |
+| `LecturerId` | `GUID (FK)` | Giảng viên (`AppUsers`). |
+| `IsPrimary` | `BIT` | Giảng viên chính (True/False). |
+
+### 4.3. Chapters
 | Tên Cột | Kiểu Dữ Liệu | Mô Tả |
 | :--- | :--- | :--- |
 | `Title` | `NVARCHAR` | Tên chương học. |
 | `OrderIndex` | `INT` | Số thứ tự sắp xếp. |
 | `CourseId` | `GUID (FK)` | Thuộc khóa học nào (`Courses`). |
 
-### 4.3. CourseStudents
+### 4.4. CourseStudents
 | Tên Cột | Kiểu Dữ Liệu | Mô Tả |
 | :--- | :--- | :--- |
 | `EnrolledDate` | `DATETIME2` | Ngày sinh viên vào lớp. |
+| `Source` | `NVARCHAR` | Nguồn ghi danh (`SIS`, `Manual`, `Import`). |
 | `CourseId` | `GUID (FK)` | Lớp học (`Courses`). |
 | `StudentId` | `GUID (FK)` | Sinh viên (`AppUsers`). |
 
@@ -103,13 +123,13 @@ Tất cả các bảng bên dưới đều mặc định bao gồm 4 cột kế 
 
 ## 5. PHÂN HỆ NỘI DUNG (CONTENT - TPT)
 
-> **Lưu ý TPT:** Các bảng con (`Lessons`, `Quizzes`, `Assignments`) chia sẻ chung **Id** với bảng cha `CourseContents`.
+> **Lưu ý TPT:** Các bảng con (`Lessons`, `Quizzes`, `Assignments`, `Announcements`) chia sẻ chung **Id** với bảng cha `CourseContents`.
 
 ### 5.1. CourseContents (Bảng Cha)
 | Tên Cột | Kiểu Dữ Liệu | Mô Tả |
 | :--- | :--- | :--- |
 | `Title` | `NVARCHAR` | Tiêu đề nội dung. |
-| `Type` | `INT` | Loại (1=Lesson, 2=Quiz, 3=Assignment). |
+| `Type` | `INT` | Loại (1=Lesson, 2=Quiz, 3=Assignment, 4=Announcement). |
 | `OrderIndex` | `INT` | Thứ tự trong chương. |
 | `ChapterId` | `GUID (FK)` | Thuộc chương nào (`Chapters`). |
 
@@ -134,6 +154,13 @@ Tất cả các bảng bên dưới đều mặc định bao gồm 4 cột kế 
 | :--- | :--- | :--- |
 | `DueDate` | `DATETIME2` | Hạn nộp bài. |
 | `MaxScore` | `INT` | Điểm số tối đa. |
+| `AssignmentDescription`| `NVARCHAR` | Mô tả bài tập. |
+
+### 5.5. Announcements (Bảng Con - Mới)
+| Tên Cột | Kiểu Dữ Liệu | Mô Tả |
+| :--- | :--- | :--- |
+| `ContentHtml` | `NVARCHAR` | Nội dung thông báo (Rich Text). |
+| `AttachmentsJson` | `NVARCHAR` | JSON chứa danh sách file đính kèm. |
 
 ---
 
@@ -149,7 +176,7 @@ Tất cả các bảng bên dưới đều mặc định bao gồm 4 cột kế 
 | Tên Cột | Kiểu Dữ Liệu | Mô Tả |
 | :--- | :--- | :--- |
 | `ContentText` | `NVARCHAR` | Nội dung câu hỏi. |
-| `Type` | `INT` | Loại câu hỏi (Trắc nghiệm, Tự luận...). |
+| `Type` | `INT` | Loại câu hỏi (`MultipleChoice`, `TrueFalse`, `FillInTheBlank`, `Essay`...). |
 | `TopicId` | `GUID (FK)` | Thuộc chủ đề nào (`QuestionTopics`). |
 
 ### 6.3. Answers
@@ -162,13 +189,13 @@ Tất cả các bảng bên dưới đều mặc định bao gồm 4 cột kế 
 ### 6.4. QuizQuestions
 | Tên Cột | Kiểu Dữ Liệu | Mô Tả |
 | :--- | :--- | :--- |
-| `Points` | `INT` | Điểm số của câu hỏi trong đề này. |
+| `Points` | `DOUBLE` | Điểm số của câu hỏi trong đề này. |
 | `QuizId` | `GUID (FK)` | Đề thi (`Quizzes`). |
 | `QuestionId` | `GUID (FK)` | Câu hỏi (`Questions`). |
 
 ---
 
-## 7. PHÂN HỆ THEO DÕI (TRACKING)
+## 7. PHÂN HỆ THEO DÕI & NỘP BÀI (TRACKING & SUBMISSION)
 
 ### 7.1. LessonProgresses
 | Tên Cột | Kiểu Dữ Liệu | Mô Tả |
@@ -183,10 +210,73 @@ Tất cả các bảng bên dưới đều mặc định bao gồm 4 cột kế 
 | Tên Cột | Kiểu Dữ Liệu | Mô Tả |
 | :--- | :--- | :--- |
 | `Status` | `NVARCHAR` | Trạng thái (`InProgress`, `Submitted`). |
-| `Score` | `FLOAT` | Điểm số đạt được. |
+| `Score` | `DOUBLE` | Tổng điểm số đạt được. |
 | `StartTime` | `DATETIME2` | Thời gian bắt đầu làm. |
 | `EndTime` | `DATETIME2` | Thời gian nộp bài. |
-| `TempData` | `NVARCHAR` | **JSON** lưu bài làm tạm thời (Resume). |
-| `UpdatedAt` | `DATETIME2` | **Quan trọng**: Thời điểm Auto-save cuối cùng. |
+| `AutoSavedAt` | `DATETIME2` | Thời điểm tự động lưu cuối cùng. |
 | `QuizId` | `GUID (FK)` | Đề thi (`Quizzes`). |
 | `StudentId` | `GUID (FK)` | Sinh viên (`AppUsers`). |
+
+### 7.3. AttemptQuestionSnapshots (Chống gian lận & Integrity)
+| Tên Cột | Kiểu Dữ Liệu | Mô Tả |
+| :--- | :--- | :--- |
+| `QuizSubmissionId` | `GUID (FK)` | Bài nộp (`QuizSubmissions`). |
+| `QuestionId` | `GUID (FK)` | Câu hỏi (`Questions`). |
+| `OrderIndex` | `INT` | Thứ tự câu hỏi hiển thị cho sinh viên này. |
+| `QuestionTextSnapshot` | `NVARCHAR` | **Snapshot** nội dung câu hỏi lúc làm bài. |
+| `AnswersSnapshotJson` | `NVARCHAR` | **Snapshot** danh sách đáp án đã xáo trộn. |
+| `StudentAnswerJson` | `NVARCHAR` | Câu trả lời của sinh viên. |
+| `PointsAchieved` | `DOUBLE` | Điểm đạt được cho câu này. |
+| `IsCorrect` | `BIT` | Đúng/Sai. |
+
+### 7.4. EssaySubmissions (Chấm tự luận)
+| Tên Cột | Kiểu Dữ Liệu | Mô Tả |
+| :--- | :--- | :--- |
+| `QuizSubmissionId` | `GUID (FK)` | Bài nộp (`QuizSubmissions`). |
+| `QuestionId` | `GUID (FK)` | Câu hỏi tự luận. |
+| `SubmissionText` | `NVARCHAR` | Đoạn văn trả lời. |
+| `FileUrl` | `NVARCHAR` | File đính kèm (nếu có). |
+| `Score` | `DOUBLE` | Điểm giáo viên chấm. |
+| `Feedback` | `NVARCHAR` | Nhận xét của giáo viên. |
+| `GradedBy` | `GUID (FK)` | Người chấm (`AppUsers`). |
+| `GradedAt` | `DATETIME2` | Thời gian chấm. |
+
+---
+
+## 8. PHÂN HỆ LOGS & NOTIFICATIONS (Mới)
+
+### 8.1. AuditLogs (Truy vết Hệ thống)
+| Tên Cột | Kiểu Dữ Liệu | Mô Tả |
+| :--- | :--- | :--- |
+| `UserId` | `GUID` | Người thực hiện hành động. |
+| `Action` | `NVARCHAR` | Hành động (`Create`, `Update`, `Delete`). |
+| `ResourceType` | `NVARCHAR` | Loại tài nguyên (`User`, `Course`, ...). |
+| `ResourceId` | `NVARCHAR` | ID tài nguyên. |
+| `OldValue` | `NVARCHAR` | Giá trị cũ (JSON). |
+| `NewValue` | `NVARCHAR` | Giá trị mới (JSON). |
+| `Timestamp` | `DATETIME2` | Thời điểm log. |
+
+### 8.2. ActivityLogs (Nhật ký Hoạt động User)
+| Tên Cột | Kiểu Dữ Liệu | Mô Tả |
+| :--- | :--- | :--- |
+| `UserId` | `GUID` | User liên quan. |
+| `ActivityType` | `NVARCHAR` | Loại hoạt động (`Login`, `ViewCourse`, `SubmitQuiz`...). |
+| `Description` | `NVARCHAR` | Mô tả chi tiết. |
+| `IpAddress` | `NVARCHAR` | IP người dùng. |
+| `UserAgent` | `NVARCHAR` | Thông tin trình duyệt/thiết bị. |
+
+### 8.3. EmailTemplates
+| Tên Cột | Kiểu Dữ Liệu | Mô Tả |
+| :--- | :--- | :--- |
+| `TemplateCode` | `NVARCHAR` | Mã mẫu (`WELCOME`, `RESET_PASS`...). |
+| `SubjectTemplate` | `NVARCHAR` | Tiêu đề mẫu. |
+| `BodyTemplateHtml` | `NVARCHAR` | Nội dung HTML mẫu. |
+
+### 8.4. EmailQueues
+| Tên Cột | Kiểu Dữ Liệu | Mô Tả |
+| :--- | :--- | :--- |
+| `ToEmail` | `NVARCHAR` | Email người nhận. |
+| `Subject` | `NVARCHAR` | Tiêu đề email. |
+| `BodyHtml` | `NVARCHAR` | Nội dung email. |
+| `Status` | `NVARCHAR` | Trạng thái (`Pending`, `Sent`, `Failed`). |
+| `RetryCount` | `INT` | Số lần thử lại. |

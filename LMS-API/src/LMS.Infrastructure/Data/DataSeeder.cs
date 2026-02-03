@@ -129,8 +129,10 @@ public sealed class DataSeeder
                 AvatarUrl = null,
                 Bio = null,
                 StudentCode = u.StudentCode,
-                IsFirstLogin = u.IsFirstLogin,
+                TeacherCode = u.TeacherCode, // Assuming available in seed data or null
+                MustChangePassword = u.IsFirstLogin, // Map from old seed property
                 IsActive = u.IsActive,
+                Status = u.IsActive ? "Active" : "Inactive",
                 RoleId = u.RoleId,
                 DepartmentId = u.DepartmentId,
                 CreatedAt = now,
@@ -153,7 +155,18 @@ public sealed class DataSeeder
             SemesterId = x.SemesterId,
             AcademicYearId = x.AcademicYearId,
             MajorId = x.MajorId,
+            // LecturerId removed - handled in CourseLecturers
+            CreatedAt = now,
+            UpdatedAt = null,
+            IsDeleted = false
+        }));
+
+        // Link Course to Lecturers
+        _db.CourseLecturers.AddRange(dataset.Courses.Select(x => new CourseLecturer
+        {
+            CourseId = x.Id,
             LecturerId = x.LecturerId,
+            IsPrimary = true,
             CreatedAt = now,
             UpdatedAt = null,
             IsDeleted = false
@@ -230,6 +243,21 @@ public sealed class DataSeeder
                         IsDeleted = false
                     });
                     break;
+                case ContentType.Announcement: // Handle new type
+                    _db.Announcements.Add(new Announcement
+                    {
+                        Id = content.Id,
+                        ChapterId = content.ChapterId,
+                        Title = content.Title,
+                        Type = content.Type,
+                        OrderIndex = content.OrderIndex,
+                        ContentHtml = content.ContentHtml,
+                        AttachmentsJson = content.AttachmentsJson,
+                        CreatedAt = now,
+                        UpdatedAt = null,
+                        IsDeleted = false
+                    });
+                    break;
             }
         }
 
@@ -285,6 +313,7 @@ public sealed class DataSeeder
             CourseId = x.CourseId,
             StudentId = x.StudentId,
             EnrolledDate = now,
+            Source = "Import", // Default source for seed
             CreatedAt = now,
             UpdatedAt = null,
             IsDeleted = false

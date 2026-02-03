@@ -17,9 +17,12 @@ namespace LMS.Domain.Entities.Users
         public string? Phone { get; set; }
         public string? AvatarUrl { get; set; }
         public string? Bio { get; set; }
-        public string? StudentCode { get; set; } // Nullable if Lecturer
-        public bool IsFirstLogin { get; set; } = true;
-        public bool IsActive { get; set; } = true;
+        public string? StudentCode { get; set; } // For Student
+        public string? TeacherCode { get; set; } // For Lecturer
+        public DateTime? DateOfBirth { get; set; }
+        public bool MustChangePassword { get; set; } = true;
+        public string Status { get; set; } = "Active"; // Active, Inactive, Suspended
+        public bool IsActive { get; set; } = true; // Keep for backward compatibility or simple checks
 
         public Guid RoleId { get; set; }
         public Guid? DepartmentId { get; set; }
@@ -34,6 +37,14 @@ namespace LMS.Domain.Entities.Users
         public ICollection<LMS.Domain.Entities.Assessment.LessonProgress> LessonProgresses { get; set; } = new List<LMS.Domain.Entities.Assessment.LessonProgress>();
         
         // As Lecturer
-        public ICollection<LMS.Domain.Entities.Courses.Course> ManagedCourses { get; set; } = new List<LMS.Domain.Entities.Courses.Course>();
+        public ICollection<LMS.Domain.Entities.Courses.CourseLecturer> CoLecturedCourses { get; set; } = new List<LMS.Domain.Entities.Courses.CourseLecturer>();
+    }
+
+    public class PasswordResetToken : BaseEntity
+    {
+        public string Email { get; set; } = string.Empty;
+        public string Token { get; set; } = string.Empty;
+        public DateTime ExpiryDate { get; set; }
+        public bool IsUsed { get; set; }
     }
 }

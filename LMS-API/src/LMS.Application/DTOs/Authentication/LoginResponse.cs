@@ -14,5 +14,6 @@ namespace LMS.Application.DTOs.Authentication
         public string Email { get; set; } = string.Empty;
         public string Role { get; set; } = string.Empty;
         public Guid UserId { get; set; }
+        public bool MustChangePassword { get; set; }
     }
 }
