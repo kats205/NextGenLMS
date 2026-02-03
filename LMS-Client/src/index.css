@@ -1827,3 +1827,51 @@ html, body {
   inherits: false;
   initial-value: "";
 }
+/* Custom slider styles for MediaViewer */
+.slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.slider::-webkit-slider-track {
+  background: #4B5563;
+  height: 4px;
+  border-radius: 2px;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  background: #FFFFFF;
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid #4B5563;
+}
+
+.slider::-webkit-slider-thumb:hover {
+  background: #F3F4F6;
+}
+
+.slider::-moz-range-track {
+  background: #4B5563;
+  height: 4px;
+  border-radius: 2px;
+  border: none;
+}
+
+.slider::-moz-range-thumb {
+  background: #FFFFFF;
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid #4B5563;
+}
+
+.slider::-moz-range-thumb:hover {
+  background: #F3F4F6;
+}

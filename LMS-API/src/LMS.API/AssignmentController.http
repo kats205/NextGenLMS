@@ -1,0 +1,158 @@
+### Variables
+@baseUrl = http://localhost:5000
+@token = your-jwt-token-here
+@assignmentId = your-assignment-id-here
+@submissionId = your-submission-id-here
+@studentId = your-student-id-here
+@commentId = your-comment-id-here
+
+### 1. Get assignment details
+GET {{baseUrl}}/api/Assignment/{{assignmentId}}
+Authorization: Bearer {{token}}
+
+### 2. Create new submission (Student)
+POST {{baseUrl}}/api/Assignment/submissions
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="assignmentId"
+
+{{assignmentId}}
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="textContent"
+
+Đây là nội dung bài nộp của tôi. Tôi đã hoàn thành tất cả các yêu cầu trong bài tập.
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="links"
+
+https://github.com/myusername/my-project
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="links"
+
+https://docs.google.com/document/d/example
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="saveAsDraft"
+
+true
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="files"; filename="assignment.pdf"
+Content-Type: application/pdf
+
+< ./path/to/your/assignment.pdf
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 3. Update submission (Student)
+PUT {{baseUrl}}/api/Assignment/submissions/{{submissionId}}
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="textContent"
+
+Đây là nội dung bài nộp đã được cập nhật với thêm thông tin chi tiết.
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="saveAsDraft"
+
+false
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 4. Submit assignment (Student)
+POST {{baseUrl}}/api/Assignment/submissions/{{submissionId}}/submit
+Authorization: Bearer {{token}}
+
+### 5. Unsubmit assignment (Student)
+POST {{baseUrl}}/api/Assignment/submissions/{{submissionId}}/unsubmit
+Authorization: Bearer {{token}}
+
+### 6. Get submission details
+GET {{baseUrl}}/api/Assignment/submissions/{{submissionId}}
+Authorization: Bearer {{token}}
+
+### 7. Delete submission (Student)
+DELETE {{baseUrl}}/api/Assignment/submissions/{{submissionId}}
+Authorization: Bearer {{token}}
+
+### 8. Get my submission for assignment (Student)
+GET {{baseUrl}}/api/Assignment/{{assignmentId}}/my-submission
+Authorization: Bearer {{token}}
+
+### 9. Get my submission history (Student)
+GET {{baseUrl}}/api/Assignment/{{assignmentId}}/my-submission-history
+Authorization: Bearer {{token}}
+
+### 10. Grade submission (Lecturer/Admin)
+POST {{baseUrl}}/api/Assignment/submissions/{{submissionId}}/grade
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "score": 85,
+  "feedback": "Bài làm tốt! Tuy nhiên cần cải thiện phần phân tích dữ liệu. Điểm trừ 15 điểm do nộp muộn."
+}
+
+### 11. Get all submissions for assignment (Lecturer/Admin)
+GET {{baseUrl}}/api/Assignment/{{assignmentId}}/submissions
+Authorization: Bearer {{token}}
+
+### 12. Get specific student's submission (Lecturer/Admin)
+GET {{baseUrl}}/api/Assignment/{{assignmentId}}/students/{{studentId}}/submission
+Authorization: Bearer {{token}}
+
+### 13. Create comment on submission
+POST {{baseUrl}}/api/Assignment/submissions/{{submissionId}}/comments
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="content"
+
+Bài làm rất tốt! Tuy nhiên em cần chú ý thêm về phần kết luận.
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="isPrivate"
+
+false
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="files"; filename="feedback.png"
+Content-Type: image/png
+
+< ./path/to/your/feedback.png
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 14. Update comment
+PUT {{baseUrl}}/api/Assignment/comments/{{commentId}}
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="content"
+
+Bài làm rất tốt! Em đã cải thiện đáng kể so với lần trước.
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="isPrivate"
+
+false
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 15. Delete comment
+DELETE {{baseUrl}}/api/Assignment/comments/{{commentId}}
+Authorization: Bearer {{token}}
+
+### 16. Get comments for submission
+GET {{baseUrl}}/api/Assignment/submissions/{{submissionId}}/comments
+Authorization: Bearer {{token}}
+
+### Example workflow for student:
+# 1. Get assignment details to understand requirements
+# 2. Create submission as draft with initial content
+# 3. Update submission multiple times as needed
+# 4. Submit assignment when ready
+# 5. View comments and feedback from instructor
+# 6. Reply to comments if needed
+
+### Example workflow for instructor:
+# 1. Get all submissions for assignment
+# 2. Review each student's submission
+# 3. Add comments and feedback
+# 4. Grade the submission
+# 5. Continue discussion via comments if needed

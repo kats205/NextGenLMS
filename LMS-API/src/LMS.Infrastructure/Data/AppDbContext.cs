@@ -52,6 +52,9 @@ namespace LMS.Infrastructure.Data
         public DbSet<QuizQuestion> QuizQuestions { get; set; }
         public DbSet<LessonProgress> LessonProgresses { get; set; }
         public DbSet<QuizSubmission> QuizSubmissions { get; set; }
+
+        // Assignment - không cần thêm DbSet vì sử dụng EssaySubmission có sẵn
+        // Sẽ sử dụng EssaySubmission để lưu bài nộp assignment
         public DbSet<AttemptQuestionSnapshot> AttemptQuestionSnapshots { get; set; }
         public DbSet<EssaySubmission> EssaySubmissions { get; set; }
 
@@ -98,6 +101,9 @@ namespace LMS.Infrastructure.Data
                 .WithMany(u => u.LessonProgresses)
                 .HasForeignKey(lp => lp.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // Assignment relationships - sử dụng EssaySubmission thay vì AssignmentSubmission
+            // Không cần thêm relationship vì sử dụng bảng có sẵn
                 
             modelBuilder.Entity<AttemptQuestionSnapshot>()
                 .HasOne(s => s.QuizSubmission)

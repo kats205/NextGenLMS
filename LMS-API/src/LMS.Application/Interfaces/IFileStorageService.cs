@@ -33,5 +33,15 @@ namespace LMS.Application.Interfaces
         /// </summary>
         /// <param name="publicId">The public ID of the file in cloud storage</param>
         Task DeleteFileAsync(string publicId);
+
+        /// <summary>
+        /// Get optimized URL for media files with optional transformations
+        /// </summary>
+        /// <param name="originalUrl">The original URL from cloud storage</param>
+        /// <param name="width">Optional width for image/video optimization</param>
+        /// <param name="height">Optional height for image/video optimization</param>
+        /// <param name="quality">Optional quality setting (1-100)</param>
+        /// <returns>Optimized URL with transformations applied</returns>
+        Task<string> GetOptimizedUrlAsync(string originalUrl, int? width = null, int? height = null, int? quality = null);
     }
 }

@@ -2,6 +2,7 @@ using LMS.Application.Common;
 using LMS.Application.Interfaces;
 using LMS.Domain.Constant;
 using LMS.Domain.Entities.Courses;
+using LMS.Domain.Entities.Content;
 using LMS.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using static LMS.Application.Common.ServiceResult;
@@ -11,17 +12,18 @@ namespace LMS.Infrastructure.Services
     public class CourseService : ICourseService
     {
         private readonly AppDbContext _context;
+        private readonly IFileStorageService _fileStorageService;
 
-        public CourseService(AppDbContext context)
+        public CourseService(AppDbContext context, IFileStorageService fileStorageService)
         {
             _context = context;
+            _fileStorageService = fileStorageService;
         }
 
         public async Task<ServiceResult<CourseDto>> CreateCourseAsync(CreateCourseDto createDto, Guid currentUserId)
         {
             try
             {
-                // Kiểm tra quyền: chỉ Admin hoặc Lecturer được tạo khóa học
                 var currentUser = await _context.AppUsers
                     .Include(u => u.Role)
                     .FirstOrDefaultAsync(u => u.Id == currentUserId);
@@ -31,26 +33,12 @@ namespace LMS.Infrastructure.Services
                     return ServiceResult<CourseDto>.Failure("Bạn không có quyền tạo khóa học");
                 }
 
-                // Kiểm tra mã khóa học đã tồn tại
                 var existingCourse = await _context.Courses
                     .FirstOrDefaultAsync(c => c.CourseCode == createDto.CourseCode && !c.IsDeleted);
 
                 if (existingCourse != null)
                 {
                     return ServiceResult<CourseDto>.Failure("Mã khóa học đã tồn tại");
-                }
-
-                // Kiểm tra các foreign key có tồn tại
-                var semester = await _context.Semesters.FindAsync(createDto.SemesterId);
-                var academicYear = await _context.AcademicYears.FindAsync(createDto.AcademicYearId);
-                var major = await _context.Majors.FindAsync(createDto.MajorId);
-                var lecturer = await _context.AppUsers
-                    .Include(u => u.Role)
-                    .FirstOrDefaultAsync(u => u.Id == createDto.LecturerId && u.Role!.RoleName == UserRoles.Lecturer);
-
-                if (semester == null || academicYear == null || major == null || lecturer == null)
-                {
-                    return ServiceResult<CourseDto>.Failure("Thông tin học kỳ, năm học, chuyên ngành hoặc giảng viên không hợp lệ");
                 }
 
                 var course = new Course
@@ -61,12 +49,29 @@ namespace LMS.Infrastructure.Services
                     ThumbnailUrl = createDto.ThumbnailUrl,
                     SemesterId = createDto.SemesterId,
                     AcademicYearId = createDto.AcademicYearId,
-                    MajorId = createDto.MajorId,
-                    LecturerId = createDto.LecturerId
+                    MajorId = createDto.MajorId
                 };
 
                 _context.Courses.Add(course);
                 await _context.SaveChangesAsync();
+
+                if (createDto.LecturerIds?.Any() == true)
+                {
+                    var lecturers = await _context.AppUsers
+                        .Include(u => u.Role)
+                        .Where(u => createDto.LecturerIds.Contains(u.Id) && u.Role!.RoleName == UserRoles.Lecturer)
+                        .ToListAsync();
+
+                    var courseLecturers = lecturers.Select((lecturer, index) => new CourseLecturer
+                    {
+                        CourseId = course.Id,
+                        LecturerId = lecturer.Id,
+                        IsPrimary = index == 0
+                    }).ToList();
+
+                    _context.Set<CourseLecturer>().AddRange(courseLecturers);
+                    await _context.SaveChangesAsync();
+                }
 
                 var courseDto = await GetCourseDtoAsync(course.Id);
                 return ServiceResult<CourseDto>.Success(courseDto, "Tạo khóa học thành công");
@@ -89,35 +94,11 @@ namespace LMS.Infrastructure.Services
                     return ServiceResult<CourseDto>.Failure("Không tìm thấy khóa học");
                 }
 
-                // Kiểm tra quyền
                 if (!await CanUserManageCourseAsync(courseId, currentUserId))
                 {
                     return ServiceResult<CourseDto>.Failure("Bạn không có quyền chỉnh sửa khóa học này");
                 }
 
-                // Kiểm tra mã khóa học trùng (trừ chính nó)
-                var existingCourse = await _context.Courses
-                    .FirstOrDefaultAsync(c => c.CourseCode == updateDto.CourseCode && c.Id != courseId && !c.IsDeleted);
-
-                if (existingCourse != null)
-                {
-                    return ServiceResult<CourseDto>.Failure("Mã khóa học đã tồn tại");
-                }
-
-                // Kiểm tra các foreign key
-                var semester = await _context.Semesters.FindAsync(updateDto.SemesterId);
-                var academicYear = await _context.AcademicYears.FindAsync(updateDto.AcademicYearId);
-                var major = await _context.Majors.FindAsync(updateDto.MajorId);
-                var lecturer = await _context.AppUsers
-                    .Include(u => u.Role)
-                    .FirstOrDefaultAsync(u => u.Id == updateDto.LecturerId && u.Role!.RoleName == UserRoles.Lecturer);
-
-                if (semester == null || academicYear == null || major == null || lecturer == null)
-                {
-                    return ServiceResult<CourseDto>.Failure("Thông tin học kỳ, năm học, chuyên ngành hoặc giảng viên không hợp lệ");
-                }
-
-                // Cập nhật thông tin
                 course.CourseCode = updateDto.CourseCode;
                 course.Name = updateDto.Name;
                 course.Description = updateDto.Description;
@@ -125,7 +106,6 @@ namespace LMS.Infrastructure.Services
                 course.SemesterId = updateDto.SemesterId;
                 course.AcademicYearId = updateDto.AcademicYearId;
                 course.MajorId = updateDto.MajorId;
-                course.LecturerId = updateDto.LecturerId;
                 course.UpdatedAt = DateTime.UtcNow;
 
                 await _context.SaveChangesAsync();
@@ -151,13 +131,11 @@ namespace LMS.Infrastructure.Services
                     return ServiceResult<bool>.Failure("Không tìm thấy khóa học");
                 }
 
-                // Kiểm tra quyền
                 if (!await CanUserManageCourseAsync(courseId, currentUserId))
                 {
                     return ServiceResult<bool>.Failure("Bạn không có quyền xóa khóa học này");
                 }
 
-                // Soft delete
                 course.IsDeleted = true;
                 course.UpdatedAt = DateTime.UtcNow;
 
@@ -184,7 +162,6 @@ namespace LMS.Infrastructure.Services
                     return ServiceResult<CourseDetailDto>.Failure("Người dùng không tồn tại");
                 }
 
-                // Kiểm tra quyền truy cập
                 if (!await CanUserAccessCourseAsync(courseId, currentUserId, currentUser.Role!.RoleName))
                 {
                     return ServiceResult<CourseDetailDto>.Failure("Bạn không có quyền truy cập khóa học này");
@@ -194,9 +171,10 @@ namespace LMS.Infrastructure.Services
                     .Include(c => c.Semester)
                     .Include(c => c.AcademicYear)
                     .Include(c => c.Major)
-                    .Include(c => c.Lecturer)
+                    .Include(c => c.Lecturers).ThenInclude(cl => cl.Lecturer)
                     .Include(c => c.Students).ThenInclude(cs => cs.Student)
-                    .Include(c => c.Chapters)
+                    .Include(c => c.Chapters.OrderBy(ch => ch.OrderIndex))
+                        .ThenInclude(ch => ch.Contents.OrderBy(co => co.OrderIndex))
                     .FirstOrDefaultAsync(c => c.Id == courseId && !c.IsDeleted);
 
                 if (course == null)
@@ -204,7 +182,7 @@ namespace LMS.Infrastructure.Services
                     return ServiceResult<CourseDetailDto>.Failure("Không tìm thấy khóa học");
                 }
 
-                var courseDetailDto = MapToCourseDetailDto(course);
+                var courseDetailDto = await MapToCourseDetailDtoAsync(course);
                 return ServiceResult<CourseDetailDto>.Success(courseDetailDto);
             }
             catch (Exception ex)
@@ -229,14 +207,19 @@ namespace LMS.Infrastructure.Services
                     .Include(c => c.Semester)
                     .Include(c => c.AcademicYear)
                     .Include(c => c.Major)
-                    .Include(c => c.Lecturer)
+                    .Include(c => c.Lecturers).ThenInclude(cl => cl.Lecturer)
                     .Include(c => c.Students)
                     .Include(c => c.Chapters)
                     .Where(c => !c.IsDeleted)
                     .OrderByDescending(c => c.CreatedAt)
                     .ToListAsync();
 
-                var courseDtos = courses.Select(MapToCourseDto).ToList();
+                var courseDtos = new List<CourseDto>();
+                foreach (var course in courses)
+                {
+                    courseDtos.Add(await MapToCourseDtoAsync(course));
+                }
+
                 return ServiceResult<List<CourseDto>>.Success(courseDtos);
             }
             catch (Exception ex)
@@ -253,8 +236,6 @@ namespace LMS.Infrastructure.Services
                     .Include(u => u.Role)
                     .FirstOrDefaultAsync(u => u.Id == currentUserId);
 
-                // Admin có thể xem khóa học của bất kỳ giảng viên nào
-                // Lecturer chỉ có thể xem khóa học của chính mình
                 if (currentUser?.Role?.RoleName == UserRoles.Lecturer && currentUserId != lecturerId)
                 {
                     return ServiceResult<List<CourseDto>>.Failure("Bạn chỉ có thể xem khóa học của chính mình");
@@ -269,14 +250,19 @@ namespace LMS.Infrastructure.Services
                     .Include(c => c.Semester)
                     .Include(c => c.AcademicYear)
                     .Include(c => c.Major)
-                    .Include(c => c.Lecturer)
+                    .Include(c => c.Lecturers).ThenInclude(cl => cl.Lecturer)
                     .Include(c => c.Students)
                     .Include(c => c.Chapters)
-                    .Where(c => c.LecturerId == lecturerId && !c.IsDeleted)
+                    .Where(c => c.Lecturers.Any(cl => cl.LecturerId == lecturerId) && !c.IsDeleted)
                     .OrderByDescending(c => c.CreatedAt)
                     .ToListAsync();
 
-                var courseDtos = courses.Select(MapToCourseDto).ToList();
+                var courseDtos = new List<CourseDto>();
+                foreach (var course in courses)
+                {
+                    courseDtos.Add(await MapToCourseDtoAsync(course));
+                }
+
                 return ServiceResult<List<CourseDto>>.Success(courseDtos);
             }
             catch (Exception ex)
@@ -293,7 +279,7 @@ namespace LMS.Infrastructure.Services
                     .Include(cs => cs.Course).ThenInclude(c => c!.Semester)
                     .Include(cs => cs.Course).ThenInclude(c => c!.AcademicYear)
                     .Include(cs => cs.Course).ThenInclude(c => c!.Major)
-                    .Include(cs => cs.Course).ThenInclude(c => c!.Lecturer)
+                    .Include(cs => cs.Course).ThenInclude(c => c!.Lecturers).ThenInclude(cl => cl.Lecturer)
                     .Include(cs => cs.Course).ThenInclude(c => c!.Students)
                     .Include(cs => cs.Course).ThenInclude(c => c!.Chapters)
                     .Where(cs => cs.StudentId == studentId && !cs.Course!.IsDeleted && !cs.IsDeleted)
@@ -301,7 +287,12 @@ namespace LMS.Infrastructure.Services
                     .OrderByDescending(c => c.CreatedAt)
                     .ToListAsync();
 
-                var courseDtos = courses.Select(MapToCourseDto).ToList();
+                var courseDtos = new List<CourseDto>();
+                foreach (var course in courses)
+                {
+                    courseDtos.Add(await MapToCourseDtoAsync(course));
+                }
+
                 return ServiceResult<List<CourseDto>>.Success(courseDtos);
             }
             catch (Exception ex)
@@ -314,7 +305,6 @@ namespace LMS.Infrastructure.Services
         {
             try
             {
-                // Kiểm tra quyền
                 if (!await CanUserManageCourseAsync(courseId, currentUserId))
                 {
                     return ServiceResult<bool>.Failure("Bạn không có quyền quản lý sinh viên trong khóa học này");
@@ -328,7 +318,6 @@ namespace LMS.Infrastructure.Services
                     return ServiceResult<bool>.Failure("Không tìm thấy khóa học");
                 }
 
-                // Kiểm tra các sinh viên có tồn tại và có role Student
                 var students = await _context.AppUsers
                     .Include(u => u.Role)
                     .Where(u => enrollDto.StudentIds.Contains(u.Id) && u.Role!.RoleName == UserRoles.Student)
@@ -339,13 +328,11 @@ namespace LMS.Infrastructure.Services
                     return ServiceResult<bool>.Failure("Một số sinh viên không tồn tại hoặc không có quyền sinh viên");
                 }
 
-                // Lấy danh sách sinh viên đã đăng ký
                 var existingEnrollments = await _context.CourseStudents
                     .Where(cs => cs.CourseId == courseId && enrollDto.StudentIds.Contains(cs.StudentId) && !cs.IsDeleted)
                     .Select(cs => cs.StudentId)
                     .ToListAsync();
 
-                // Chỉ thêm sinh viên chưa đăng ký
                 var newStudentIds = enrollDto.StudentIds.Except(existingEnrollments).ToList();
 
                 if (newStudentIds.Count == 0)
@@ -375,7 +362,6 @@ namespace LMS.Infrastructure.Services
         {
             try
             {
-                // Kiểm tra quyền
                 if (!await CanUserManageCourseAsync(courseId, currentUserId))
                 {
                     return ServiceResult<bool>.Failure("Bạn không có quyền quản lý sinh viên trong khóa học này");
@@ -389,7 +375,6 @@ namespace LMS.Infrastructure.Services
                     return ServiceResult<bool>.Failure("Sinh viên không có trong khóa học này");
                 }
 
-                // Soft delete
                 enrollment.IsDeleted = true;
                 enrollment.UpdatedAt = DateTime.UtcNow;
 
@@ -422,8 +407,8 @@ namespace LMS.Infrastructure.Services
                     return true;
 
                 case UserRoles.Lecturer:
-                    return await _context.Courses
-                        .AnyAsync(c => c.Id == courseId && c.LecturerId == userId && !c.IsDeleted);
+                    return await _context.Set<CourseLecturer>()
+                        .AnyAsync(cl => cl.CourseId == courseId && cl.LecturerId == userId && !cl.IsDeleted);
 
                 case UserRoles.Student:
                     return await _context.CourseStudents
@@ -446,8 +431,8 @@ namespace LMS.Infrastructure.Services
 
             if (user?.Role?.RoleName == UserRoles.Lecturer)
             {
-                return await _context.Courses
-                    .AnyAsync(c => c.Id == courseId && c.LecturerId == userId && !c.IsDeleted);
+                return await _context.Set<CourseLecturer>()
+                    .AnyAsync(cl => cl.CourseId == courseId && cl.LecturerId == userId && !cl.IsDeleted);
             }
 
             return false;
@@ -459,17 +444,17 @@ namespace LMS.Infrastructure.Services
                 .Include(c => c.Semester)
                 .Include(c => c.AcademicYear)
                 .Include(c => c.Major)
-                .Include(c => c.Lecturer)
+                .Include(c => c.Lecturers).ThenInclude(cl => cl.Lecturer)
                 .Include(c => c.Students)
                 .Include(c => c.Chapters)
                 .FirstAsync(c => c.Id == courseId);
 
-            return MapToCourseDto(course);
+            return await MapToCourseDtoAsync(course);
         }
 
-        private static CourseDto MapToCourseDto(Course course)
+        private async Task<CourseDto> MapToCourseDtoAsync(Course course)
         {
-            return new CourseDto
+            var dto = new CourseDto
             {
                 Id = course.Id,
                 CourseCode = course.CourseCode,
@@ -484,34 +469,50 @@ namespace LMS.Infrastructure.Services
                 AcademicYearName = course.AcademicYear?.Name,
                 MajorId = course.MajorId,
                 MajorName = course.Major?.Name,
-                LecturerId = course.LecturerId,
-                LecturerName = course.Lecturer?.FullName,
-                StudentCount = course.Students?.Count(s => !s.IsDeleted) ?? 0,
-                ChapterCount = course.Chapters?.Count(c => !c.IsDeleted) ?? 0
-            };
-        }
-
-        private static CourseDetailDto MapToCourseDetailDto(Course course)
-        {
-            return new CourseDetailDto
-            {
-                Id = course.Id,
-                CourseCode = course.CourseCode,
-                Name = course.Name,
-                Description = course.Description,
-                ThumbnailUrl = course.ThumbnailUrl,
-                CreatedAt = course.CreatedAt,
-                UpdatedAt = course.UpdatedAt,
-                SemesterId = course.SemesterId,
-                SemesterName = course.Semester?.Name,
-                AcademicYearId = course.AcademicYearId,
-                AcademicYearName = course.AcademicYear?.Name,
-                MajorId = course.MajorId,
-                MajorName = course.Major?.Name,
-                LecturerId = course.LecturerId,
-                LecturerName = course.Lecturer?.FullName,
                 StudentCount = course.Students?.Count(s => !s.IsDeleted) ?? 0,
                 ChapterCount = course.Chapters?.Count(c => !c.IsDeleted) ?? 0,
+                Lecturers = course.Lecturers?
+                    .Where(cl => !cl.IsDeleted)
+                    .Select(cl => new LecturerInCourseDto
+                    {
+                        LecturerId = cl.LecturerId,
+                        FullName = cl.Lecturer?.FullName ?? "",
+                        Email = cl.Lecturer?.Email ?? "",
+                        IsPrimary = cl.IsPrimary
+                    }).ToList() ?? new List<LecturerInCourseDto>()
+            };
+
+            // Process thumbnail URL through Cloudinary if needed
+            if (!string.IsNullOrEmpty(dto.ThumbnailUrl))
+            {
+                dto.ThumbnailUrl = await _fileStorageService.GetOptimizedUrlAsync(dto.ThumbnailUrl, 400, 300);
+            }
+
+            return dto;
+        }
+
+        private async Task<CourseDetailDto> MapToCourseDetailDtoAsync(Course course)
+        {
+            var baseDto = await MapToCourseDtoAsync(course);
+            
+            return new CourseDetailDto
+            {
+                Id = baseDto.Id,
+                CourseCode = baseDto.CourseCode,
+                Name = baseDto.Name,
+                Description = baseDto.Description,
+                ThumbnailUrl = baseDto.ThumbnailUrl,
+                CreatedAt = baseDto.CreatedAt,
+                UpdatedAt = baseDto.UpdatedAt,
+                SemesterId = baseDto.SemesterId,
+                SemesterName = baseDto.SemesterName,
+                AcademicYearId = baseDto.AcademicYearId,
+                AcademicYearName = baseDto.AcademicYearName,
+                MajorId = baseDto.MajorId,
+                MajorName = baseDto.MajorName,
+                StudentCount = baseDto.StudentCount,
+                ChapterCount = baseDto.ChapterCount,
+                Lecturers = baseDto.Lecturers,
                 Students = course.Students?
                     .Where(cs => !cs.IsDeleted)
                     .Select(cs => new StudentInCourseDto
@@ -520,19 +521,88 @@ namespace LMS.Infrastructure.Services
                         StudentCode = cs.Student?.StudentCode ?? "",
                         FullName = cs.Student?.FullName ?? "",
                         Email = cs.Student?.Email ?? "",
-                        EnrolledDate = cs.EnrolledDate
+                        EnrolledDate = cs.EnrolledDate,
+                        Source = cs.Source
                     }).ToList() ?? new List<StudentInCourseDto>(),
-                Chapters = course.Chapters?
-                    .Where(c => !c.IsDeleted)
-                    .OrderBy(c => c.OrderIndex)
-                    .Select(c => new ChapterDto
-                    {
-                        Id = c.Id,
-                        Title = c.Title,
-                        OrderIndex = c.OrderIndex,
-                        ContentCount = c.Contents?.Count(content => !content.IsDeleted) ?? 0
-                    }).ToList() ?? new List<ChapterDto>()
+                Chapters = await MapToChapterDetailDtosAsync(course.Chapters?.Where(c => !c.IsDeleted).OrderBy(c => c.OrderIndex).ToList() ?? new List<Chapter>())
             };
+        }
+
+        private async Task<List<ChapterDetailDto>> MapToChapterDetailDtosAsync(List<Chapter> chapters)
+        {
+            var result = new List<ChapterDetailDto>();
+            
+            foreach (var chapter in chapters)
+            {
+                var chapterDto = new ChapterDetailDto
+                {
+                    Id = chapter.Id,
+                    Title = chapter.Title,
+                    OrderIndex = chapter.OrderIndex,
+                    Contents = await MapToCourseContentDtosAsync(chapter.Contents?.Where(c => !c.IsDeleted).OrderBy(c => c.OrderIndex).ToList() ?? new List<CourseContent>())
+                };
+                result.Add(chapterDto);
+            }
+            
+            return result;
+        }
+
+        private async Task<List<CourseContentDto>> MapToCourseContentDtosAsync(List<CourseContent> contents)
+        {
+            var result = new List<CourseContentDto>();
+            
+            foreach (var content in contents)
+            {
+                var contentDto = new CourseContentDto
+                {
+                    Id = content.Id,
+                    Title = content.Title,
+                    Type = content.Type.ToString(),
+                    OrderIndex = content.OrderIndex,
+                    CreatedAt = content.CreatedAt
+                };
+
+                // Map specific content type properties
+                switch (content)
+                {
+                    case Lesson lesson:
+                        contentDto.FileUrl = lesson.FileUrl;
+                        contentDto.FileType = lesson.FileType;
+                        contentDto.FileSize = lesson.FileSize;
+                        contentDto.DurationSeconds = lesson.DurationSeconds;
+                        contentDto.ContentHtml = lesson.ContentHtml;
+                        
+                        // Process file URL through Cloudinary if it's a media file
+                        if (!string.IsNullOrEmpty(lesson.FileUrl) && (lesson.FileType == "Video" || lesson.FileType == "Image"))
+                        {
+                            contentDto.FileUrl = await _fileStorageService.GetOptimizedUrlAsync(lesson.FileUrl);
+                        }
+                        break;
+
+                    case Quiz quiz:
+                        contentDto.OpenTime = quiz.OpenTime;
+                        contentDto.CloseTime = quiz.CloseTime;
+                        contentDto.DurationMinutes = quiz.DurationMinutes;
+                        contentDto.ShuffleQuestions = quiz.ShuffleQuestions;
+                        contentDto.ShuffleAnswers = quiz.ShuffleAnswers;
+                        break;
+
+                    case Assignment assignment:
+                        contentDto.DueDate = assignment.DueDate;
+                        contentDto.MaxScore = assignment.MaxScore;
+                        contentDto.Description = assignment.Description;
+                        break;
+
+                    case Announcement announcement:
+                        contentDto.ContentHtml = announcement.ContentHtml;
+                        contentDto.AttachmentsJson = announcement.AttachmentsJson;
+                        break;
+                }
+
+                result.Add(contentDto);
+            }
+            
+            return result;
         }
     }
 }

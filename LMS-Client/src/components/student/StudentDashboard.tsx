@@ -144,9 +144,10 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
                   <p className="text-sm text-gray-600">
                     {course.academicYearName} - {course.semesterName}
                   </p>
-                  {course.lecturerName && (
+                  {course.lecturers.length > 0 && (
                     <p className="text-sm text-gray-500">
-                      GV: {course.lecturerName}
+                      GV: {course.lecturers.find(l => l.isPrimary)?.fullName || course.lecturers[0]?.fullName}
+                      {course.lecturers.length > 1 && ` (+${course.lecturers.length - 1} khác)`}
                     </p>
                   )}
                   <div className="flex items-center gap-4 text-xs text-gray-500">

@@ -15,15 +15,21 @@ export interface CourseDto {
   academicYearName?: string;
   majorId: string;
   majorName?: string;
-  lecturerId: string;
-  lecturerName?: string;
+  lecturers: LecturerInCourseDto[];
   studentCount: number;
   chapterCount: number;
 }
 
 export interface CourseDetailDto extends CourseDto {
   students: StudentInCourseDto[];
-  chapters: ChapterDto[];
+  chapters: ChapterDetailDto[];
+}
+
+export interface LecturerInCourseDto {
+  lecturerId: string;
+  fullName: string;
+  email: string;
+  isPrimary: boolean;
 }
 
 export interface StudentInCourseDto {
@@ -32,13 +38,44 @@ export interface StudentInCourseDto {
   fullName: string;
   email: string;
   enrolledDate: string;
+  source: string;
 }
 
-export interface ChapterDto {
+export interface ChapterDetailDto {
   id: string;
   title: string;
   orderIndex: number;
-  contentCount: number;
+  contents: CourseContentDto[];
+}
+
+export interface CourseContentDto {
+  id: string;
+  title: string;
+  type: 'Lesson' | 'Quiz' | 'Assignment' | 'Announcement';
+  orderIndex: number;
+  createdAt: string;
+  
+  // Lesson specific
+  fileUrl?: string;
+  fileType?: string;
+  fileSize?: number;
+  durationSeconds?: number;
+  contentHtml?: string;
+  
+  // Quiz specific
+  openTime?: string;
+  closeTime?: string;
+  durationMinutes?: number;
+  shuffleQuestions?: boolean;
+  shuffleAnswers?: boolean;
+  
+  // Assignment specific
+  dueDate?: string;
+  maxScore?: number;
+  description?: string;
+  
+  // Announcement specific
+  attachmentsJson?: string;
 }
 
 export interface CreateCourseDto {
@@ -49,7 +86,7 @@ export interface CreateCourseDto {
   semesterId: string;
   academicYearId: string;
   majorId: string;
-  lecturerId: string;
+  lecturerIds?: string[];
 }
 
 export interface UpdateCourseDto extends CreateCourseDto {}

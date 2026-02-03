@@ -26,8 +26,7 @@ namespace LMS.Application.Common
         [Required(ErrorMessage = "Chuyên ngành là bắt buộc")]
         public Guid MajorId { get; set; }
 
-        [Required(ErrorMessage = "Giảng viên là bắt buộc")]
-        public Guid LecturerId { get; set; }
+        public List<Guid>? LecturerIds { get; set; } = new();
     }
 
     public class UpdateCourseDto
@@ -54,8 +53,7 @@ namespace LMS.Application.Common
         [Required(ErrorMessage = "Chuyên ngành là bắt buộc")]
         public Guid MajorId { get; set; }
 
-        [Required(ErrorMessage = "Giảng viên là bắt buộc")]
-        public Guid LecturerId { get; set; }
+        public List<Guid>? LecturerIds { get; set; } = new();
     }
 
     public class CourseDto
@@ -78,9 +76,7 @@ namespace LMS.Application.Common
         public Guid MajorId { get; set; }
         public string? MajorName { get; set; }
 
-        public Guid LecturerId { get; set; }
-        public string? LecturerName { get; set; }
-
+        public List<LecturerInCourseDto> Lecturers { get; set; } = new();
         public int StudentCount { get; set; }
         public int ChapterCount { get; set; }
     }
@@ -88,7 +84,15 @@ namespace LMS.Application.Common
     public class CourseDetailDto : CourseDto
     {
         public List<StudentInCourseDto> Students { get; set; } = new();
-        public List<ChapterDto> Chapters { get; set; } = new();
+        public List<ChapterDetailDto> Chapters { get; set; } = new();
+    }
+
+    public class LecturerInCourseDto
+    {
+        public Guid LecturerId { get; set; }
+        public string FullName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public bool IsPrimary { get; set; }
     }
 
     public class StudentInCourseDto
@@ -98,6 +102,46 @@ namespace LMS.Application.Common
         public string FullName { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public DateTime EnrolledDate { get; set; }
+        public string Source { get; set; } = string.Empty;
+    }
+
+    public class ChapterDetailDto
+    {
+        public Guid Id { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public int OrderIndex { get; set; }
+        public List<CourseContentDto> Contents { get; set; } = new();
+    }
+
+    public class CourseContentDto
+    {
+        public Guid Id { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public string Type { get; set; } = string.Empty; // Lesson, Quiz, Assignment, Announcement
+        public int OrderIndex { get; set; }
+        public DateTime CreatedAt { get; set; }
+
+        // Lesson specific
+        public string? FileUrl { get; set; }
+        public string? FileType { get; set; }
+        public long FileSize { get; set; }
+        public int DurationSeconds { get; set; }
+        public string? ContentHtml { get; set; }
+
+        // Quiz specific
+        public DateTime? OpenTime { get; set; }
+        public DateTime? CloseTime { get; set; }
+        public int DurationMinutes { get; set; }
+        public bool ShuffleQuestions { get; set; }
+        public bool ShuffleAnswers { get; set; }
+
+        // Assignment specific
+        public DateTime? DueDate { get; set; }
+        public int MaxScore { get; set; }
+        public string? Description { get; set; }
+
+        // Announcement specific
+        public string? AttachmentsJson { get; set; }
     }
 
     public class ChapterDto
