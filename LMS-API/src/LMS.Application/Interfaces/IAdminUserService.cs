@@ -1,4 +1,4 @@
-﻿using LMS.Application.DTOs.Admin;
+using LMS.Application.DTOs.Admin;
 using LMS.Application.DTOs.Common;
 using System;
 using System.Collections.Generic;
@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LMS.Infrastructure.Services
+namespace LMS.Application.Interfaces
 {
     public interface IAdminUserService
     {
@@ -17,5 +17,6 @@ namespace LMS.Infrastructure.Services
         Task<ServiceResult<bool>> DeleteUserAsync(Guid userId);
         Task<ServiceResult<bool>> ToggleUserStatusAsync(ToggleUserStatusDto dto);
         Task<ServiceResult<string>> ResetPasswordAsync(Guid userId);
+        Task<ServiceResult<ImportUserResultDto>> ImportUsersFromExcelAsync(Stream fileStream);
     }
 }
