@@ -83,6 +83,7 @@ namespace LMS.Infrastructure.Services
                 Email = user.Email,
                 FullName = user.FullName,
                 Phone = user.Phone,
+                DateOfBirth = user.DateOfBirth,
                 AvatarUrl = user.AvatarUrl,
                 StudentCode = user.StudentCode,
                 TeacherCode = user.TeacherCode,
@@ -124,16 +125,36 @@ namespace LMS.Infrastructure.Services
                 }
             }
 
-            // Generate password if not provided
-            var password = dto.Password ?? GenerateRandomPassword();
+            // Generate password if not provided.
+            // If client provided DateOfBirth use it to create default password in dd/MM/yyyy format.
+            var id = Guid.NewGuid();
+            string password;
+            if (!string.IsNullOrWhiteSpace(dto.Password))
+            {
+                password = dto.Password!;
+            }
+            else if (dto.DateOfBirth.HasValue)
+            {
+                // format as dd/MM/yyyy
+                password = dto.DateOfBirth.Value.ToString("dd/MM/yyyy");
+            }
+            else
+            {
+                // Fallback: try to derive from DB (for reset scenarios) or generate a simple random 8-char string
+                var derived = GenerateDoBToPasswordById(id);
+                if (!string.IsNullOrEmpty(derived)) password = derived;
+                else password = Guid.NewGuid().ToString("N").Substring(0, 8);
+            }
+
             var passwordHash = PasswordHelper.Hash(password);
 
             var newUser = new AppUser
             {
-                Id = Guid.NewGuid(),
+                Id = id,
                 Email = dto.Email,
                 FullName = dto.FullName,
                 Phone = dto.Phone,
+                DateOfBirth = dto.DateOfBirth,
                 PasswordHash = passwordHash,
                 RoleId = role.Id,
                 DepartmentId = dto.DepartmentId,
@@ -210,6 +231,7 @@ namespace LMS.Infrastructure.Services
             user.Email = dto.Email;
             user.FullName = dto.FullName;
             user.Phone = dto.Phone;
+            user.DateOfBirth = dto.DateOfBirth;
             user.RoleId = role.Id;
             user.DepartmentId = dto.DepartmentId;
             user.StudentCode = dto.StudentCode;
@@ -294,8 +316,12 @@ namespace LMS.Infrastructure.Services
             {
                 return ServiceResult<string>.Failure("Không tìm thấy người dùng");
             }
-
-            var newPassword = GenerateRandomPassword();
+            var newPassword = GenerateDoBToPasswordById(user.Id);
+            if (string.IsNullOrEmpty(newPassword))
+            {
+                // fallback random
+                newPassword = Guid.NewGuid().ToString("N").Substring(0, 8);
+            }
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
             user.MustChangePassword = true;
             user.UpdatedAt = DateTime.UtcNow;
@@ -305,13 +331,15 @@ namespace LMS.Infrastructure.Services
             return ServiceResult<string>.Success(newPassword, "Reset mật khẩu thành công");
         }
 
-        private string GenerateRandomPassword()
+        private string GenerateDoBToPasswordById(Guid userId)
         {
             // Generate 8-character password with letters and numbers
-            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-            var random = new Random();
-            return new string(Enumerable.Repeat(chars, 8)
-                .Select(s => s[random.Next(s.Length)]).ToArray());
+            var doB = _db.AppUsers.Where(u => u.Id == userId).Select(u => u.DateOfBirth).FirstOrDefault();
+            if (doB.HasValue)
+            {
+                return doB.Value.ToString("dd/MM/yyyy");
+            }
+            return null;
         }
     }
 }

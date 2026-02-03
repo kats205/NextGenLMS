@@ -130,30 +130,13 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
               <div className="text-xs text-success-600 font-medium">{stats.activeCourses} đang hoạt động</div>
             </div>
           </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-warning-100 rounded-lg flex items-center justify-center">
-                <Activity className="w-6 h-6 text-warning-600" />
-              </div>
-            </div>
-            <div className="text-3xl font-semibold text-gray-900 mb-1">{stats.totalPageViews.toLocaleString()}</div>
-            <div className="text-sm text-gray-600">Lượt truy cập</div>
-            <div className="flex items-center gap-2 mt-2">
-              <TrendingUp className="w-3 h-3 text-success-600" />
-              <span className="text-xs text-success-600 font-medium">+12% so với tháng trước</span>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center">
-                <Activity className="w-6 h-6 text-primary-600" />
-              </div>
-            </div>
-            <div className="text-3xl font-semibold text-gray-900 mb-1">{stats.avgSessionTime}</div>
-            <div className="text-sm text-gray-600">Thời gian trung bình</div>
-          </div>
+          <button
+            onClick={() => navigate('/admin/courses')}
+            className="p-6 bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all text-left">
+            <BookOpen className="w-8 h-8 text-primary-600 mb-3" />
+            <h3 className="font-semibold text-gray-900 mb-1">Quản lý khóa học</h3>
+            <p className="text-sm text-gray-600">Xem và quản lý khóa học</p>
+          </button>
         </div>
 
         {/* Recent Activity */}

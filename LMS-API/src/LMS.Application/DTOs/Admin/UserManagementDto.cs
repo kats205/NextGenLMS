@@ -11,6 +11,7 @@ namespace LMS.Application.DTOs.Admin
             public string Email { get; set; } = string.Empty;
             public string FullName { get; set; } = string.Empty;
             public string? Phone { get; set; }
+            public DateTime? DateOfBirth { get; set; }
             public string RoleName { get; set; } = string.Empty; // "Admin", "Lecturer", "Student"
             public Guid? DepartmentId { get; set; }
             public string? StudentCode { get; set; }
@@ -23,6 +24,7 @@ namespace LMS.Application.DTOs.Admin
             public Guid UserId { get; set; }
             public string Email { get; set; } = string.Empty;
             public string FullName { get; set; } = string.Empty;
+            public DateTime? DateOfBirth { get; set; }
             public string? Phone { get; set; }
             public string RoleName { get; set; } = string.Empty;
             public Guid? DepartmentId { get; set; }
@@ -37,6 +39,7 @@ namespace LMS.Application.DTOs.Admin
             public string Email { get; set; } = string.Empty;
             public string FullName { get; set; } = string.Empty;
             public string? Phone { get; set; }
+            public DateTime? DateOfBirth { get; set; }
             public string? AvatarUrl { get; set; }
             public string? StudentCode { get; set; }
             public string? TeacherCode { get; set; }

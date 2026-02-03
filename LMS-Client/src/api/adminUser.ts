@@ -21,6 +21,7 @@ export type CreateUserDto = {
     email: string;
     fullName: string;
     phone?: string|null;
+    dateOfBirth?: string | null;
     roleName:string;
     departmentId?:string | null;
     studentCode?:string | null;
@@ -31,6 +32,7 @@ export type UpdateUserDto = {
     email: string;
     fullName: string;
     phone?: string|null;
+    dateOfBirth?: string | null;
     roleName:string;
     departmentId?:string | null;
     studentCode?:string | null;
@@ -41,6 +43,7 @@ export type UserDetailDto = {
     email: string;
     fullName: string;
     phone?: string|null;
+    dateOfBirth?: string | null;
     avatarUrl?: string|null;
     studentCode?:string | null;
     roleName:string;
