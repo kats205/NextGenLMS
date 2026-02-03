@@ -1,8 +1,12 @@
-﻿using LMS.Domain.Constant;
+﻿using AutoMapper;
+using LMS.Application.Interfaces;
+using LMS.Application.Lecturer;
+using LMS.Domain.Constant;
 using LMS.Infrastructure.Data;
 using LMS.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using System.Text;
@@ -39,7 +43,10 @@ builder.Services.AddSwaggerGen(options =>
         }
     });
 });
-
+builder.Services.AddAutoMapper(cfg =>
+{
+    cfg.AddProfile<LecturerMappingProfile>();
+});
 
 // DB Context Setup
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -145,6 +152,8 @@ app.UseCors("AllowClient");
 app.UseAuthentication();
 
 app.UseAuthorization();
+
+app.UseMiddleware<ErrorHandlerMiddleware>();
 
 app.Use(async (context, next) =>
 {

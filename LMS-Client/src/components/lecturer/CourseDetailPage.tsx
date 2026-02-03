@@ -1,106 +1,161 @@
-import { useState } from 'react';
-import { User } from '../../App';
-import { Header } from '../shared/Header';
-import { mockCourses } from '../../data/mockData';
-import { ArrowLeft, FileText, HelpCircle, ClipboardList, Users, BarChart3 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
+import lecturerApi from '../../api/lecturerApi';
+import type { Course } from './lecturer.types';
 import { ContentManagement } from './ContentManagement';
-import { QuestionBank } from './QuestionBank';
 import { AssessmentManagement } from './AssessmentManagement';
+import { QuestionBank } from './QuestionBank';
 import { StudentList } from './StudentList';
 import { CourseReports } from './CourseReports';
-import { useNavigate, useParams } from 'react-router-dom';
 
-interface CourseDetailPageProps {
-  user: User;
-}
+type TabType = 'content' | 'assessments' | 'questions' | 'students' | 'reports';
 
-type Tab = 'content' | 'questions' | 'assessments' | 'students' | 'reports';
+const CourseDetailPage: React.FC = () => {
+    const { courseId } = useParams<{ courseId: string }>();
+    const navigate = useNavigate();
 
-export function CourseDetailPage({ user }: CourseDetailPageProps) {
-  const navigate = useNavigate();
-  const { courseId } = useParams<{ courseId: string }>();
-  const [activeTab, setActiveTab] = useState<Tab>('content');
-  const course = mockCourses.find(c => c.id === courseId);
+    const [course, setCourse] = useState<Course | null>(null);
+    const [activeTab, setActiveTab] = useState<TabType>('content');
+    const [loading, setLoading] = useState(true);
 
-  if (!course) {
-    return <div>Course not found</div>;
-  }
+    useEffect(() => {
+        if (courseId) {
+            loadCourse();
+        }
+    }, [courseId]);
 
-  const tabs = [
-    { id: 'content' as Tab, label: 'Nội dung', icon: FileText },
-    { id: 'questions' as Tab, label: 'Ngân hàng câu hỏi', icon: HelpCircle },
-    { id: 'assessments' as Tab, label: 'Bài kiểm tra', icon: ClipboardList },
-    { id: 'students' as Tab, label: 'Sinh viên', icon: Users },
-    { id: 'reports' as Tab, label: 'Báo cáo', icon: BarChart3 },
-  ];
+    const loadCourse = async () => {
+        if (!courseId) return;
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <Header user={user} />
+        try {
+            setLoading(true);
+            const data = await lecturerApi.getCourseById(courseId);
+            setCourse(data);
+        } catch (error: any) {
+            console.error('Failed to load course:', error);
+            toast.error('Không thể tải thông tin khóa học');
+        } finally {
+            setLoading(false);
+        }
+    };
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Back button and course header */}
-        <button
-          onClick={() => navigate('/lecturer/dashboard')}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          Quay lại danh sách khóa học
-        </button>
+    const handleBack = () => {
+        navigate('/lecturer/dashboard');
+    };
 
-        <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-2xl font-semibold text-gray-900">{course.name}</h1>
-                <span className="text-sm font-medium px-3 py-1 bg-primary-50 text-primary-700 rounded-full border border-primary-200">
-                  {course.code}
-                </span>
-              </div>
-              <p className="text-gray-600">
-                {course.academicYear} - {course.semester} • {course.studentCount} sinh viên
-              </p>
-              {course.description && (
-                <p className="text-sm text-gray-500 mt-2">{course.description}</p>
-              )}
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
             </div>
-          </div>
-        </div>
+        );
+    }
 
-        {/* Tabs */}
-        <div className="bg-white rounded-xl shadow-sm mb-6 overflow-hidden">
-          <div className="border-b border-gray-200">
-            <nav className="flex -mb-px overflow-x-auto">
-              {tabs.map(tab => {
-                const Icon = tab.icon;
-                const isActive = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 px-6 py-4 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${isActive
-                      ? 'border-primary-600 text-primary-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                      }`}
-                  >
-                    <Icon className="w-5 h-5" />
-                    {tab.label}
-                  </button>
-                );
-              })}
-            </nav>
-          </div>
+    if (!course) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="text-center">
+                    <p className="text-gray-500 mb-4">Không tìm thấy khóa học</p>
+                    <button
+                        onClick={handleBack}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    >
+                        Quay lại
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
-          {/* Tab Content */}
-          <div className="p-6">
-            {activeTab === 'content' && <ContentManagement courseId={courseId || ''} />}
-            {activeTab === 'questions' && <QuestionBank courseId={courseId || ''} />}
-            {activeTab === 'assessments' && <AssessmentManagement courseId={courseId || ''} />}
-            {activeTab === 'students' && <StudentList courseId={courseId || ''} />}
-            {activeTab === 'reports' && <CourseReports courseId={courseId || ''} />}
-          </div>
+    return (
+        <div className="min-h-screen bg-gray-50">
+            {/* Header */}
+            <div className="bg-white shadow-sm border-b">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                    <div className="flex items-center space-x-4">
+                        <button
+                            onClick={handleBack}
+                            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                        >
+                            ← Quay lại
+                        </button>
+                        <div className="flex-1">
+                            <h1 className="text-xl font-semibold text-gray-900">{course.name}</h1>
+                            <p className="text-sm text-gray-600">
+                                {course.courseCode} • {course.semesterName}
+                            </p>
+                        </div>
+                        <div className="flex items-center space-x-2 text-sm text-gray-600">
+                            <span>👥 {course.totalStudents} sinh viên</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Tabs */}
+            <div className="bg-white border-b">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <nav className="flex space-x-8">
+                        <TabButton
+                            active={activeTab === 'content'}
+                            onClick={() => setActiveTab('content')}
+                            label="Khóa học của tôi"
+                        />
+                        <TabButton
+                            active={activeTab === 'assessments'}
+                            onClick={() => setActiveTab('assessments')}
+                            label="Bài kiểm tra"
+                        />
+                        <TabButton
+                            active={activeTab === 'questions'}
+                            onClick={() => setActiveTab('questions')}
+                            label="Ngân hàng câu hỏi"
+                        />
+                        <TabButton
+                            active={activeTab === 'students'}
+                            onClick={() => setActiveTab('students')}
+                            label="Chấm bài"
+                        />
+                        <TabButton
+                            active={activeTab === 'reports'}
+                            onClick={() => setActiveTab('reports')}
+                            label="Báo cáo lớp"
+                        />
+                    </nav>
+                </div>
+            </div>
+
+            {/* Tab Content */}
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                {activeTab === 'content' && <ContentManagement courseId={course.id} />}
+                {activeTab === 'assessments' && <AssessmentManagement courseId={course.id} />}
+                {activeTab === 'questions' && <QuestionBank courseId={course.id} />}
+                {activeTab === 'students' && <StudentList courseId={course.id} />}
+                {activeTab === 'reports' && <CourseReports courseId={course.id} />}
+            </main>
         </div>
-      </main>
-    </div>
-  );
+    );
+};
+
+interface TabButtonProps {
+    active: boolean;
+    onClick: () => void;
+    label: string;
 }
+
+const TabButton: React.FC<TabButtonProps> = ({ active, onClick, label }) => {
+    return (
+        <button
+            onClick={onClick}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${active
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                }`}
+        >
+            {label}
+        </button>
+    );
+};
+
+export default CourseDetailPage;
