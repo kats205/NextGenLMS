@@ -12,5 +12,9 @@ namespace LMS.Infrastructure.Services
         Task<LoginResponse> LoginAsync(LoginRequest request);
         Task<bool> ValidateTokenAsync(string token);
         Task<LoginResponse> RefreshTokenAsync(string refreshToken);
+        Task RevokeTokenAsync(string refreshToken);
+        Task ChangePasswordAsync(Guid userId, string currentPassword, string newPassword);
+        Task ForgotPasswordAsync(string email);
+        Task ResetPasswordAsync(string email, string token, string newPassword);
     }
 }

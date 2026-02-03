@@ -112,6 +112,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddScoped<IAdminUserService, AdminUserService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IFileStorageService, CloudinaryService>();
+builder.Services.AddScoped<LMS.Application.Common.Interfaces.IEmailService, MockEmailService>();
 
 var app = builder.Build();
 

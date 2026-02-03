@@ -19,11 +19,13 @@ namespace LMS.Infrastructure.Services
     {
         private readonly AppDbContext _db;
         private readonly IConfiguration _config;
+        private readonly LMS.Application.Common.Interfaces.IEmailService _emailService;
 
-        public AuthService(AppDbContext db, IConfiguration config)
+        public AuthService(AppDbContext db, IConfiguration config, LMS.Application.Common.Interfaces.IEmailService emailService)
         {
             _db = db;
             _config = config;
+            _emailService = emailService;
         }
 
         public async Task<LoginResponse> LoginAsync(LoginRequest request)
@@ -58,16 +60,25 @@ namespace LMS.Infrastructure.Services
 
             // 4. Generate tokens
             var token = GenerateJwtToken(user);
-            var refreshToken = GenerateRefreshToken();
+            var refreshTokenValue = GenerateRefreshToken();
 
-            // 5. Lưu refresh token vào database (optional - nếu muốn quản lý refresh token)
-            // TODO: Tạo bảng RefreshTokens nếu cần
+            // 5. Lưu refresh token vào database
+            var refreshTokenEntity = new LMS.Domain.Entities.Users.RefreshToken
+            {
+                Token = refreshTokenValue,
+                UserId = user.Id,
+                Expires = DateTime.UtcNow.AddDays(7), // Refresh Token valid for 7 days
+                Created = DateTime.UtcNow
+            };
+            
+            _db.RefreshTokens.Add(refreshTokenEntity);
+            await _db.SaveChangesAsync();
 
             // 6. Return response
             return new LoginResponse
             {
                 Token = token,
-                RefreshToken = refreshToken,
+                RefreshToken = refreshTokenValue,
                 FullName = user.FullName,
                 Email = user.Email,
                 Role = user.Role?.RoleName ?? "Student",
@@ -106,13 +117,63 @@ namespace LMS.Infrastructure.Services
             }
         }
 
-        public async Task<LoginResponse> RefreshTokenAsync(string refreshToken)
+        public async Task<LoginResponse> RefreshTokenAsync(string oldRefreshToken)
         {
-            // TODO: Implement refresh token logic
-            // 1. Validate refresh token from database
-            // 2. Get user from refresh token
-            // 3. Generate new access token
-            throw new NotImplementedException("Refresh token chưa được implement");
+            // 1. Tìm refresh token trong DB
+            var existingToken = await _db.RefreshTokens
+                .Include(r => r.User)
+                .ThenInclude(u => u.Role)
+                .FirstOrDefaultAsync(r => r.Token == oldRefreshToken);
+
+            // 2. Validate token
+            if (existingToken == null)
+                throw new UnauthorizedAccessException("Invalid refresh token");
+
+            if (existingToken.IsExpired)
+                throw new UnauthorizedAccessException("Refresh token has expired");
+
+            if (existingToken.Revoked != null)
+                throw new UnauthorizedAccessException("Refresh token has been revoked");
+
+            // 3. Mark old token as revoked
+            existingToken.Revoked = DateTime.UtcNow;
+
+            // 4. Generate new pair of tokens
+            var newAccessToken = GenerateJwtToken(existingToken.User!);
+            var newRefreshTokenValue = GenerateRefreshToken();
+
+            // 5. Save new refresh token
+            var newRefreshTokenEntity = new LMS.Domain.Entities.Users.RefreshToken
+            {
+                Token = newRefreshTokenValue,
+                UserId = existingToken.UserId,
+                Expires = DateTime.UtcNow.AddDays(7),
+                Created = DateTime.UtcNow
+            };
+
+            _db.RefreshTokens.Add(newRefreshTokenEntity);
+            await _db.SaveChangesAsync();
+
+            return new LoginResponse
+            {
+                Token = newAccessToken,
+                RefreshToken = newRefreshTokenValue,
+                FullName = existingToken.User!.FullName,
+                Email = existingToken.User.Email,
+                Role = existingToken.User.Role?.RoleName ?? "Student",
+                UserId = existingToken.UserId,
+                MustChangePassword = existingToken.User.MustChangePassword
+            };
+        }
+
+        public async Task RevokeTokenAsync(string refreshToken)
+        {
+            var token = await _db.RefreshTokens.FirstOrDefaultAsync(r => r.Token == refreshToken);
+            if (token != null)
+            {
+                token.Revoked = DateTime.UtcNow;
+                await _db.SaveChangesAsync();
+            }
         }
 
         #region Private Methods
@@ -131,7 +192,7 @@ namespace LMS.Infrastructure.Services
                     new Claim("RoleId", user.RoleId.ToString()),
                     new Claim("StudentCode", user.StudentCode ?? "")
                 }),
-                Expires = DateTime.UtcNow.AddHours(8), // Token expire sau 8 giờ
+                Expires = DateTime.UtcNow.AddMinutes(30), // Access Token 30 mins
                 Issuer = _config["Jwt:Issuer"],
                 Audience = _config["Jwt:Audience"],
                 SigningCredentials = new SigningCredentials(
@@ -154,5 +215,70 @@ namespace LMS.Infrastructure.Services
         }
 
         #endregion
+        public async Task ChangePasswordAsync(Guid userId, string currentPassword, string newPassword)
+        {
+            var user = await _db.AppUsers.FindAsync(userId);
+            if (user == null)
+                throw new KeyNotFoundException("User not found");
+
+            if (!PasswordHelper.Verify(user.PasswordHash, currentPassword))
+                throw new UnauthorizedAccessException("Mật khẩu hiện tại không đúng");
+
+            user.PasswordHash = PasswordHelper.Hash(newPassword);
+            user.MustChangePassword = false; // Reset flag if set
+            
+            await _db.SaveChangesAsync();
+        }
+
+        public async Task ForgotPasswordAsync(string email)
+        {
+            var user = await _db.AppUsers.FirstOrDefaultAsync(u => u.Email == email && !u.IsDeleted);
+            if (user == null) return; // Silent return for security
+
+            // 1. Create Token
+            var token = Guid.NewGuid().ToString("N");
+            var resetToken = new LMS.Domain.Entities.Users.PasswordResetToken
+            {
+                Email = email,
+                Token = token,
+                ExpiryDate = DateTime.UtcNow.AddMinutes(15),
+                IsUsed = false,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _db.PasswordResetTokens.Add(resetToken);
+            await _db.SaveChangesAsync();
+
+            // 2. Send Email
+            var resetLink = $"http://localhost:5173/reset-password?email={email}&token={token}";
+            var subject = "Yêu cầu đặt lại mật khẩu - NextGenLMS";
+            var body = $"<h1>Đặt lại mật khẩu</h1><p>Nhấn vào link sau để đặt lại mật khẩu:</p><p><a href=\"{resetLink}\">{resetLink}</a></p><p>Link có hiệu lực trong 15 phút.</p>";
+
+            await _emailService.SendEmailAsync(email, subject, body);
+        }
+
+        public async Task ResetPasswordAsync(string email, string token, string newPassword)
+        {
+            var resetToken = await _db.PasswordResetTokens
+                .FirstOrDefaultAsync(t => t.Token == token && t.Email == email && !t.IsUsed);
+
+            if (resetToken == null || resetToken.ExpiryDate < DateTime.UtcNow)
+                throw new UnauthorizedAccessException("Link đặt lại mật khẩu không hợp lệ hoặc đã hết hạn");
+
+            var user = await _db.AppUsers.FirstOrDefaultAsync(u => u.Email == email);
+            if (user == null)
+                throw new KeyNotFoundException("User not found");
+
+            // Update user password
+            user.PasswordHash = PasswordHelper.Hash(newPassword);
+            user.MustChangePassword = false;
+
+            // Mark token as used
+            resetToken.IsUsed = true;
+            resetToken.UpdatedAt = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync();
+        }
     }
 }
+

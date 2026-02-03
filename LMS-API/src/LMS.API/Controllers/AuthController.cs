@@ -68,6 +68,22 @@ namespace LMS.API.Controllers
             }
         }
 
+        [HttpPost("revoke-token")]
+        public async Task<IActionResult> RevokeToken([FromBody] RefreshTokenRequest request)
+        {
+            if (string.IsNullOrEmpty(request.RefreshToken))
+            {
+                return BadRequest(new { success = false, message = "Token is required" });
+            }
+
+            await _authService.RevokeTokenAsync(request.RefreshToken);
+            return Ok(new
+            {
+                success = true,
+                message = "Token revoked successfully (Logged out)"
+            });
+        }
+
         [HttpPost("validate-token")]
         public async Task<IActionResult> ValidateToken([FromBody] ValidateTokenRequest request)
         {
@@ -78,6 +94,67 @@ namespace LMS.API.Controllers
                 isValid = isValid
             });
         }
+        
+
+        [HttpPost("change-password")]
+        [Microsoft.AspNetCore.Authorization.Authorize] // Require Login
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+                if (userIdClaim == null) return Unauthorized();
+
+                var userId = Guid.Parse(userIdClaim.Value);
+                await _authService.ChangePasswordAsync(userId, request.CurrentPassword, request.NewPassword);
+
+                return Ok(new { success = true, message = "Đổi mật khẩu thành công" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+        {
+            await _authService.ForgotPasswordAsync(request.Email);
+            // Always return success to prevent email enumeration
+            return Ok(new { success = true, message = "Nếu email tồn tại, link đặt lại mật khẩu đã được gửi." });
+        }
+
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+        {
+            try
+            {
+                await _authService.ResetPasswordAsync(request.Email, request.Token, request.NewPassword);
+                return Ok(new { success = true, message = "Đặt lại mật khẩu thành công." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+    }
+
+    public class ForgotPasswordRequest
+    {
+        public string Email { get; set; } = string.Empty;
+    }
+
+    public class ResetPasswordRequest
+    {
+        public string Email { get; set; } = string.Empty;
+        public string Token { get; set; } = string.Empty;
+        public string NewPassword { get; set; } = string.Empty;
+    }
+
+    public class ChangePasswordRequest
+    {
+        public string CurrentPassword { get; set; } = string.Empty;
+        public string NewPassword { get; set; } = string.Empty;
     }
 
     public class RefreshTokenRequest

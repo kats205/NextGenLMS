@@ -31,6 +31,7 @@ namespace LMS.Infrastructure.Data
         public DbSet<AppUser> AppUsers { get; set; } 
         public DbSet<AppRole> AppRoles { get; set; }
         public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
 
         // Courses
         public DbSet<Course> Courses { get; set; }
