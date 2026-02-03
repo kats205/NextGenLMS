@@ -126,13 +126,11 @@ using (var scope = app.Services.CreateScope())
 
     try
     {
-        var jsonPath = Path.Combine(app.Environment.ContentRootPath, "Seed", "seed-data.json");
-        await seeder.SeedAsync(jsonPath);
+        await seeder.SeedAsync();
     }
     catch (Exception ex)
     {
         Console.WriteLine($"[ERROR] Seed failed: {ex.Message}");
-        Console.WriteLine($"[ERROR] Stack trace: {ex.StackTrace}");
     }
 }
 // Configure the HTTP request pipeline.
