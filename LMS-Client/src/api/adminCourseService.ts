@@ -26,6 +26,7 @@ export interface CourseDto {
   courseCode: string;
   name: string;
   description?: string;
+  credits: number;
   thumbnailUrl?: string;
   semesterId: string;
   semesterName: string;
@@ -33,30 +34,37 @@ export interface CourseDto {
   academicYearName: string;
   majorId: string;
   majorName: string;
-  lecturerId?: string;
-  lecturerName?: string;
+  primaryLecturerId?: string;
+  primaryLecturerName?: string;
+  lecturers: CourseLecturerDto[];
   studentCount: number;
   createdAt: string;
 }
 
 export interface CourseDetailDto extends CourseDto {
-  lecturerEmail?: string;
-  lecturerPhone?: string;
-  lecturerAvatarUrl?: string;
   students: StudentDto[];
   chapterCount: number;
   contentCount: number;
+}
+
+export interface CourseLecturerDto {
+  id: string;
+  fullName: string;
+  email?: string;
+  phone?: string;
+  avatarUrl?: string;
+  isPrimary: boolean;
 }
 
 export interface CreateCourseDto {
   courseCode: string;
   name: string;
   description?: string;
-  credits: number;
   semesterId: string;
   academicYearId: string;
   majorId: string;
-  lecturerId?: string;
+  thumbnailUrl?: string;
+  lecturerId?: string[]; // danh sách giảng viên (nếu cần)
 }
 
 export interface UpdateCourseDto {
@@ -66,6 +74,7 @@ export interface UpdateCourseDto {
   semesterId?: string;
   academicYearId?: string;
   majorId?: string;
+  thumbnailUrl?: string;
 }
 
 export interface CourseFilterDto {
@@ -151,10 +160,9 @@ export async function deleteCourse(id: string) {
  * Phân công giảng viên cho khóa học
  */
 export async function assignLecturer(courseId: string, lecturerId: string) {
-  const payload: AssignLecturerDto = { lecturerId };
-  const response = await instance.post<ApiResponse<boolean>>(
-    `/api/admin/courses/${courseId}/assign-lecturer`, 
-    payload
+  // Backend endpoint: PUT /api/admin/courses/{courseId}/lecturer/{lecturerId}
+  const response = await instance.put<ApiResponse<boolean>>(
+    `/api/admin/courses/${courseId}/lecturer/${lecturerId}`
   );
   return response.data.data;
 }
@@ -169,11 +177,11 @@ export async function getCourseStatistics(courseId: string) {
 }
 
 export async function getDepartments() {
-    const response = await instance.get<ApiResponse<DepartmentDto[]>>('/api/admin/Course/departments');
+    const response = await instance.get<ApiResponse<DepartmentDto[]>>('/api/admin/courses/departments');
     return response.data.data;
 }
 
 export async function getMajors(){
-    const response = await instance.get<ApiResponse<MajorDto[]>>('/api/admin/Course/majors');
+    const response = await instance.get<ApiResponse<MajorDto[]>>('/api/admin/courses/majors');
     return response.data.data;
 }

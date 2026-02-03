@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { User } from '../../App'; // Import type User của bạn
 import { Header } from '../shared/Header';
-import { Badge } from '../shared/Badge';
 import { 
   ArrowLeft, Search, Plus, Upload, Download, 
   Edit, Trash2, BookOpen, UserCog, X, Users, LayoutList, Calendar 
@@ -15,7 +14,6 @@ import {
   createCourse, 
   updateCourse, 
   deleteCourse,
-  getDepartments,
   getCourseById, 
   getMajors,
   assignLecturer,
@@ -23,10 +21,11 @@ import {
   CreateCourseDto,
   UpdateCourseDto,
   CourseFilterDto,
-  DepartmentDto,
   MajorDto
-} from '@/api/adminCourseService'; // Đảm bảo đường dẫn đúng
-import { set } from 'react-hook-form';
+} from '@/api/adminCourseService';
+import { getAdminUsers, UserListItemDto } from '@/api/adminUser';
+import { getAcademicYears, getSemesters, AcademicYearDto, SemesterDto } from '@/api/systemConfig';
+import instance from '@/api/axiosClient';
 
 interface CourseManagementPageProps {
   user: User;
@@ -52,6 +51,8 @@ export function CourseManagementPage({ user }: CourseManagementPageProps) {
   const [courses, setCourses] = useState<CourseDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [majors, setMajors] = useState<MajorDto[]>([]);
+  const [academicYears, setAcademicYears] = useState<AcademicYearDto[]>([]);
+  const [semesters, setSemesters] = useState<SemesterDto[]>([]);
 
 
   // --- Modal States ---
@@ -66,7 +67,7 @@ export function CourseManagementPage({ user }: CourseManagementPageProps) {
     courseCode: string;
     name: string;
     description: string;
-    credits: number;
+    thumbnailUrl?: string;
     semesterId: string;
     academicYearId: string;
     majorId: string;
@@ -74,7 +75,7 @@ export function CourseManagementPage({ user }: CourseManagementPageProps) {
     courseCode: '',
     name: '',
     description: '',
-    credits: 0,
+    thumbnailUrl: undefined,
     semesterId: '', // Cần ID thực từ DB
     academicYearId: '', // Cần ID thực từ DB
     majorId: '', // Cần ID thực từ DB
@@ -84,6 +85,15 @@ export function CourseManagementPage({ user }: CourseManagementPageProps) {
     lecturerId: ''
   });
 
+  // --- Lecturer selection states ---
+  const [lecturerSearch, setLecturerSearch] = useState('');
+  const [debouncedLecturerSearch, setDebouncedLecturerSearch] = useState('');
+  const [lecturerOptions, setLecturerOptions] = useState<UserListItemDto[]>([]);
+  const [lecturerLoading, setLecturerLoading] = useState(false);
+
+  const [selectedLecturers, setSelectedLecturers] = useState<Array<{ id: string; fullName: string; email: string; isPrimary?: boolean }>>([]);
+  const [primaryLecturerId, setPrimaryLecturerId] = useState<string | null>(null);
+
   // --- Effects ---
 
   // 1. Debounce Search
@@ -91,6 +101,12 @@ export function CourseManagementPage({ user }: CourseManagementPageProps) {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 500);
     return () => clearTimeout(timer);
   }, [searchTerm]);
+
+  // Debounce lecturer search
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedLecturerSearch(lecturerSearch), 500);
+    return () => clearTimeout(t);
+  }, [lecturerSearch]);
 
   // 2. Fetch Data
   useEffect(() => {
@@ -132,20 +148,63 @@ export function CourseManagementPage({ user }: CourseManagementPageProps) {
     setPage(1);
   }, [debouncedSearch, majorFilter]);
 
-  //4. Fetch Majors for select
+  //4. Fetch Majors, AcademicYears, Semesters for select
   useEffect(() => {
-      const fetchMajors = async () => {
-        try{
-          const majors = await getMajors();
-
-          setMajors(majors || []);
-        }
-        catch(error){
-          console.error("Lỗi khi tải dữ liệu dropdown:", error);
-        }
+    const fetchLookups = async () => {
+      try {
+        const [majorsRes, yearsRes, semestersRes] = await Promise.all([
+          getMajors(),
+          getAcademicYears(),
+          getSemesters()
+        ]);
+        setMajors(majorsRes || []);
+        setAcademicYears(yearsRes || []);
+        setSemesters(semestersRes || []);
+      } catch (error) {
+        console.error("Lỗi khi tải dữ liệu dropdown:", error);
       }
-      fetchMajors();
-    }, []);
+    };
+    fetchLookups();
+  }, []);
+
+  // Fetch lecturers options (role = Lecturer). Filter client-side by department if major selected
+  useEffect(() => {
+    let ignore = false;
+    const fetchLecturers = async () => {
+      setLecturerLoading(true);
+      try {
+        const params = {
+          page: 1,
+          pageSize: 200,
+          search: debouncedLecturerSearch || undefined,
+          role: 'Lecturer'
+        } as any;
+
+        const res = await getAdminUsers(params);
+        if (ignore) return;
+
+        let items = res.items || [];
+
+        // If a major is selected, filter by its department name
+        if (formData.majorId) {
+          const major = majors.find(m => m.id === formData.majorId);
+          if (major?.departmentName) {
+            items = items.filter(i => i.department === major.departmentName);
+          }
+        }
+
+        setLecturerOptions(items);
+      } catch (err) {
+        console.error('Failed to fetch lecturers', err);
+        setLecturerOptions([]);
+      } finally {
+        if (!ignore) setLecturerLoading(false);
+      }
+    };
+
+    fetchLecturers();
+    return () => { ignore = true; };
+  }, [debouncedLecturerSearch, formData.majorId, majors]);
 
   // --- Helper Functions ---
 
@@ -154,12 +213,14 @@ export function CourseManagementPage({ user }: CourseManagementPageProps) {
       courseCode: '',
       name: '',
       description: '',
-      credits: 0,
+      thumbnailUrl: undefined,
       semesterId: '',
       academicYearId: '',
       majorId: '',
     });
     setEditingId(null);
+    setSelectedLecturers([]);
+    setPrimaryLecturerId(null);
   };
 
   const refreshData = async () => {
@@ -183,6 +244,24 @@ export function CourseManagementPage({ user }: CourseManagementPageProps) {
 
   // --- Handlers ---
 
+  const getFirstName = (fullName: string) => {
+    if (!fullName) return '';
+    const parts = fullName.trim().split(' ');
+    return parts[parts.length - 1];
+  };
+
+  const addSelectedLecturer = (u: UserListItemDto) => {
+    if (!u) return;
+    if (selectedLecturers.find(s => s.id === u.id)) return;
+    setSelectedLecturers(prev => [...prev, { id: u.id, fullName: u.fullName, email: u.email }]);
+    if (!primaryLecturerId) setPrimaryLecturerId(u.id);
+  };
+
+  const removeSelectedLecturer = (id: string) => {
+    setSelectedLecturers(prev => prev.filter(p => p.id !== id));
+    if (primaryLecturerId === id) setPrimaryLecturerId(selectedLecturers[0]?.id ?? null);
+  };
+
   const handleCreateCourse = async () => {
     // Validate required fields
     if (!formData.courseCode || !formData.name || !formData.semesterId || !formData.majorId) {
@@ -191,15 +270,19 @@ export function CourseManagementPage({ user }: CourseManagementPageProps) {
     }
 
     try {
+      const lecturerIds = primaryLecturerId
+        ? [primaryLecturerId, ...selectedLecturers.map(s => s.id).filter(i => i !== primaryLecturerId)]
+        : selectedLecturers.map(s => s.id);
+
       const createData: CreateCourseDto = {
         courseCode: formData.courseCode,
         name: formData.name,
         description: formData.description,
-        credits: formData.credits,
         semesterId: formData.semesterId,
         academicYearId: formData.academicYearId,
         majorId: formData.majorId,
-        // lecturerId: optional
+        thumbnailUrl: formData.thumbnailUrl,
+        lecturerId: lecturerIds
       };
 
       await createCourse(createData);
@@ -220,13 +303,23 @@ export function CourseManagementPage({ user }: CourseManagementPageProps) {
           courseCode: data.courseCode,
           name: data.name,
           description: data.description || '',
-          credits: 0, // Lưu ý: API GetCourseDetail hiện tại trong CourseDto chưa trả về credits? Nếu có cần map vào.
+          thumbnailUrl: data.thumbnailUrl,
           semesterId: data.semesterId,
           academicYearId: data.academicYearId,
           majorId: data.majorId,
         });
         setEditingId(id);
         setIsEditing(true);
+        // populate selected lecturers from course data
+        if (data.lecturers && data.lecturers.length) {
+          const list = data.lecturers.map(l => ({ id: l.id, fullName: l.fullName, email: l.email, isPrimary: l.isPrimary }));
+          setSelectedLecturers(list);
+          const primary = list.find(x => x.isPrimary);
+          setPrimaryLecturerId(primary ? primary.id : (list[0]?.id ?? null));
+        } else {
+          setSelectedLecturers([]);
+          setPrimaryLecturerId(null);
+        }
       }
     } catch (error: any) {
       toast.error('Không thể tải thông tin khóa học!');
@@ -240,14 +333,18 @@ export function CourseManagementPage({ user }: CourseManagementPageProps) {
       const updateData: UpdateCourseDto = {
         name: formData.name,
         description: formData.description,
-        credits: formData.credits,
         semesterId: formData.semesterId,
         academicYearId: formData.academicYearId,
-        majorId: formData.majorId
+        majorId: formData.majorId,
+        thumbnailUrl: formData.thumbnailUrl
         // Lưu ý: Update DTO không cho phép sửa courseCode
       };
 
       await updateCourse(editingId, updateData);
+      // Assign selected lecturers after update (best-effort)
+      if (selectedLecturers && selectedLecturers.length) {
+        await Promise.all(selectedLecturers.map(s => assignLecturer(editingId, s.id)));
+      }
       toast.success('Cập nhật khóa học thành công!');
       setIsEditing(false);
       resetForm();
@@ -306,6 +403,27 @@ export function CourseManagementPage({ user }: CourseManagementPageProps) {
     setIsEditing(false);
     setIsAssigning(false);
     resetForm();
+  };
+
+  const handleThumbnailUpload = async (file: File) => {
+    const formDataUpload = new FormData();
+    formDataUpload.append('file', file);
+    try {
+      const response = await instance.post('/api/upload/image', formDataUpload, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        params: { folder: 'courses' }
+      });
+      const url = response.data?.data?.url as string | undefined;
+      if (url) {
+        setFormData(prev => ({ ...prev, thumbnailUrl: url }));
+        toast.success('Tải ảnh khóa học thành công!');
+      } else {
+        toast.error('Không lấy được URL ảnh từ server');
+      }
+    } catch (error: any) {
+      console.error('Upload thumbnail error:', error);
+      toast.error(error?.response?.data?.message || 'Tải ảnh khóa học thất bại!');
+    }
   };
 
   if (loading && page === 1 && courses.length === 0) {
@@ -398,60 +516,57 @@ export function CourseManagementPage({ user }: CourseManagementPageProps) {
                       placeholder="VD: Nhập môn Lập trình"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Số tín chỉ</label>
-                    <input
-                      type="number"
-                      value={formData.credits}
-                      onChange={(e) => setFormData({ ...formData, credits: Number(e.target.value) })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    />
-                  </div>
                   
-                  {/* Note: Trong thực tế, các field dưới đây nên là Select box load từ API Semester/Major */}
                   <div>
-                    <select 
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Ngành học <span className="text-red-500">*</span>
+                    </label>
+                    <select
                       value={formData.majorId}
                       onChange={(e) => setFormData({ ...formData, majorId: e.target.value })}
-                      className="block text-sm font-medium text-gray-700 mb-2">
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    >
                       <option value="">-- Chọn Ngành học --</option>
                       {majors.map((major) => (
                         <option key={major.id} value={major.id}>
-                          {major.name}
+                          {major.name} ({major.departmentName})
                         </option>
                       ))}
                     </select>
-                    <input
-                      type="text"
-                      value={formData.majorId}
-                      onChange={(e) => setFormData({ ...formData, majorId: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      placeholder="Nhập ID ngành (GUID)"
-                    />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Kỳ học (ID) <span className="text-red-500">*</span>
+                        Học kỳ <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="text"
+                    <select
                       value={formData.semesterId}
                       onChange={(e) => setFormData({ ...formData, semesterId: e.target.value })}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      placeholder="Nhập ID kỳ học (GUID)"
-                    />
+                    >
+                      <option value="">-- Chọn Học kỳ --</option>
+                      {semesters.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Năm học (ID)
+                        Năm học
                     </label>
-                    <input
-                      type="text"
+                    <select
                       value={formData.academicYearId}
                       onChange={(e) => setFormData({ ...formData, academicYearId: e.target.value })}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      placeholder="Nhập ID năm học (GUID)"
-                    />
+                    >
+                      <option value="">-- Chọn Năm học --</option>
+                      {academicYears.map((y) => (
+                        <option key={y.id} value={y.id}>
+                          {y.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div className="md:col-span-2">
@@ -464,6 +579,95 @@ export function CourseManagementPage({ user }: CourseManagementPageProps) {
                       placeholder="Mô tả ngắn về nội dung khóa học..."
                     />
                   </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Ảnh khóa học
+                    </label>
+                    <div className="flex items-center gap-4">
+                      {formData.thumbnailUrl && (
+                        <img
+                          src={formData.thumbnailUrl}
+                          alt="Thumbnail"
+                          className="w-16 h-16 rounded-lg object-cover border"
+                        />
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            handleThumbnailUpload(file);
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* --- Lecturer Selector & Selected Table --- */}
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Giảng viên</label>
+                    <div>
+                      <input
+                        type="text"
+                        value={lecturerSearch}
+                        onChange={(e) => setLecturerSearch(e.target.value)}
+                        placeholder="Gõ để tìm giảng viên (email hoặc tên)..."
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      />
+                      {/* Dropdown suggestions */}
+                      {lecturerOptions.length > 0 && lecturerSearch.trim() !== '' && (
+                        <ul className="mt-1 border border-gray-200 rounded bg-white max-h-48 overflow-y-auto z-50">
+                          {lecturerOptions.map(opt => (
+                            <li
+                              key={opt.id}
+                              onClick={() => { addSelectedLecturer(opt); setLecturerSearch(''); }}
+                              className="px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm"
+                            >
+                              {opt.email} ({getFirstName(opt.fullName)})
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      <p className="text-xs text-gray-400 mt-2">Danh sách lọc theo Khoa (nếu đã chọn Ngành), có thể gõ để tìm và chọn.</p>
+                    </div>
+
+                    {/* Selected lecturers table */}
+                    {selectedLecturers.length > 0 && (
+                      <div className="mt-3 border rounded overflow-hidden">
+                        <table className="w-full text-sm">
+                          <thead className="bg-gray-50 border-b">
+                            <tr>
+                              <th className="px-3 py-2 text-left">Họ & Tên</th>
+                              <th className="px-3 py-2 text-left">Email</th>
+                              <th className="px-3 py-2 text-center">Chính</th>
+                              <th className="px-3 py-2 text-center">Xóa</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {selectedLecturers.map(s => (
+                              <tr key={s.id} className="border-b">
+                                <td className="px-3 py-2">{s.fullName}</td>
+                                <td className="px-3 py-2">{s.email}</td>
+                                <td className="px-3 py-2 text-center">
+                                  <input
+                                    type="radio"
+                                    name="primaryLecturer"
+                                    checked={primaryLecturerId === s.id}
+                                    onChange={() => setPrimaryLecturerId(s.id)}
+                                  />
+                                </td>
+                                <td className="px-3 py-2 text-center">
+                                  <button onClick={() => removeSelectedLecturer(s.id)} className="text-sm text-danger-600 hover:underline">Xóa</button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+
                 </div>
                 <div className="flex gap-2 mt-6">
                   <button
@@ -538,14 +742,18 @@ export function CourseManagementPage({ user }: CourseManagementPageProps) {
               />
             </div>
             <div>
-              {/* Note: Value ở đây nên là ID của Major */}
-              <input 
-                 type="text"
-                 placeholder="Lọc theo ID Ngành..."
-                 value={majorFilter}
-                 onChange={(e) => setMajorFilter(e.target.value)}
-                 className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-              />
+              <select
+                value={majorFilter}
+                onChange={(e) => setMajorFilter(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              >
+                <option value="">Tất cả ngành</option>
+                {majors.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         </div>
@@ -590,9 +798,17 @@ export function CourseManagementPage({ user }: CourseManagementPageProps) {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center mr-3">
-                            <BookOpen className="w-4 h-4" />
-                          </div>
+                          {course.thumbnailUrl ? (
+                            <img
+                              src={course.thumbnailUrl}
+                              alt={course.name}
+                              className="w-8 h-8 rounded-lg object-cover mr-3"
+                            />
+                          ) : (
+                            <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center mr-3">
+                              <BookOpen className="w-4 h-4" />
+                            </div>
+                          )}
                           <span className="text-sm font-medium text-gray-900">{course.name}</span>
                         </div>
                       </td>
@@ -603,10 +819,10 @@ export function CourseManagementPage({ user }: CourseManagementPageProps) {
                          </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        {course.lecturerName ? (
+                        {course.primaryLecturerName ? (
                           <div className="flex items-center text-gray-900">
                             <Users className="w-4 h-4 mr-2 text-gray-400" />
-                            {course.lecturerName}
+                            {course.primaryLecturerName}
                           </div>
                         ) : (
                           <span className="text-gray-400 italic text-sm">Chưa phân công</span>

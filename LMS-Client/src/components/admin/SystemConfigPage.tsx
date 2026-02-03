@@ -9,8 +9,12 @@ import {
   updateSystemConfigs,
   backupNow,
   testEmailConfig,
+  getAcademicYears,
+  getSemesters,
   SystemConfigResponse,
-  SystemConfigUpdateRequest
+  SystemConfigUpdateRequest,
+  AcademicYearDto,
+  SemesterDto
 } from '@/api/systemConfig';
 import { toast } from 'react-toastify';
 
@@ -23,6 +27,8 @@ export function SystemConfigPage({ user }: SystemConfigPageProps) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [academicYears, setAcademicYears] = useState<AcademicYearDto[]>([]);
+  const [semesters, setSemesters] = useState<SemesterDto[]>([]);
   const [config, setConfig] = useState<SystemConfigResponse>({
     academicYear: {
       currentAcademicYear: '',
@@ -58,6 +64,7 @@ export function SystemConfigPage({ user }: SystemConfigPageProps) {
 
   useEffect(() => {
     loadConfigs();
+    loadLookups();
   }, []);
 
   const loadConfigs = async () => {
@@ -70,6 +77,16 @@ export function SystemConfigPage({ user }: SystemConfigPageProps) {
       toast.error(error.response?.data?.message || 'Không thể tải cấu hình');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadLookups = async () => {
+    try {
+      const [years, sems] = await Promise.all([getAcademicYears(), getSemesters()]);
+      setAcademicYears(years || []);
+      setSemesters(sems || []);
+    } catch (error) {
+      console.error('Error loading academic years/semesters:', error);
     }
   };
 
@@ -169,16 +186,23 @@ export function SystemConfigPage({ user }: SystemConfigPageProps) {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Năm học hiện tại
                 </label>
-                <input
-                  type="text"
+                <select
                   value={config.academicYear.currentAcademicYear}
-                  onChange={(e) => setConfig({
-                    ...config,
-                    academicYear: { ...config.academicYear, currentAcademicYear: e.target.value }
-                  })}
+                  onChange={(e) =>
+                    setConfig({
+                      ...config,
+                      academicYear: { ...config.academicYear, currentAcademicYear: e.target.value }
+                    })
+                  }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  placeholder="2025-2026"
-                />
+                >
+                  <option value="">Chọn năm học</option>
+                  {academicYears.map((y) => (
+                    <option key={y.id} value={y.name}>
+                      {y.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
@@ -187,16 +211,20 @@ export function SystemConfigPage({ user }: SystemConfigPageProps) {
                 </label>
                 <select
                   value={config.academicYear.currentSemester}
-                  onChange={(e) => setConfig({
-                    ...config,
-                    academicYear: { ...config.academicYear, currentSemester: e.target.value }
-                  })}
+                  onChange={(e) =>
+                    setConfig({
+                      ...config,
+                      academicYear: { ...config.academicYear, currentSemester: e.target.value }
+                    })
+                  }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
-                  <option value="Học kỳ 1">Học kỳ 1</option>
-                  <option value="Học kỳ 2">Học kỳ 2</option>
-                  <option value="Học kỳ 3">Học kỳ 3</option>
-                  <option value="Học kỳ hè">Học kỳ hè</option>
+                  <option value="">Chọn học kỳ</option>
+                  {semesters.map((s) => (
+                    <option key={s.id} value={s.name}>
+                      {s.name}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>

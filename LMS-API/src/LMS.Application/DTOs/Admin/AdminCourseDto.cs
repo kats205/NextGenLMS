@@ -57,10 +57,10 @@ namespace LMS.Application.DTOs.Admin
         public string CourseCode { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string? Description { get; set; }
-        public int Credits { get; set; }
         public Guid SemesterId { get; set; }
         public Guid AcademicYearId { get; set; }
         public Guid MajorId { get; set; }
+        public string? ThumbnailUrl { get; set; }
         public List<Guid>? LecturerId { get; set; }
     }
 
@@ -68,7 +68,6 @@ namespace LMS.Application.DTOs.Admin
     {
         public string? Name { get; set; }
         public string? Description { get; set; }
-        public int? Credits { get; set; }
         public Guid? SemesterId { get; set; }
         public Guid? AcademicYearId { get; set; }
         public Guid? MajorId { get; set; }

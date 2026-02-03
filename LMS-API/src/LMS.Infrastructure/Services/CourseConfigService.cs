@@ -1,4 +1,4 @@
-﻿using LMS.Application.DTOs.Admin; // Import DTOs namespace
+using LMS.Application.DTOs.Admin; // Import DTOs namespace
 using LMS.Application.DTOs.Common;
 using LMS.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -62,7 +62,7 @@ namespace LMS.Infrastructure.Services
                         id = m.Id,
                         name = m.Name,
                         departmentId = m.DepartmentId,
-                        departmentName = m.Department.Name != null ? m.Name : "N/A"
+                        departmentName = m.Department != null ? m.Department.Name : "N/A"
                     })
                     .ToListAsync();
                 return ServiceResult<List<MajorDto>>.Success(list);

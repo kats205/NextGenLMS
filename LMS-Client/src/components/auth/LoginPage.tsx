@@ -93,9 +93,9 @@ export function LoginPage() {
           <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-sm font-medium text-blue-900 mb-2">Tài khoản demo:</p>
             <div className="space-y-1 text-xs text-blue-800">
-              <p>Admin: admin@nextgenlms.local / 01012000</p>
-              <p>GV: gv001@school.edu.vn / 29012005</p>
-              <p>SV: sv001@school.edu.vn / 29012005</p>
+              <p>Admin: admintest@gmail.com / 123456</p>
+              <p>SV: sv01test@gmail.com / 123456</p>
+              <p>GV: gv01test@gmail.com / 123456</p>
             </div>
           </div>
 
