@@ -14,6 +14,7 @@ namespace LMS.Application.Admin
             public string RoleName { get; set; } = string.Empty; // "Admin", "Lecturer", "Student"
             public Guid? DepartmentId { get; set; }
             public string? StudentCode { get; set; }
+            public string? TeacherCode { get; set; }
             public string? Password { get; set; } // Optional, if null -> auto-generate
         }
 
@@ -26,6 +27,7 @@ namespace LMS.Application.Admin
             public string RoleName { get; set; } = string.Empty;
             public Guid? DepartmentId { get; set; }
             public string? StudentCode { get; set; }
+            public string? TeacherCode { get; set; }
             public bool IsActive { get; set; } = true;
         }
 
@@ -37,12 +39,13 @@ namespace LMS.Application.Admin
             public string? Phone { get; set; }
             public string? AvatarUrl { get; set; }
             public string? StudentCode { get; set; }
+            public string? TeacherCode { get; set; }
             public string RoleName { get; set; } = string.Empty;
             public Guid RoleId { get; set; }
             public Guid? DepartmentId { get; set; }
             public string? DepartmentName { get; set; }
             public bool IsActive { get; set; }
-            public bool IsFirstLogin { get; set; }
+            public bool MustChangePassword { get; set; }
             public DateTime CreatedAt { get; set; }
             public DateTime? UpdatedAt { get; set; }
         }

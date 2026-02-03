@@ -43,7 +43,8 @@ public record UserSeed(
     bool IsFirstLogin,
     bool IsActive,
     string PlainPassword,
-    string? StudentCode
+    string? StudentCode,
+    string? TeacherCode
 );
 
 public record CourseSeed(
@@ -82,7 +83,9 @@ public record ContentSeed(
     // Assignment properties (nullable)
     DateTime? DueDate,
     int? MaxScore,
-    string? AssignmentDescription
+    string? AssignmentDescription,
+    // Announcement properties (nullable)
+    string? AttachmentsJson
 );
 
 public record QuestionTopicSeed(Guid Id, string Name, Guid LecturerId);
