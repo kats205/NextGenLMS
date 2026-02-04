@@ -93,9 +93,9 @@ export async function getSemesters(): Promise<SemesterDto[]> {
 }
 
 
-export async function backupNow(): Promise<string> {
-  const response = await instance.post<ApiResponse<string>>('/api/admin/system-config/backup');
-  return response.data.data;
+export async function backupNow(): Promise<Blob> {
+  const response = await instance.post('/api/admin/system-config/backup', {}, { responseType: 'blob' });
+  return response.data;
 }
 
 

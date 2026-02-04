@@ -7,8 +7,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using System.Text;
+using OfficeOpenXml;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// EPPlus license (non-commercial use)
+ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -117,6 +121,9 @@ builder.Services.AddScoped<ICourseConfigService, CourseConfigService>();
 builder.Services.AddScoped<IFileStorageService, CloudinaryService>();
 builder.Services.AddScoped<IEmailService, MockEmailService>();
 builder.Services.AddScoped<IMasterDataService, MasterDataService>();
+builder.Services.AddScoped<IBackUpService, BackupService>();
+builder.Services.AddHostedService<BackupWorker>();
+
 
 var app = builder.Build();
 

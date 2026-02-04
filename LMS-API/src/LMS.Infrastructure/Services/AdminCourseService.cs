@@ -9,6 +9,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using LMS.Application.Interfaces;
+using OfficeOpenXml;
+using OfficeOpenXml.Style;
+using System.Drawing;
 
 namespace LMS.Infrastructure.Services
 {
@@ -425,20 +428,31 @@ namespace LMS.Infrastructure.Services
                     return ServiceResult.Failure("Người dùng không phải là giảng viên");
                 }
 
-                var existing = course.Lecturers.FirstOrDefault(cl => cl.LecturerId == lecturerId && !cl.IsDeleted);
-                if (existing != null)
-                {
-                    return ServiceResult.Success("Giảng viên đã được phân quyền cho khóa học");
-                }
-
+                // If there is a soft-deleted relation, restore it instead of inserting a new row
+                var existingAny = course.Lecturers.FirstOrDefault(cl => cl.LecturerId == lecturerId);
                 var hasPrimary = course.Lecturers.Any(cl => !cl.IsDeleted && cl.IsPrimary);
 
-                _context.CourseLecturers.Add(new CourseLecturer
+                if (existingAny != null)
                 {
-                    CourseId = courseId,
-                    LecturerId = lecturerId,
-                    IsPrimary = !hasPrimary
-                });
+                    if (!existingAny.IsDeleted)
+                    {
+                        return ServiceResult.Success("Giảng viên đã được phân quyền cho khóa học");
+                    }
+
+                    // restore soft-deleted relation
+                    existingAny.IsDeleted = false;
+                    existingAny.IsPrimary = !hasPrimary;
+                    existingAny.UpdatedAt = DateTime.UtcNow;
+                }
+                else
+                {
+                    _context.CourseLecturers.Add(new CourseLecturer
+                    {
+                        CourseId = courseId,
+                        LecturerId = lecturerId,
+                        IsPrimary = !hasPrimary
+                    });
+                }
 
                 course.UpdatedAt = DateTime.UtcNow;
 
@@ -622,6 +636,107 @@ namespace LMS.Infrastructure.Services
                     CreatedAt = c.CreatedAt
                 })
                 .FirstAsync();
+        }
+
+        public async Task<ServiceResult<byte[]>> ExportStudentsExcelAsync(LMS.Application.DTOs.Admin.ExportStudentsRequestDto request)
+        {
+            try
+            {
+                var query = _context.Courses
+                    .Include(c => c.Lecturers).ThenInclude(cl => cl.Lecturer)
+                    .Include(c => c.Students).ThenInclude(cs => cs.Student)
+                    .Where(c => !c.IsDeleted)
+                    .AsQueryable();
+
+                if (!request.ExportAll && request.CourseCodes != null && request.CourseCodes.Any())
+                {
+                    var codes = request.CourseCodes.Select(x => x.Trim().ToLower()).ToList();
+                    query = query.Where(c => codes.Contains(c.CourseCode.ToLower()) || codes.Contains(c.Name.ToLower()));
+                }
+
+                var courses = await query.ToListAsync();
+
+                using (var package = new ExcelPackage())
+                {
+                    foreach (var course in courses)
+                    {
+                        var sheetName = string.IsNullOrWhiteSpace(course.CourseCode) ? course.Name : course.CourseCode;
+                        if (sheetName.Length > 31) sheetName = sheetName.Substring(0, 31);
+
+                        var ws = package.Workbook.Worksheets.Add(sheetName);
+
+                        // Title
+                        ws.Cells[1, 1, 1, 6].Merge = true;
+                        ws.Cells[1, 1].Value = "Danh sách sinh viên";
+                        ws.Cells[1, 1].Style.Font.Size = 16;
+                        ws.Cells[1, 1].Style.Font.Bold = true;
+                        ws.Cells[1, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+
+                        // Course info
+                        ws.Cells[2, 1].Value = $"Mã học phần: {course.CourseCode}";
+                        ws.Cells[2, 1].Style.Font.Size = 13;
+                        ws.Cells[2, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
+
+                        ws.Cells[3, 1].Value = $"Tên học phần: {course.Name}";
+                        ws.Cells[3, 1].Style.Font.Size = 13;
+                        ws.Cells[3, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
+
+                        var lecturerNames = course.Lecturers?
+                            .Where(l => !l.IsDeleted && l.Lecturer != null)
+                            .OrderByDescending(l => l.IsPrimary)
+                            .Select(l => l.Lecturer!.FullName)
+                            .ToArray() ?? Array.Empty<string>();
+
+                        ws.Cells[4, 1].Value = $"Giảng viên giảng dạy: {string.Join(", ", lecturerNames)}";
+                        ws.Cells[4, 1].Style.Font.Size = 13;
+                        ws.Cells[4, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
+
+                        // Header
+                        var headers = new[] { "Mã số sinh viên", "Họ tên", "Email", "Số điện thoại", "Mã khoa", "Ngày tháng năm sinh" };
+                        var headerRow = 6;
+                        for (int i = 0; i < headers.Length; i++)
+                        {
+                            ws.Cells[headerRow, i + 1].Value = headers[i];
+                            ws.Cells[headerRow, i + 1].Style.Font.Bold = true;
+                            ws.Cells[headerRow, i + 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                            ws.Column(i + 1).Width = 22;
+                        }
+
+                        // Rows
+                        var row = headerRow + 1;
+                        var students = course.Students?.Where(s => !s.IsDeleted).Select(s => s.Student).Where(st => st != null).ToList() ?? new List<Domain.Entities.Users.AppUser>();
+                        foreach (var st in students)
+                        {
+                            ws.Cells[row, 1].Value = st!.StudentCode ?? string.Empty;
+                            ws.Cells[row, 2].Value = st!.FullName;
+                            ws.Cells[row, 3].Value = st!.Email;
+                            ws.Cells[row, 4].Value = st!.Phone ?? string.Empty;
+                            ws.Cells[row, 5].Value = st!.Department != null ? st.Department.Code : string.Empty;
+                            if (st.DateOfBirth.HasValue)
+                            {
+                                ws.Cells[row, 6].Value = st.DateOfBirth.Value;
+                                ws.Cells[row, 6].Style.Numberformat.Format = "dd/MM/yyyy";
+                            }
+                            else
+                            {
+                                ws.Cells[row, 6].Value = string.Empty;
+                            }
+
+                            for (int c = 1; c <= headers.Length; c++)
+                                ws.Cells[row, c].Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
+
+                            row++;
+                        }
+                    }
+
+                    var bytes = package.GetAsByteArray();
+                    return ServiceResult<byte[]>.Success(bytes, "Xuất file thành công");
+                }
+            }
+            catch (Exception ex)
+            {
+                return ServiceResult<byte[]>.Failure("Lỗi khi xuất file Excel", ex.Message);
+            }
         }
     }
 }

@@ -207,3 +207,13 @@ export async function getMajors(){
     const response = await instance.get<ApiResponse<MajorDto[]>>('/api/admin/courses/majors');
     return response.data.data;
 }
+
+export type ExportStudentsRequestDto = {
+  exportAll: boolean;
+  courseCodes?: string[];
+}
+
+export async function exportStudents(request: ExportStudentsRequestDto) {
+  const response = await instance.post('/api/admin/courses/export-students', request, { responseType: 'blob' });
+  return response.data as Blob;
+}

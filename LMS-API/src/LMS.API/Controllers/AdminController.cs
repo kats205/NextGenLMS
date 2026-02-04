@@ -204,10 +204,12 @@ namespace LMS.API.Controllers
     public class SystemConfigController : ControllerBase
     {
         private readonly ISystemConfigService _configService;
+        private readonly IBackUpService _backupService;
 
-        public SystemConfigController(ISystemConfigService configService)
+        public SystemConfigController(ISystemConfigService configService, IBackUpService backupService)
         {
             _configService = configService;
+            _backupService = backupService;
         }
 
         /// <summary>
@@ -364,12 +366,20 @@ namespace LMS.API.Controllers
                 });
             }
 
-            return Ok(new ApiResponse<string>
+            var filePath = result.Data;
+            if (!System.IO.File.Exists(filePath))
             {
-                Success = true,
-                Message = result.Message,
-                Data = result.Data
-            });
+                return NotFound(new ApiResponse<string>
+                {
+                     Success = false,
+                     Message = "File backup không tồn tại"
+                });
+            }
+
+            var fileBytes = await System.IO.File.ReadAllBytesAsync(filePath);
+            var fileName = System.IO.Path.GetFileName(filePath);
+
+            return File(fileBytes, "application/octet-stream", fileName);
         }
 
         /// <summary>
@@ -396,6 +406,19 @@ namespace LMS.API.Controllers
                 Data = true
             });
         }
+        [HttpPost("trigger-backup")]
+        public async Task<IActionResult> TriggerBackup()
+        {
+            try
+            {
+                var fileName = await _backupService.PerformBackupAsync();
+                return Ok(new { message = "Sao lưu thành công!", file = fileName });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Lỗi sao lưu: " + ex.Message });
+            }
+        }
     }
     [ApiController]
     [Route("api/admin/[controller]")]
@@ -420,6 +443,19 @@ namespace LMS.API.Controllers
             var response = ApiResponse<PagedResultDto<CourseDto>>.FromServiceResult(result);
 
             return result.IsSuccess ? Ok(response) : BadRequest(response);
+        }
+        
+        [HttpPost("export-students")]
+        public async Task<IActionResult> ExportStudents([FromBody] ExportStudentsRequestDto request)
+        {
+            var result = await _courseService.ExportStudentsExcelAsync(request);
+            if (!result.IsSuccess)
+            {
+                return BadRequest(new ApiResponse<string> { Success = false, Message = result.Message });
+            }
+
+            var fileName = $"Danh_sach_sinh_vien_{DateTime.UtcNow:yyyyMMddHHmmss}.xlsx";
+            return File(result.Data, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
 
         /// <summary>
@@ -611,5 +647,7 @@ namespace LMS.API.Controllers
                 Message = result.Message
             });
         }
+
+        
     }
 }

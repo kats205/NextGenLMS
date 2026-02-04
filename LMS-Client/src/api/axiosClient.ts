@@ -111,18 +111,14 @@ instance.interceptors.response.use(
 
         // Handle 400 Bad Request
         if (error.response?.status === 400) {
-            const apiError = error;
-            if (apiError?.message) {
-                toastify.error(apiError.message);
-            }
+            const msg = (error.response?.data && (error.response.data.message || error.response.data)) || error.message;
+            toastify.error(typeof msg === 'string' ? msg : JSON.stringify(msg));
         }
 
         // Handle 404 Not Found
         if (error.response?.status === 404) {
-            const apiError = error;
-            if (apiError?.message) {
-                toastify.error(apiError.message);
-            }
+            const msg = (error.response?.data && (error.response.data.message || error.response.data)) || error.message;
+            toastify.error(typeof msg === 'string' ? msg : JSON.stringify(msg));
         }
 
         // Handle 500 Internal Server Error

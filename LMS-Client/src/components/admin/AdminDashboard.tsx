@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { User } from '../../App';
 import { Header } from '../shared/Header';
-import { Users, BookOpen, Activity, TrendingUp, Settings } from 'lucide-react';
+import { Users, BookOpen, Clock, TrendingUp, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 // import axiosClient from '../../api/axiosClient';
 
@@ -130,13 +130,30 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
               <div className="text-xs text-success-600 font-medium">{stats.activeCourses} đang hoạt động</div>
             </div>
           </div>
-          <button
-            onClick={() => navigate('/admin/courses')}
-            className="p-6 bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all text-left">
-            <BookOpen className="w-8 h-8 text-primary-600 mb-3" />
-            <h3 className="font-semibold text-gray-900 mb-1">Quản lý khóa học</h3>
-            <p className="text-sm text-gray-600">Xem và quản lý khóa học</p>
-          </button>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-success-100 rounded-lg flex items-center justify-center">
+                <BookOpen className="w-6 h-6 text-success-600" />
+              </div>
+            </div>
+            <div className="text-3xl font-semibold text-gray-900 mb-1">{stats.totalCourses}</div>
+            <div className="text-sm text-gray-600">Tổng khóa học</div>
+            <div className="flex items-center gap-2 mt-2">
+              <div className="text-xs text-success-600 font-medium">{stats.activeCourses} đang hoạt động</div>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-warning-100 rounded-lg flex items-center justify-center">
+                <Clock className="w-6 h-6 text-warning-600" />
+              </div>
+            </div>
+            <div className="text-3xl font-semibold text-gray-900 mb-1">2026</div>
+            <div className="text-sm text-gray-600">Tháng 2</div>
+            <div className="flex items-center gap-2 mt-2">
+              <div className="text-xs text-success-600 font-medium">Năm học hiện tại</div>
+            </div>
+          </div>
         </div>
 
         {/* Recent Activity */}

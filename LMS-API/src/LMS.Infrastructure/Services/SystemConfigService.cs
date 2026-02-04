@@ -18,13 +18,16 @@ namespace LMS.Infrastructure.Services
     {
         private readonly AppDbContext _context;
         private readonly ILogger<SystemConfigService> _logger;
+        private readonly IBackUpService _backupService;
 
         public SystemConfigService(
             AppDbContext context,
-            ILogger<SystemConfigService> logger)
+            ILogger<SystemConfigService> logger,
+            IBackUpService backupService)
         {
             _context = context;
             _logger = logger;
+            _backupService = backupService;
         }
 
         public async Task<ServiceResult<SystemConfigResponse>> GetAllConfigsAsync()
@@ -268,19 +271,13 @@ namespace LMS.Infrastructure.Services
         {
             try
             {
-                // Implement backup logic here
-                var backupFileName = $"backup_{DateTime.UtcNow:yyyyMMdd_HHmmss}.sql";
-
-                // TODO: Implement actual backup logic
-                // This is a placeholder
-                _logger.LogInformation($"Backup created: {backupFileName}");
-
-                return ServiceResult<string>.Success(backupFileName, "Sao lưu dữ liệu thành công");
+                var backupPath = await _backupService.PerformBackupAsync();
+                return ServiceResult<string>.Success(backupPath, "Sao lưu dữ liệu thành công");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating backup");
-                return ServiceResult<string>.Failure("Lỗi khi sao lưu dữ liệu");
+                return ServiceResult<string>.Failure("Lỗi khi sao lưu dữ liệu: " + ex.Message);
             }
         }
 

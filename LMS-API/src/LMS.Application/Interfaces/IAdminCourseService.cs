@@ -17,5 +17,6 @@ namespace LMS.Application.Interfaces
         Task<ServiceResult<CourseStatisticsDto>> GetCourseStatisticsAsync(Guid courseId);
         Task<ServiceResult> RemoveLecturerAsync(Guid courseId, Guid lecturerId);
         Task<ServiceResult> SetPrimaryLecturerAsync(Guid courseId, Guid lecturerId);
+        Task<ServiceResult<byte[]>> ExportStudentsExcelAsync(LMS.Application.DTOs.Admin.ExportStudentsRequestDto request);
     }
 }
