@@ -82,13 +82,13 @@ builder.Services.AddAuthentication(options =>
     {
         OnAuthenticationFailed = context =>
         {
-            Console.WriteLine($"[AUTH FAILED] {context.Exception.Message}");
+            // Console.WriteLine($"[AUTH FAILED] {context.Exception.Message}");
             return Task.CompletedTask;
         },
         OnTokenValidated = context =>
         {
             var claims = context.Principal?.Claims.Select(c => $"{c.Type}: {c.Value}");
-            Console.WriteLine($"[AUTH SUCCESS] Claims: {string.Join(", ", claims ?? Array.Empty<string>())}");
+            // Console.WriteLine($"[AUTH SUCCESS] Claims: {string.Join(", ", claims ?? Array.Empty<string>())}");
             return Task.CompletedTask;
         }
     };
@@ -132,22 +132,22 @@ builder.Services.AddControllers()
     });
 var app = builder.Build();
 
-//using (var scope = app.Services.CreateScope())
-//{
-//    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-//    await db.Database.MigrateAsync();
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await db.Database.MigrateAsync();
 
-//    var seeder = new DataSeeder(db);
+    var seeder = new DataSeeder(db);
 
-//    try
-//    {
-//        await seeder.SeedAsync();
-//    }
-//    catch (Exception ex)
-//    {
-//        Console.WriteLine($"[ERROR] Seed failed: {ex.Message}");
-//    }
-//}
+    try
+    {
+        await seeder.SeedAsync();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[ERROR] Seed failed: {ex.Message}");
+    }
+}
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -167,7 +167,6 @@ app.UseMiddleware<ErrorHandlerMiddleware>();
 
 app.Use(async (context, next) =>
 {
-    Console.WriteLine($"[REQUEST] {context.Request.Method} {context.Request.Path}");
     await next();
 });
 
