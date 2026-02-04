@@ -20,6 +20,7 @@ namespace LMS.Infrastructure.Services
         Task<CourseDto> UpdateCourseAsync(Guid courseId, UpdateCourseDtoLecturer dto);
         Task DeleteCourseAsync(Guid courseId);
         Task<LecturerCourseReportDto> GetCourseReportAsync(Guid courseId);
+        Task<StudentDetailReportDto> GetStudentCourseDetailAsync(Guid courseId, Guid studentId);
 
         // Chapters
         Task<List<ChapterDto>> GetChaptersByCourseAsync(Guid courseId);

@@ -9,7 +9,7 @@ import { CourseNav } from "./CourseNav";
 import { CourseQuizzes } from "./CourseQuizzes";
 import { CourseGrading } from "./CourseGrading";
 import { CourseReport } from "./CourseReport";
-import { ChevronDown, ChevronRight, FileText, ClipboardList, Plus, FileVideo, File, Edit, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronRight, FileText, ClipboardList, Plus, FileVideo, File, Edit, Trash2, X, Upload, Link as LinkIcon } from "lucide-react";
 import { Button } from "../ui/button";
 
 type User = {
@@ -39,6 +39,7 @@ const CourseDetailPage = () => {
     const [newChapterTitle, setNewChapterTitle] = useState("");
     const [addingChapter, setAddingChapter] = useState(false);
 
+
     // Add/Edit Lesson Modal
     const [showLessonModal, setShowLessonModal] = useState(false);
     const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
@@ -50,6 +51,9 @@ const CourseDetailPage = () => {
         fileType: "",
         durationSeconds: 0
     });
+    const [uploadInputType, setUploadInputType] = useState<"file" | "url">("file");
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
     const [savingLesson, setSavingLesson] = useState(false);
 
     // Delete Lesson Confirmation
@@ -174,6 +178,8 @@ const CourseDetailPage = () => {
             fileType: "",
             durationSeconds: 0
         });
+        setUploadInputType("file");
+        setSelectedFile(null);
         setShowLessonModal(true);
     };
 
@@ -187,7 +193,32 @@ const CourseDetailPage = () => {
             fileType: lesson.fileType || "",
             durationSeconds: lesson.durationSeconds || 0
         });
+        setUploadInputType(lesson.fileUrl ? "url" : "file"); // Default to url if exists
+        setSelectedFile(null);
         setShowLessonModal(true);
+    };
+
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            setSelectedFile(file);
+            setLessonForm(prev => ({
+                ...prev,
+                fileType: file.type || "application/octet-stream"
+            }));
+        }
+    };
+
+    const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+            const file = e.dataTransfer.files[0];
+            setSelectedFile(file);
+            setLessonForm(prev => ({
+                ...prev,
+                fileType: file.type || "application/octet-stream"
+            }));
+        }
     };
 
     const handleSaveLesson = async () => {
@@ -199,13 +230,31 @@ const CourseDetailPage = () => {
         try {
             setSavingLesson(true);
 
+            let finalFileUrl = lessonForm.fileUrl;
+
+            // Upload file if selected
+            if (uploadInputType === "file" && selectedFile) {
+                setIsUploading(true);
+                try {
+                    const uploadedUrl = await lecturerApi.uploadFile(selectedFile, "lessons");
+                    finalFileUrl = uploadedUrl;
+                } catch (uploadError) {
+                    console.error("Upload failed:", uploadError);
+                    toast.error("Tải file thất bại");
+                    setSavingLesson(false);
+                    setIsUploading(false);
+                    return;
+                }
+                setIsUploading(false);
+            }
+
             if (editingLesson) {
                 // Update existing lesson
                 await lecturerApi.updateLesson({
                     id: editingLesson.id,
                     title: lessonForm.title,
                     contentHtml: lessonForm.contentHtml,
-                    fileUrl: lessonForm.fileUrl,
+                    fileUrl: finalFileUrl,
                     fileType: lessonForm.fileType,
                     durationSeconds: lessonForm.durationSeconds
                 });
@@ -218,7 +267,7 @@ const CourseDetailPage = () => {
                     title: lessonForm.title,
                     orderIndex: (content?.lessons.length || 0) + 1,
                     contentHtml: lessonForm.contentHtml,
-                    fileUrl: lessonForm.fileUrl,
+                    fileUrl: finalFileUrl,
                     fileType: lessonForm.fileType,
                     durationSeconds: lessonForm.durationSeconds
                 });
@@ -574,50 +623,116 @@ const CourseDetailPage = () => {
                                 />
                             </div>
 
-                            {/* File URL */}
+                            {/* Content Type Toggle */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    URL file/video (tùy chọn)
+                                    Loại nội dung
                                 </label>
-                                <input
-                                    type="text"
-                                    value={lessonForm.fileUrl}
-                                    onChange={(e) => setLessonForm(prev => ({ ...prev, fileUrl: e.target.value }))}
-                                    placeholder="https://example.com/video.mp4"
-                                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                                />
+                                <div className="flex gap-2 mb-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setUploadInputType("file")}
+                                        className={`flex-1 py-2 px-4 rounded-lg border flex items-center justify-center gap-2 transition ${uploadInputType === "file"
+                                            ? "border-blue-500 bg-blue-50 text-blue-700 font-medium"
+                                            : "border-gray-200 hover:bg-gray-50 text-gray-600"
+                                            }`}
+                                    >
+                                        <Upload className="w-4 h-4" />
+                                        Tải file
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setUploadInputType("url")}
+                                        className={`flex-1 py-2 px-4 rounded-lg border flex items-center justify-center gap-2 transition ${uploadInputType === "url"
+                                            ? "border-blue-500 bg-blue-50 text-blue-700 font-medium"
+                                            : "border-gray-200 hover:bg-gray-50 text-gray-600"
+                                            }`}
+                                    >
+                                        <LinkIcon className="w-4 h-4" />
+                                        Link URL
+                                    </button>
+                                </div>
                             </div>
 
-                            {/* File Type and Duration */}
-                            <div className="grid grid-cols-2 gap-4">
+                            {/* File Upload / URL Input */}
+                            {uploadInputType === "file" ? (
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Loại file
+                                        File đính kèm
                                     </label>
-                                    <select
-                                        value={lessonForm.fileType}
-                                        onChange={(e) => setLessonForm(prev => ({ ...prev, fileType: e.target.value }))}
-                                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                    <div
+                                        className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition ${selectedFile
+                                            ? "border-blue-500 bg-blue-50"
+                                            : "border-gray-300 hover:border-blue-400 hover:bg-gray-50"
+                                            }`}
+                                        onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                                        onDrop={handleDrop}
+                                        onClick={() => document.getElementById('file-upload')?.click()}
                                     >
-                                        <option value="">Chọn loại</option>
-                                        <option value="video/mp4">Video</option>
-                                        <option value="application/pdf">PDF</option>
-                                        <option value="text/html">Văn bản</option>
-                                    </select>
+                                        <input
+                                            id="file-upload"
+                                            type="file"
+                                            className="hidden"
+                                            onChange={handleFileSelect}
+                                        />
+                                        <div className="flex flex-col items-center gap-2">
+                                            {selectedFile ? (
+                                                <>
+                                                    <File className="w-10 h-10 text-blue-500" />
+                                                    <p className="font-medium text-gray-900">{selectedFile.name}</p>
+                                                    <p className="text-sm text-gray-500">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                                                    <p className="text-xs text-blue-600 mt-2">Click hoặc kéo thả để thay đổi</p>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Upload className="w-10 h-10 text-gray-400" />
+                                                    <p className="font-medium text-gray-900">Kéo thả file hoặc click để chọn</p>
+                                                    <p className="text-sm text-gray-500">PDF, Word, Excel, Video (Tối đa 500MB)</p>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {isUploading && (
+                                        <div className="mt-2 text-sm text-blue-600 animate-pulse">
+                                            Đang tải file lên... {selectedFile?.name}
+                                        </div>
+                                    )}
                                 </div>
+                            ) : (
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Thời lượng (phút)
+                                        URL file/video
                                     </label>
                                     <input
-                                        type="number"
-                                        value={Math.floor(lessonForm.durationSeconds / 60)}
-                                        onChange={(e) => setLessonForm(prev => ({ ...prev, durationSeconds: parseInt(e.target.value) * 60 || 0 }))}
-                                        min={0}
+                                        type="text"
+                                        value={lessonForm.fileUrl}
+                                        onChange={(e) => setLessonForm(prev => ({ ...prev, fileUrl: e.target.value }))}
+                                        placeholder="https://example.com/video.mp4"
                                         className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                                     />
                                 </div>
-                            </div>
+                            )}
+
+                            {/* File Type (Hidden if file uploaded, auto-detected) */}
+                            {uploadInputType === "url" && (
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Loại file
+                                        </label>
+                                        <select
+                                            value={lessonForm.fileType}
+                                            onChange={(e) => setLessonForm(prev => ({ ...prev, fileType: e.target.value }))}
+                                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                        >
+                                            <option value="">Chọn loại</option>
+                                            <option value="video/mp4">Video</option>
+                                            <option value="application/pdf">PDF</option>
+                                            <option value="text/html">Văn bản</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <div className="flex gap-3 justify-end mt-6">
@@ -636,8 +751,8 @@ const CourseDetailPage = () => {
                             <Button variant="outline" onClick={() => setShowLessonModal(false)}>
                                 Hủy
                             </Button>
-                            <Button onClick={handleSaveLesson} disabled={savingLesson}>
-                                {savingLesson ? "Đang lưu..." : (editingLesson ? "Cập nhật" : "Thêm bài giảng")}
+                            <Button onClick={handleSaveLesson} disabled={savingLesson || isUploading}>
+                                {savingLesson || isUploading ? "Đang xử lý..." : (editingLesson ? "Cập nhật" : "Thêm bài giảng")}
                             </Button>
                         </div>
                     </div>

@@ -28,6 +28,22 @@ namespace LMS.Application.Lecturer
                 .ForMember(dest => dest.TotalQuizzes, opt => opt.Ignore()) // Compute separately
                 .ForMember(dest => dest.AverageProgress, opt => opt.Ignore()); // Compute separately
 
+            CreateMap<CreateCourseDtoLecturer, Course>()
+                .ForMember(dest => dest.Id, opt => opt.Ignore())
+                .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.UtcNow))
+                .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
+                .ForMember(dest => dest.IsDeleted, opt => opt.MapFrom(src => false));
+
+            CreateMap<UpdateCourseDtoLecturer, Course>()
+                .ForMember(dest => dest.Name, opt => opt.Condition(src => src.Name != null))
+                .ForMember(dest => dest.Description, opt => opt.Condition(src => src.Description != null))
+                .ForMember(dest => dest.ThumbnailUrl, opt => opt.Condition(src => src.ThumbnailUrl != null))
+                .ForMember(dest => dest.CourseCode, opt => opt.Condition(src => src.CourseCode != null))
+                .ForMember(dest => dest.SemesterId, opt => opt.Condition(src => src.SemesterId.HasValue))
+                .ForMember(dest => dest.AcademicYearId, opt => opt.Condition(src => src.AcademicYearId.HasValue))
+                .ForMember(dest => dest.MajorId, opt => opt.Condition(src => src.MajorId.HasValue))
+                .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
+
             // Chapter mappings
             CreateMap<Chapter, ChapterDto>()
                 .ForMember(dest => dest.TotalLessons, opt => opt.MapFrom(src => src.Contents.Count(c => c is Lesson)))

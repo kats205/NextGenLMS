@@ -27,6 +27,16 @@ const CourseDetailPage = lazy(() =>
         .then(module => ({ default: module.default }))
 );
 
+const CourseEditPage = lazy(() =>
+    import('./components/lecturer/CourseEditPage')
+        .then(module => ({ default: module.default }))
+);
+
+const CourseStudentsPage = lazy(() =>
+    import('./components/lecturer/CourseStudentsPage')
+        .then(module => ({ default: module.default }))
+);
+
 // Admin
 const AdminDashboard = lazy(() => import('./components/admin/AdminDashboard').then(module => ({ default: module.AdminDashboard })));
 const UserManagementPage = lazy(() => import('./components/admin/UserManagementPage').then(module => ({ default: module.UserManagementPage })));
@@ -169,6 +179,22 @@ export const router: ReturnType<typeof createBrowserRouter> = createBrowserRoute
                 element: (
                     <SuspenseLayout>
                         <CourseDetailPage />
+                    </SuspenseLayout>
+                )
+            },
+            {
+                path: '/lecturer/courses/:courseId/edit',
+                element: (
+                    <SuspenseLayout>
+                        <CourseEditPage />
+                    </SuspenseLayout>
+                )
+            },
+            {
+                path: '/lecturer/courses/:courseId/students',
+                element: (
+                    <SuspenseLayout>
+                        <CourseStudentsPage />
                     </SuspenseLayout>
                 )
             }

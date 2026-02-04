@@ -1,4 +1,5 @@
 ﻿using LMS.Application.Lecturer;
+using LMS.Application.Interfaces;
 using LMS.Infrastructure.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -7,15 +8,17 @@ using System.Security.Claims;
 namespace LMS.API.Controllers
 {
     [Route("api/lecturer")]
-    [ApiController]
+    [ApiController] 
     [Authorize(Roles = "Lecturer")]
     public class LecturerController : ControllerBase
     {
         private readonly ILecturerService _lecturerService;
+        private readonly IFileStorageService _fileStorageService;
 
-        public LecturerController(ILecturerService lecturerService)
+        public LecturerController(ILecturerService lecturerService, IFileStorageService fileStorageService)
         {
             _lecturerService = lecturerService;
+            _fileStorageService = fileStorageService;
         }
 
         private Guid GetCurrentLecturerId()
@@ -188,31 +191,6 @@ namespace LMS.API.Controllers
                 });
             }
         }
-
-        [HttpGet("courses/{id}/report")]
-        public async Task<IActionResult> GetCourseReport(Guid id)
-        {
-            try
-            {
-                var report = await _lecturerService.GetCourseReportAsync(id);
-
-                return Ok(new ApiResponse<CourseReportDto>
-                {
-                    Success = true,
-                    Data = report
-                });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new ApiResponse<object>
-                {
-                    Success = false,
-                    Message = "Lỗi khi tải báo cáo",
-                    Errors = ex.Message
-                });
-            }
-        }
-
         // ========== CHAPTERS ==========
 
         [HttpGet("courses/{courseId}/chapters")]
@@ -433,55 +411,54 @@ namespace LMS.API.Controllers
                     Errors = ex.Message
                 });
             }
-
-        [HttpGet("courses/{courseId}/submissions")]
-        public async Task<IActionResult> GetSubmissionsByCourse(Guid courseId)
-        {
-            try
-            {
-                var submissions = await _lecturerService.GetSubmissionsByCourseAsync(courseId);
-
-                return Ok(new ApiResponse<List<QuizSubmissionDto>>
-                {
-                    Success = true,
-                    Data = submissions
-                });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new ApiResponse<object>
-                {
-                    Success = false,
-                    Message = "Lỗi khi tải danh sách bài nộp",
-                    Errors = ex.Message
-                });
-            }
         }
-
-        [HttpGet("courses/{courseId}/report")]
-        public async Task<IActionResult> GetCourseReport(Guid courseId)
-        {
-            try
+            [HttpGet("courses/{courseId}/submissions")]
+            public async Task<IActionResult> GetSubmissionsByCourse(Guid courseId)
             {
-                var report = await _lecturerService.GetCourseReportAsync(courseId);
+                try
+                {
+                    var submissions = await _lecturerService.GetSubmissionsByCourseAsync(courseId);
 
-                return Ok(new ApiResponse<LecturerCourseReportDto>
+                    return Ok(new ApiResponse<List<QuizSubmissionDto>>
+                    {
+                        Success = true,
+                        Data = submissions
+                    });
+                }
+                catch (Exception ex)
                 {
-                    Success = true,
-                    Data = report
-                });
+                    return StatusCode(500, new ApiResponse<object>
+                    {
+                        Success = false,
+                        Message = "Lỗi khi tải danh sách bài nộp",
+                        Errors = ex.Message
+                    });
+                }
             }
-            catch (Exception ex)
+
+            [HttpGet("courses/{courseId}/report")]
+            public async Task<IActionResult> GetCourseReport(Guid courseId)
             {
-                return StatusCode(500, new ApiResponse<object>
+                try
                 {
-                    Success = false,
-                    Message = "Lỗi khi tải báo cáo khóa học",
-                    Errors = ex.Message
-                });
+                    var report = await _lecturerService.GetCourseReportAsync(courseId);
+
+                    return Ok(new ApiResponse<LecturerCourseReportDto>
+                    {
+                        Success = true,
+                        Data = report
+                    });
+                }
+                catch (Exception ex)
+                {
+                    return StatusCode(500, new ApiResponse<object>
+                    {
+                        Success = false,
+                        Message = "Lỗi khi tải báo cáo khóa học",
+                        Errors = ex.Message
+                    });
+                }
             }
-        }
-        }
 
         //========== LESSONS ==========
 
@@ -753,6 +730,54 @@ namespace LMS.API.Controllers
         }
 
         //========== STUDENTS ==========
+        [HttpGet("courses/{courseId}/students")]
+        public async Task<IActionResult> GetStudentsByCourse(Guid courseId, [FromQuery] int page = 1, [FromQuery] int limit = 100)
+        {
+            try
+            {
+                var pagination = new PaginationDto { Page = page, Limit = limit };
+                var result = await _lecturerService.GetStudentsByCourseAsync(courseId, pagination);
+
+                return Ok(new ApiResponse<PaginatedResponse<StudentDto>>
+                {
+                    Success = true,
+                    Data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Lỗi khi tải danh sách sinh viên",
+                    Errors = ex.Message
+                });
+            }
+        }
+        [HttpGet("courses/{courseId}/students/{studentId}/detail")]
+        public async Task<IActionResult> GetStudentDetail(Guid courseId, Guid studentId)
+        {
+            try
+            {
+                var result = await _lecturerService.GetStudentCourseDetailAsync(courseId, studentId);
+
+                return Ok(new ApiResponse<StudentDetailReportDto>
+                {
+                    Success = true,
+                    Data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Lỗi khi tải chi tiết sinh viên",
+                    Errors = ex.Message
+                });
+            }
+        }
+
         [HttpPost("courses/{courseId}/students")]
         public async Task<IActionResult> EnrollStudent(Guid courseId, [FromBody] EnrollStudentDto dto)
         {
@@ -776,29 +801,51 @@ namespace LMS.API.Controllers
                 Message = "Xóa sinh viên khỏi khóa học thành công"
             });
         }
+        [HttpPost("upload")]
+        public async Task<IActionResult> UploadFile([FromForm] IFormFile file, [FromForm] string type)
+        {
+            try
+            {
+                if (file == null || file.Length == 0)
+                    return BadRequest("Vui lòng chọn file");
 
+                // Determine folder based on file extension
+                var extension = System.IO.Path.GetExtension(file.FileName).ToLower();
+                string folderName = "documents/other";
 
-        // ========== FILE UPLOAD ==========
+                if (extension == ".pdf")
+                    folderName = "documents/pdf";
+                else if (new[] { ".doc", ".docx" }.Contains(extension))
+                    folderName = "documents/word";
+                else if (new[] { ".xls", ".xlsx" }.Contains(extension))
+                    folderName = "documents/excel";
+                else if (new[] { ".ppt", ".pptx" }.Contains(extension))
+                    folderName = "documents/ppt";
+                else if (new[] { ".mp4", ".mov", ".avi", ".mkv", ".webm" }.Contains(extension))
+                    folderName = "video";
+                else if (new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" }.Contains(extension))
+                    folderName = "image";
+                else if (new[] { ".zip", ".rar", ".7z" }.Contains(extension))
+                    folderName = "documents/archive";
 
-        //[HttpPost("upload")]
-        //[Consumes("multipart/form-data")]
-        //public async Task<IActionResult> UploadFile([FromForm] UploadFileRequest request)
-        //{
-        //    if (request.File == null || request.File.Length == 0)
-        //        return BadRequest(new ApiResponse<object>
-        //        {
-        //            Success = false,
-        //            Message = "File không hợp lệ"
-        //        });
+                var fileUrl = await _fileStorageService.UploadFileAsync(file, folderName);
 
-        //    var url = await _lecturerService.UploadFileAsync(request.File, request.Type);
-
-        //    return Ok(new ApiResponse<object>
-        //    {
-        //        Success = true,
-        //        Message = "Upload file thành công",
-        //        Data = new { Url = url }
-        //    });
-        //}
+                return Ok(new ApiResponse<object>
+                {
+                    Success = true,
+                    Message = "Upload file thành công",
+                    Data = new { url = fileUrl }
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Lỗi khi upload file",
+                    Errors = ex.Message
+                });
+            }
+        }
     }
 }

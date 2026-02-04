@@ -1,4 +1,5 @@
-﻿using LMS.Application.Lecturer;
+﻿using AutoMapper;
+using LMS.Application.Lecturer;
 using LMS.Domain.Entities.Assessment;
 using LMS.Domain.Entities.Content;
 using LMS.Domain.Entities.Courses;
@@ -9,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+
 
 
 namespace LMS.Infrastructure.Services
@@ -31,6 +33,7 @@ namespace LMS.Infrastructure.Services
             var courses = await _context.Courses
                 .Include(c => c.Semester)
                 .Include(c => c.AcademicYear)
+                .Include(c => c.Students)
                 .Include(c => c.Chapters)
                     .ThenInclude(ch => ch.Contents)
                 .Where(c =>
@@ -38,6 +41,8 @@ namespace LMS.Infrastructure.Services
                     c.Lecturers.Any(l => l.LecturerId == lecturerId)
                 )
                 .ToListAsync();
+
+            var courseIds = courses.Select(c => c.Id).ToList();
 
             var totalLessons = courses.SelectMany(c => c.Chapters)
                 .SelectMany(ch => ch.Contents)
@@ -49,9 +54,9 @@ namespace LMS.Infrastructure.Services
 
             var pendingGrading = await _context.QuizSubmissions
                 .CountAsync(qs => qs.Status == "Submitted" &&
-                    _context.Quizzes.Any(q => q.Chapter.CourseId == courses.Select(c => c.Id).FirstOrDefault()));
+                    _context.Quizzes.Any(q => courseIds.Contains(q.Chapter.CourseId)));
 
-            return new LecturerDashboardDto
+            var dashboard = new LecturerDashboardDto
             {
                 TotalCourses = courses.Count,
                 TotalStudents = courses.Sum(c => c.Students.Count),
@@ -60,6 +65,17 @@ namespace LMS.Infrastructure.Services
                 PendingGrading = pendingGrading,
                 Courses = _mapper.Map<List<CourseDto>>(courses)
             };
+
+            // Ensure stats are correctly set for mapped courses
+            foreach (var dto in dashboard.Courses)
+            {
+                var course = courses.First(c => c.Id == dto.Id);
+                dto.TotalLessons = course.Chapters.SelectMany(ch => ch.Contents).Count(c => c is Lesson);
+                dto.TotalQuizzes = course.Chapters.SelectMany(ch => ch.Contents).Count(c => c is Quiz);
+                dto.TotalStudents = course.Students.Count;
+            }
+
+            return dashboard;
         }
         public async Task<List<LessonDto>> GetLessonsByChapterAsync(Guid chapterId)
         {
@@ -133,7 +149,64 @@ namespace LMS.Infrastructure.Services
         }
         public async Task<LecturerCourseReportDto> GetCourseReportAsync(Guid courseId)
         {
-             return new LecturerCourseReportDto();
+            var course = await _context.Courses
+                .FirstOrDefaultAsync(c => c.Id == courseId);
+
+            if (course == null)
+                throw new Exception("Không tìm thấy khóa học");
+
+            // 1. Get Students
+            var students = await _context.CourseStudents
+                .Include(cs => cs.Student)
+                .Where(cs => cs.CourseId == courseId)
+                .Select(cs => cs.Student)
+                .ToListAsync();
+
+            // 2. Get Progress & Scores (Simplification for now: Mock calculation or fetch from related tables if exist)
+            // Assuming tables: StudentProgress, QuizSubmission
+            
+            var studentReports = new List<StudentReportDto>();
+            double totalProgress = 0;
+            double totalQuizScore = 0;
+
+            foreach (var student in students)
+            {
+                // TODO: Fetch real progress and scores
+                // For now, return mock data or 0 to enable the structure
+                // In real implementation, fetching this in a loop is N+1, should optimize later
+                
+                // Mock logic:
+                double progress = 0; 
+                double quizScore = 0;
+
+                studentReports.Add(new StudentReportDto
+                {
+                    StudentId = student.Id,
+                    FullName = student.FullName ?? "Unknown",
+                    StudentCode = student.StudentCode ?? "",
+                    Progress = progress,
+                    AvgQuizScore = quizScore,
+                    AvgAssignmentScore = 0,
+                    ParticipationRate = 0
+                });
+
+                totalProgress += progress;
+                totalQuizScore += quizScore;
+            }
+
+            var totalStudents = students.Count;
+
+            return new LecturerCourseReportDto
+            {
+                CourseId = course.Id,
+                CourseName = course.Name,
+                CourseCode = course.CourseCode,
+                TotalStudents = totalStudents,
+                AverageProgress = totalStudents > 0 ? Math.Round(totalProgress / totalStudents, 1) : 0,
+                AverageQuizScore = totalStudents > 0 ? Math.Round(totalQuizScore / totalStudents, 1) : 0,
+                CompletionRate = 0, // Placeholder
+                Students = studentReports
+            };
         }
         private IQueryable<Course> LecturerCourseQuery(Guid lecturerId)
         {
@@ -266,9 +339,22 @@ namespace LMS.Infrastructure.Services
                 .Take(pagination.Limit)
                 .ToListAsync();
 
+            // Map manually since we need to include EnrolledDate from CourseStudent
+            var studentDtos = data.Select(cs => new StudentDto
+            {
+                Id = cs.Student.Id,
+                FullName = cs.Student.FullName ?? "",
+                Email = cs.Student.Email ?? "",
+                StudentCode = cs.Student.StudentCode,
+                AvatarUrl = cs.Student.AvatarUrl,
+                EnrolledDate = cs.CreatedAt,
+                Progress = 0, // Could calculate later
+                AverageScore = null
+            }).ToList();
+
             return new PaginatedResponse<StudentDto>
             {
-                Data = _mapper.Map<List<StudentDto>>(data),
+                Data = studentDtos,
                 Total = total,
                 Page = pagination.Page,
                 Limit = pagination.Limit,
@@ -492,18 +578,19 @@ namespace LMS.Infrastructure.Services
 
             var courseDtos = _mapper.Map<List<CourseDto>>(courses);
 
-            // Calculate statistics for each course
-            foreach (var dto in courseDtos)
-            {
-                var course = courses.First(c => c.Id == dto.Id);
+                // Calculate statistics for each course
+                foreach (var dto in courseDtos)
+                {
+                    var course = courses.First(c => c.Id == dto.Id);
 
-                dto.TotalLessons = course.Chapters.SelectMany(ch => ch.Contents).Count(c => c is Lesson);
-                dto.TotalQuizzes = course.Chapters.SelectMany(ch => ch.Contents).Count(c => c is Quiz);
+                    dto.TotalStudents = course.Students.Count;
+                    dto.TotalLessons = course.Chapters.SelectMany(ch => ch.Contents).Count(c => c is Lesson);
+                    dto.TotalQuizzes = course.Chapters.SelectMany(ch => ch.Contents).Count(c => c is Quiz);
 
-                // Calculate average progress
-                var studentProgresses = await CalculateCourseAverageProgressAsync(course.Id);
-                dto.AverageProgress = studentProgresses;
-            }
+                    // Calculate average progress
+                    var studentProgresses = await CalculateCourseAverageProgressAsync(course.Id);
+                    dto.AverageProgress = studentProgresses;
+                }
 
             return new PaginatedResponse<CourseDto>
             {
@@ -567,7 +654,17 @@ namespace LMS.Infrastructure.Services
             if (course == null)
                 throw new Exception("Không tìm thấy khóa học");
 
-            _mapper.Map(dto, course);
+            // Manually update fields to avoid AutoMapper issues with FKs
+            if (!string.IsNullOrEmpty(dto.Name)) course.Name = dto.Name;
+            if (!string.IsNullOrEmpty(dto.Description)) course.Description = dto.Description;
+            if (!string.IsNullOrEmpty(dto.CourseCode)) course.CourseCode = dto.CourseCode;
+            if (!string.IsNullOrEmpty(dto.ThumbnailUrl)) course.ThumbnailUrl = dto.ThumbnailUrl;
+            
+            // Only update FKs if they are provided and valid
+            if (dto.SemesterId.HasValue) course.SemesterId = dto.SemesterId.Value;
+            if (dto.AcademicYearId.HasValue) course.AcademicYearId = dto.AcademicYearId.Value;
+            if (dto.MajorId.HasValue) course.MajorId = dto.MajorId.Value;
+
             course.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
@@ -664,9 +761,7 @@ namespace LMS.Infrastructure.Services
             if (lesson == null)
                 throw new Exception("Không tìm thấy bài học");
 
-            lesson.IsDeleted = true;
-            lesson.UpdatedAt = DateTime.UtcNow;
-
+            _context.Lessons.Remove(lesson);
             await _context.SaveChangesAsync();
         }
 
@@ -805,6 +900,93 @@ namespace LMS.Infrastructure.Services
 
 
 
+        public async Task<StudentDetailReportDto> GetStudentCourseDetailAsync(Guid courseId, Guid studentId)
+        {
+            // 1. Verify Enrollment
+            var enrollment = await _context.CourseStudents
+                .Include(cs => cs.Student)
+                .FirstOrDefaultAsync(cs => cs.CourseId == courseId && cs.StudentId == studentId);
+
+            if (enrollment == null)
+                throw new Exception("Sinh viên không thuộc khóa học này");
+
+            // 2. Get All Course Lessons & Quizzes
+            var chapters = await _context.Chapters
+                .Include(c => c.Contents)
+                .Where(c => c.CourseId == courseId)
+                .OrderBy(c => c.OrderIndex)
+                .ToListAsync();
+
+            var allLessons = chapters.SelectMany(c => c.Contents.Where(x => x is Lesson).Cast<Lesson>()).ToList();
+            var allQuizzes = chapters.SelectMany(c => c.Contents.Where(x => x is Quiz).Cast<Quiz>()).ToList();
+
+            // 3. Get Student Progress
+            var lessonIds = allLessons.Select(l => l.Id).ToList();
+            var progressMap = await _context.LessonProgresses
+                .Where(p => p.UserId == studentId && lessonIds.Contains(p.LessonId))
+                .ToDictionaryAsync(p => p.LessonId);
+
+            // 4. Get Quiz Submissions (Get highest score per quiz)
+            var quizIds = allQuizzes.Select(q => q.Id).ToList();
+            var submissions = await _context.QuizSubmissions
+                .Where(s => s.StudentId == studentId && quizIds.Contains(s.QuizId))
+                .ToListAsync();
+
+            // 5. Build DTO
+            var lessonDtos = new List<LessonDetailDto>();
+            foreach (var chapter in chapters)
+            {
+                var chapterLessons = chapter.Contents.Where(x => x is Lesson).OrderBy(x => x.OrderIndex).Cast<Lesson>();
+                foreach (var lesson in chapterLessons) // Order by Chapter -> Lesson Order
+                {
+                    var isCompleted = progressMap.TryGetValue(lesson.Id, out var prog) && prog.IsCompleted;
+                    lessonDtos.Add(new LessonDetailDto
+                    {
+                        Id = lesson.Id,
+                        Title = lesson.Title,
+                        IsCompleted = isCompleted,
+                        LastAccess = progressMap.ContainsKey(lesson.Id) ? progressMap[lesson.Id].LastAccess : null,
+                        ChapterTitle = chapter.Title
+                    });
+                }
+            }
+
+            var quizDtos = new List<QuizResultDto>();
+            foreach (var quiz in allQuizzes)
+            {
+                // Find best submission
+                var quizSubs = submissions.Where(s => s.QuizId == quiz.Id).OrderByDescending(s => s.Score).FirstOrDefault();
+                
+                quizDtos.Add(new QuizResultDto
+                {
+                    Id = quiz.Id,
+                    Title = quiz.Title,
+                    Score = quizSubs?.Score,
+                    MaxScore = 10, // Assuming 10 for now
+                    SubmittedAt = quizSubs?.EndTime ?? quizSubs?.StartTime,
+                    Status = quizSubs?.Status ?? "NotStarted"
+                });
+            }
+
+            // Calc summary stats
+            var completedCount = lessonDtos.Count(l => l.IsCompleted);
+            var totalProgress = allLessons.Count > 0 ? (double)completedCount / allLessons.Count * 100 : 0;
+            
+            var gradedQuizzes = quizDtos.Where(q => q.Score.HasValue).ToList();
+            var avgQuiz = gradedQuizzes.Any() ? gradedQuizzes.Average(q => q.Score!.Value) : 0;
+
+            return new StudentDetailReportDto
+            {
+                StudentId = studentId,
+                FullName = enrollment.Student?.FullName ?? "Unknown",
+                StudentCode = enrollment.Student?.StudentCode ?? "",
+                Progress = Math.Round(totalProgress, 1),
+                AvgQuizScore = Math.Round(avgQuiz, 1),
+                ParticipationRate = 0, // Placeholder
+                Lessons = lessonDtos,
+                Quizzes = quizDtos
+            };
+        }
     }
 }
 

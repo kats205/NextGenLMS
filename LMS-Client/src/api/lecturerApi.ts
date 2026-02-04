@@ -66,7 +66,8 @@ export const createCourse = async (data: CreateCourseRequest): Promise<Course> =
 };
 
 export const updateCourse = async (data: UpdateCourseRequest): Promise<Course> => {
-    const response = await axiosClient.put(`${BASE_URL}/courses/${data.id}`, data);
+    const { id, ...updateData } = data;
+    const response = await axiosClient.put(`${BASE_URL}/courses/${id}`, updateData);
     return response.data.data;
 };
 
@@ -264,7 +265,12 @@ export const getStudentProgress = async (courseId: string, studentId: string): P
 };
 
 export const enrollStudent = async (courseId: string, studentEmail: string): Promise<void> => {
-    await axiosClient.post(`${BASE_URL}/courses/${courseId}/enroll`, { studentEmail });
+    await axiosClient.post(`${BASE_URL}/courses/${courseId}/students`, { studentEmail });
+};
+
+export const getStudentDetail = async (courseId: string, studentId: string): Promise<any> => {
+    const response = await axiosClient.get(`${BASE_URL}/courses/${courseId}/students/${studentId}/detail`);
+    return response.data.data;
 };
 
 export const removeStudent = async (courseId: string, studentId: string): Promise<void> => {
@@ -374,6 +380,7 @@ const lecturerApi = {
     // Students
     getStudentsByCourse,
     getStudentProgress,
+    getStudentDetail,
     enrollStudent,
     removeStudent,
 
