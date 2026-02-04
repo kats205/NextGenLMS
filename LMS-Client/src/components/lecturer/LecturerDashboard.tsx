@@ -1,4 +1,4 @@
-// src/components/lecturer/LecturerDashboard.tsx
+﻿// src/components/lecturer/LecturerDashboard.tsx
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -60,7 +60,7 @@ const LecturerDashboard: React.FC = () => {
 
                 {/* Stats */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <StatCard title="Tổng khóa học" value={dashboard.totalCourses} icon="📘" />
+                    <StatCard title="Tổng khóa học" value={dashboard.totalCourses} icon="📚" />
                     <StatCard title="Tổng sinh viên" value={dashboard.totalStudents} icon="👥" />
                     <StatCard title="Bài giảng" value={dashboard.totalLessons} icon="📄" />
                     <StatCard title="Bài cần chấm" value={dashboard.pendingGrading} icon="📝" />
@@ -110,7 +110,7 @@ const LecturerDashboard: React.FC = () => {
                             {/* Button */}
                             <div className="mt-6 flex gap-3">
                                 <button className="flex-1 bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition">
-                                    👁 Xem chi tiết
+                                    👉 Xem chi tiết
                                 </button>
                                 <button className="w-12 border rounded-lg hover:bg-gray-100 transition">
                                     👥

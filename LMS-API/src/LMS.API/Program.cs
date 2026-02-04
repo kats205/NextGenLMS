@@ -137,16 +137,8 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.MigrateAsync();
 
-    var seeder = new DataSeeder(db);
-
-    try
-    {
-        await seeder.SeedAsync();
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"[ERROR] Seed failed: {ex.Message}");
-    }
+    // Seed initialization is handled by EF Core Migrations (HasData)
+    // var seeder = new DataSeeder(db); ... -> Removed
 }
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

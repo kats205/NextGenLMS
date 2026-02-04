@@ -1,16 +1,16 @@
-import { Link, useLocation } from "react-router-dom";
+﻿import { Link, useLocation } from "react-router-dom";
 
 export function LecturerNav() {
     const location = useLocation();
 
-    // ch? hi?n th? menu ??y ?? khi ?ang ? trang course detail
+    // chỉ hiển thị menu đầy đủ khi đang ở trang course detail
     const isCourseDetailPage = location.pathname.startsWith("/lecturer/courses/");
 
     return (
         <div className="bg-white rounded-xl shadow mb-6 px-4 py-3">
             <div className="flex gap-2">
 
-                {/* TAB KH�A H?C (lu�n lu�n hi?n v� l� link) */}
+                {/* TAB KHÓA HỌC (luôn luôn hiển thị và là link) */}
                 <Link
                     to="/lecturer/dashboard"
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition ${location.pathname === "/lecturer/dashboard" ||
@@ -19,26 +19,26 @@ export function LecturerNav() {
                             : "text-gray-600 hover:bg-gray-100"
                         }`}
                 >
-                    Kh�a h?c c?a t�i
+                    Khóa học của tôi
                 </Link>
 
-                {/* 4 TAB CH? HI?N KHI ? COURSE DETAIL */}
+                {/* 4 TAB CHỈ HIỂN THỊ KHI Ở TRANG COURSE DETAIL */}
                 {isCourseDetailPage && (
                     <>
                         <button className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition">
-                            Qu?n l� n?i dung
+                            Quản lý nội dung
                         </button>
 
                         <button className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition">
-                            B�i ki?m tra
+                            Bài kiểm tra
                         </button>
 
                         <button className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition">
-                            Ch?m b�i
+                            Chấm bài
                         </button>
 
                         <button className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition">
-                            B�o c�o l?p
+                            Báo cáo lớp
                         </button>
                     </>
                 )}

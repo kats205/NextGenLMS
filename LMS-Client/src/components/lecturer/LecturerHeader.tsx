@@ -1,4 +1,4 @@
-import { LogOut, User as UserIcon } from "lucide-react";
+﻿import { LogOut, User as UserIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export type LecturerUser = {
@@ -33,7 +33,7 @@ export function LecturerHeader({ user }: LecturerHeaderProps) {
 
                         <div>
                             <h1 className="font-semibold text-gray-900">
-                                H? th?ng qu?n l� h?c t?p
+                                Hệ thống quản lý học tập
                             </h1>
                             <p className="text-sm text-gray-500">
                                 Learning Management System
@@ -75,7 +75,7 @@ export function LecturerHeader({ user }: LecturerHeaderProps) {
                         >
                             <LogOut className="w-4 h-4" />
                             <span className="text-sm font-medium">
-                                ??ng xu?t
+                                Đăng xuất
                             </span>
                         </button>
                     </div>
