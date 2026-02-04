@@ -1,162 +1,210 @@
-import { useState } from 'react';
-import { Search, Download, Mail } from 'lucide-react';
-import { Badge } from '../shared/Badge';
+// src/components/lecturer/StudentList.tsx
+import React, { useEffect, useState } from 'react';
+import { toast } from 'react-toastify';
+import lecturerApi from '../../api/lecturerApi';
+import type { QuizSubmission } from './lecturer.types';
 
 interface StudentListProps {
-  courseId: string;
+    courseId: string;
 }
 
-// Mock student data
-const mockStudents = [
-  { id: '3', name: 'Lê Minh Tuấn', email: 'student@university.edu.vn', averageScore: 9.0, completionRate: 50 },
-  { id: '4', name: 'Nguyễn Thị Lan', email: 'lan.nguyen@university.edu.vn', averageScore: 8.5, completionRate: 75 },
-  { id: '5', name: 'Trần Văn Hùng', email: 'hung.tran@university.edu.vn', averageScore: 7.8, completionRate: 60 },
-  { id: '6', name: 'Phạm Thị Hoa', email: 'hoa.pham@university.edu.vn', averageScore: 9.2, completionRate: 80 },
-  { id: '7', name: 'Hoàng Văn Nam', email: 'nam.hoang@university.edu.vn', averageScore: 6.5, completionRate: 40 },
-];
+const StudentList: React.FC<StudentListProps> = ({ courseId }) => {
+    const [submissions, setSubmissions] = useState<QuizSubmission[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [filterCourse, setFilterCourse] = useState('all');
+    const [filterStatus, setFilterStatus] = useState('all');
 
-export function StudentList({ courseId }: StudentListProps) {
-  const [searchTerm, setSearchTerm] = useState('');
+    useEffect(() => {
+        loadSubmissions();
+    }, [courseId]);
 
-  const filteredStudents = mockStudents.filter(student =>
-    student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+    const loadSubmissions = async () => {
+        try {
+            setLoading(true);
 
-  const getScoreBadge = (score: number) => {
-    if (score >= 8.5) return <Badge variant="success">Xuất sắc</Badge>;
-    if (score >= 7.0) return <Badge variant="primary">Khá</Badge>;
-    if (score >= 5.5) return <Badge variant="warning">Trung bình</Badge>;
-    return <Badge variant="danger">Yếu</Badge>;
-  };
+            // Get all quizzes for the course
+            const quizzes = await lecturerApi.getQuizzesByCourse(courseId);
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-gray-900">Danh sách sinh viên</h3>
-        <div className="flex gap-2">
-          <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
-            <Mail className="w-4 h-4" />
-            Gửi email
-          </button>
-          <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
-            <Download className="w-4 h-4" />
-            Xuất Excel
-          </button>
-        </div>
-      </div>
+            // Get submissions for each quiz
+            const allSubmissions: QuizSubmission[] = [];
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Tìm kiếm sinh viên..."
-          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-        />
-      </div>
+            for (const quiz of quizzes) {
+                try {
+                    const quizSubmissions = await lecturerApi.getQuizSubmissions(quiz.id);
+                    allSubmissions.push(...quizSubmissions);
+                } catch (error) {
+                    console.error(`Failed to load submissions for quiz ${quiz.id}:`, error);
+                }
+            }
 
-      {/* Students Table */}
-      <div className="overflow-x-auto border border-gray-200 rounded-lg">
-        <table className="w-full">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Sinh viên
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Email
-              </th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Tiến độ
-              </th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Điểm TB
-              </th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Xếp loại
-              </th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Thao tác
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {filteredStudents.map(student => (
-              <tr key={student.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
-                      <span className="font-medium text-primary-600">
-                        {student.name.charAt(0)}
-                      </span>
+            // Sort by submission time descending
+            allSubmissions.sort((a, b) =>
+                new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            );
+
+            setSubmissions(allSubmissions);
+        } catch (error: any) {
+            console.error('Failed to load submissions:', error);
+            toast.error('Không thể tải danh sách bài nộp');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const filteredSubmissions = submissions.filter(submission => {
+        if (filterStatus !== 'all') {
+            if (filterStatus === 'pending' && submission.status !== 'Submitted') return false;
+            if (filterStatus === 'graded' && submission.status !== 'Graded') return false;
+        }
+        return true;
+    });
+
+    const handleGrade = (submissionId: string) => {
+        toast.info(`Modal chấm bài cho submission: ${submissionId}`);
+    };
+
+    const handleView = (submissionId: string) => {
+        toast.info(`Xem chi tiết bài làm: ${submissionId}`);
+    };
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-6">
+            {/* Filters */}
+            <div className="flex items-center space-x-4">
+                <select
+                    value={filterCourse}
+                    onChange={(e) => setFilterCourse(e.target.value)}
+                    className="px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                    <option value="all">Tất cả khóa học</option>
+                    <option value="current">Lập trình Web (IT301)</option>
+                </select>
+                <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    className="px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                    <option value="all">Tất cả trạng thái</option>
+                    <option value="pending">Chờ chấm</option>
+                    <option value="graded">Đã chấm</option>
+                </select>
+            </div>
+
+            {/* Table */}
+            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+                {filteredSubmissions.length === 0 ? (
+                    <div className="text-center py-12">
+                        <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <p className="mt-2 text-sm text-gray-500">Chưa có bài nộp nào</p>
                     </div>
-                    <div className="ml-3">
-                      <div className="font-medium text-gray-900">{student.name}</div>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {student.email}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="flex-1 max-w-[100px]">
-                      <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-primary-600 rounded-full"
-                          style={{ width: `${student.completionRate}%` }}
-                        />
-                      </div>
-                    </div>
-                    <span className="text-sm text-gray-600">{student.completionRate}%</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-center">
-                  <span className="font-medium text-gray-900">{student.averageScore.toFixed(1)}</span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-center">
-                  {getScoreBadge(student.averageScore)}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-center">
-                  <button className="text-sm text-primary-600 hover:text-primary-700 font-medium">
-                    Xem chi tiết
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                ) : (
+                    <table className="w-full">
+                        <thead className="bg-gray-50 border-b border-gray-200">
+                            <tr>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">SINH VIÊN</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">BÀI KIỂM TRA</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">THỜI GIAN NỘP</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">TRẠNG THÁI</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">THAO TÁC</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                            {filteredSubmissions.map((submission) => (
+                                <SubmissionRow
+                                    key={submission.id}
+                                    submission={submission}
+                                    onGrade={handleGrade}
+                                    onView={handleView}
+                                />
+                            ))}
+                        </tbody>
+                    </table>
+                )}
+            </div>
+        </div>
+    );
+};
 
-      {filteredStudents.length === 0 && (
-        <div className="text-center py-8 text-gray-500">
-          Không tìm thấy sinh viên nào
-        </div>
-      )}
-
-      {/* Pagination */}
-      <div className="flex items-center justify-between border-t border-gray-200 pt-4">
-        <div className="text-sm text-gray-500">
-          Hiển thị <span className="font-medium">{filteredStudents.length}</span> sinh viên
-        </div>
-        <div className="flex gap-2">
-          <button className="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
-            Trước
-          </button>
-          <button className="px-3 py-1 bg-primary-600 text-white rounded-lg text-sm">
-            1
-          </button>
-          <button className="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
-            2
-          </button>
-          <button className="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
-            Sau
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+interface SubmissionRowProps {
+    submission: QuizSubmission;
+    onGrade: (id: string) => void;
+    onView: (id: string) => void;
 }
+
+const SubmissionRow: React.FC<SubmissionRowProps> = ({ submission, onGrade, onView }) => {
+    const isPending = submission.status === 'Submitted';
+    const isGraded = submission.status === 'Graded';
+
+    return (
+        <tr className="hover:bg-gray-50">
+            <td className="px-6 py-4">
+                <div>
+                    <div className="font-medium text-gray-900">{submission.studentName}</div>
+                    <div className="text-sm text-gray-500">{submission.studentCode}</div>
+                </div>
+            </td>
+            <td className="px-6 py-4">
+                <div>
+                    <div className="font-medium text-gray-900">{submission.quizTitle}</div>
+                    <div className="text-sm text-gray-500">IT301</div>
+                </div>
+            </td>
+            <td className="px-6 py-4 text-sm text-gray-600">
+                {submission.endTime
+                    ? new Date(submission.endTime).toLocaleString('vi-VN')
+                    : 'Đang làm bài'}
+            </td>
+            <td className="px-6 py-4">
+                {isPending && (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                        Chờ chấm
+                    </span>
+                )}
+                {isGraded && (
+                    <div>
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            Đã chấm
+                        </span>
+                        <div className="text-sm font-medium text-gray-900 mt-1">
+                            Điểm: {submission.score}/10
+                        </div>
+                    </div>
+                )}
+                {submission.status === 'InProgress' && (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        Đang làm
+                    </span>
+                )}
+            </td>
+            <td className="px-6 py-4">
+                {isPending ? (
+                    <button
+                        onClick={() => onGrade(submission.id)}
+                        className="text-blue-600 hover:text-blue-800 font-medium text-sm"
+                    >
+                        Chấm bài
+                    </button>
+                ) : (
+                    <button
+                        onClick={() => onView(submission.id)}
+                        className="text-blue-600 hover:text-blue-800 font-medium text-sm"
+                    >
+                        Xem lại
+                    </button>
+                )}
+            </td>
+        </tr>
+    );
+};
+
+export default StudentList;

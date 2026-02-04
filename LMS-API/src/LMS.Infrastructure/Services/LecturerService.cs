@@ -57,7 +57,7 @@ namespace LMS.Infrastructure.Services
                 TotalLessons = totalLessons,
                 TotalQuizzes = totalQuizzes,
                 PendingGrading = pendingGrading,
-                RecentCourses = _mapper.Map<List<CourseDto>>(courses.Take(5).ToList())
+                Courses = _mapper.Map<List<CourseDto>>(courses)
             };
         }
         public async Task<List<LessonDto>> GetLessonsByChapterAsync(Guid chapterId)
@@ -621,7 +621,7 @@ namespace LMS.Infrastructure.Services
             return dto;
         }
 
-        public async Task<CourseDto> CreateCourseAsync(Guid lecturerId, CreateCourseDto dto)
+        public async Task<CourseDto> CreateCourseAsync(Guid lecturerId, CreateCourseDtoLecturer dto)
         {
             // 1. Tạo course
             var course = _mapper.Map<Course>(dto);
@@ -641,7 +641,7 @@ namespace LMS.Infrastructure.Services
             return await GetCourseByIdAsync(course.Id);
         }
 
-        public async Task<CourseDto> UpdateCourseAsync(Guid courseId, UpdateCourseDto dto)
+        public async Task<CourseDto> UpdateCourseAsync(Guid courseId, UpdateCourseDtoLecturer dto)
         {
             var course = await _context.Courses.FindAsync(courseId);
             if (course == null)

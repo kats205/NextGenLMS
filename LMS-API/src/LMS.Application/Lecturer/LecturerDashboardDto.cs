@@ -14,8 +14,10 @@ namespace LMS.Application.Lecturer
         public int TotalQuizzes { get; set; }
         public int PendingGrading { get; set; }
 
-        // Recent activity
-        public List<CourseDto> RecentCourses { get; set; } = new();
+        // Frontend cần property này
+        public List<CourseDto> Courses { get; set; } = new();
+
+        // Giữ lại nếu muốn hiển thị lịch sử
         public List<QuizSubmissionDto> RecentSubmissions { get; set; } = new();
     }
 }

@@ -1,134 +1,267 @@
-import { useState } from 'react';
-import { mockChapters } from '../../data/mockData';
-import { Plus, FileText, Video, File, Link as LinkIcon, CheckCircle2, MoreVertical } from 'lucide-react';
-import { Badge } from '../shared/Badge';
+// src/components/lecturer/ContentManagement.tsx
+import React, { useEffect, useState } from 'react';
+import { toast } from 'react-toastify';
+import lecturerApi from '../../api/lecturerApi';
+import type { Chapter, Lesson, Quiz } from './lecturer.types';
 
 interface ContentManagementProps {
-  courseId: string;
+    courseId: string;
 }
 
-export function ContentManagement({ courseId }: ContentManagementProps) {
-  const [expandedChapters, setExpandedChapters] = useState<string[]>(['ch1']);
-  const chapters = mockChapters.filter(c => c.courseId === courseId);
+interface ContentItem {
+    id: string;
+    title: string;
+    type: 'Lesson' | 'Quiz' | 'Announcement';
+    chapterName: string;
+    date: string;
+    views: number;
+    icon: string;
+    iconBg: string;
+}
 
-  const toggleChapter = (chapterId: string) => {
-    setExpandedChapters(prev =>
-      prev.includes(chapterId)
-        ? prev.filter(id => id !== chapterId)
-        : [...prev, chapterId]
-    );
-  };
+const ContentManagement: React.FC<ContentManagementProps> = ({ courseId }) => {
+    const [contents, setContents] = useState<ContentItem[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [selectedCourse] = useState('Lập trình Web (IT301)');
 
-  const getFileIcon = (fileType?: string) => {
-    switch (fileType) {
-      case 'pdf':
-        return <FileText className="w-5 h-5 text-danger-600" />;
-      case 'video':
-        return <Video className="w-5 h-5 text-primary-600" />;
-      case 'word':
-        return <File className="w-5 h-5 text-primary-500" />;
-      case 'link':
-        return <LinkIcon className="w-5 h-5 text-success-600" />;
-      default:
-        return <FileText className="w-5 h-5 text-gray-600" />;
-    }
-  };
+    useEffect(() => {
+        loadContents();
+    }, [courseId]);
 
-  const getItemTypeBadge = (type: string) => {
-    switch (type) {
-      case 'lecture':
-        return <Badge variant="primary">Bài giảng</Badge>;
-      case 'assessment':
-        return <Badge variant="warning">Bài kiểm tra</Badge>;
-      case 'announcement':
-        return <Badge variant="secondary">Thông báo</Badge>;
-      default:
-        return null;
-    }
-  };
+    const loadContents = async () => {
+        try {
+            setLoading(true);
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="font-semibold text-gray-900">Quản lý nội dung khóa học</h3>
-        <button className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
-          <Plus className="w-4 h-4" />
-          Thêm chương mới
-        </button>
-      </div>
+            // Load chapters first
+            const chapters = await lecturerApi.getChaptersByCourse(courseId);
 
-      {/* Chapters List */}
-      <div className="space-y-4">
-        {chapters.map(chapter => {
-          const isExpanded = expandedChapters.includes(chapter.id);
-          return (
-            <div key={chapter.id} className="border border-gray-200 rounded-lg overflow-hidden">
-              <button
-                onClick={() => toggleChapter(chapter.id)}
-                className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-success-600" />
-                  <span className="font-medium text-gray-900">{chapter.title}</span>
-                  <span className="text-sm text-gray-500">({chapter.items.length} mục)</span>
-                </div>
-                <svg
-                  className={`w-5 h-5 text-gray-500 transition-transform ${
-                    isExpanded ? 'rotate-180' : ''
-                  }`}
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
+            // Load lessons and quizzes for each chapter
+            const allContents: ContentItem[] = [];
 
-              {isExpanded && (
-                <div className="divide-y divide-gray-100">
-                  {chapter.items.map(item => (
-                    <div key={item.id} className="flex items-center justify-between p-4 hover:bg-gray-50">
-                      <div className="flex items-center gap-3 flex-1">
-                        {getFileIcon(item.fileType)}
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-gray-900">{item.title}</span>
-                            {getItemTypeBadge(item.type)}
-                          </div>
-                          {item.duration && (
-                            <p className="text-sm text-gray-500 mt-1">
-                              {Math.floor(item.duration / 60)} phút
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      <button className="p-2 hover:bg-gray-100 rounded-lg">
-                        <MoreVertical className="w-4 h-4 text-gray-500" />
-                      </button>
-                    </div>
-                  ))}
-                  <div className="p-4 bg-gray-50">
-                    <button className="flex items-center gap-2 text-sm text-primary-600 hover:text-primary-700 font-medium">
-                      <Plus className="w-4 h-4" />
-                      Thêm nội dung
-                    </button>
-                  </div>
-                </div>
-              )}
+            for (const chapter of chapters) {
+                try {
+                    // Load lessons
+                    const lessons = await lecturerApi.getLessonsByChapter(chapter.id);
+                    lessons.forEach((lesson: Lesson) => {
+                        allContents.push({
+                            id: lesson.id,
+                            title: lesson.title,
+                            type: 'Lesson',
+                            chapterName: chapter.title,
+                            date: new Date(lesson.createdAt).toISOString().split('T')[0],
+                            views: lesson.totalViews || 0,
+                            icon: lesson.fileType === 'Video' ? '🎥' : '📄',
+                            iconBg: 'bg-purple-100'
+                        });
+                    });
+
+                    // Load quizzes
+                    const quizzes = await lecturerApi.getQuizzesByChapter(chapter.id);
+                    quizzes.forEach((quiz: Quiz) => {
+                        allContents.push({
+                            id: quiz.id,
+                            title: quiz.title,
+                            type: 'Quiz',
+                            chapterName: chapter.title,
+                            date: new Date(quiz.createdAt).toISOString().split('T')[0],
+                            views: 0,
+                            icon: '📝',
+                            iconBg: 'bg-blue-100'
+                        });
+                    });
+                } catch (error) {
+                    console.error(`Failed to load content for chapter ${chapter.id}:`, error);
+                }
+            }
+
+            // Sort by date descending
+            allContents.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+            setContents(allContents);
+        } catch (error: any) {
+            console.error('Failed to load contents:', error);
+            toast.error('Không thể tải danh sách nội dung');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleEdit = (contentId: string) => {
+        toast.info('Chức năng chỉnh sửa đang được phát triển');
+    };
+
+    const handleView = (contentId: string) => {
+        toast.info('Chức năng xem chi tiết đang được phát triển');
+    };
+
+    const handleDelete = async (contentId: string) => {
+        if (!window.confirm('Bạn có chắc chắn muốn xóa nội dung này?')) return;
+
+        try {
+            // Determine if it's a lesson or quiz and call appropriate API
+            const content = contents.find(c => c.id === contentId);
+            if (content?.type === 'Lesson') {
+                await lecturerApi.deleteLesson(contentId);
+            } else if (content?.type === 'Quiz') {
+                await lecturerApi.deleteQuiz(contentId);
+            }
+
+            toast.success('Xóa nội dung thành công');
+            loadContents(); // Reload
+        } catch (error: any) {
+            console.error('Failed to delete content:', error);
+            toast.error('Không thể xóa nội dung');
+        }
+    };
+
+    const handleAddLesson = () => {
+        toast.info('Modal thêm bài giảng sẽ được hiển thị ở đây');
+    };
+
+    const handleAddAnnouncement = () => {
+        toast.info('Modal thêm thông báo sẽ được hiển thị ở đây');
+    };
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
             </div>
-          );
-        })}
-      </div>
+        );
+    }
 
-      {chapters.length === 0 && (
-        <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
-          <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500 mb-4">Chưa có nội dung nào</p>
-          <button className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
-            Thêm chương đầu tiên
-          </button>
+    return (
+        <div className="space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <select
+                    value={selectedCourse}
+                    disabled
+                    className="px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                >
+                    <option>{selectedCourse}</option>
+                </select>
+
+                <div className="flex items-center space-x-3">
+                    <button
+                        onClick={handleAddLesson}
+                        className="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2"
+                    >
+                        <span>+</span>
+                        <span>Thêm bài giảng</span>
+                    </button>
+                    <button
+                        onClick={handleAddAnnouncement}
+                        className="px-4 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center space-x-2"
+                    >
+                        <span>+</span>
+                        <span>Thêm thông báo</span>
+                    </button>
+                </div>
+            </div>
+
+            {/* Table */}
+            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+                {contents.length === 0 ? (
+                    <div className="text-center py-12">
+                        <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <p className="mt-2 text-sm text-gray-500">Chưa có nội dung nào</p>
+                        <button
+                            onClick={handleAddLesson}
+                            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                        >
+                            Thêm nội dung đầu tiên
+                        </button>
+                    </div>
+                ) : (
+                    <table className="w-full">
+                        <thead className="bg-gray-50 border-b border-gray-200">
+                            <tr>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">NỘI DUNG</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">CHƯƠNG</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">NGÀY ĐĂNG</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">LƯỢT XEM</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">THAO TÁC</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                            {contents.map((content) => (
+                                <ContentRow
+                                    key={content.id}
+                                    content={content}
+                                    onEdit={handleEdit}
+                                    onView={handleView}
+                                    onDelete={handleDelete}
+                                />
+                            ))}
+                        </tbody>
+                    </table>
+                )}
+            </div>
         </div>
-      )}
-    </div>
-  );
+    );
+};
+
+interface ContentRowProps {
+    content: ContentItem;
+    onEdit: (id: string) => void;
+    onView: (id: string) => void;
+    onDelete: (id: string) => void;
 }
+
+const ContentRow: React.FC<ContentRowProps> = ({ content, onEdit, onView, onDelete }) => (
+    <tr className="hover:bg-gray-50">
+        <td className="px-6 py-4">
+            <div className="flex items-center space-x-3">
+                <div className={`w-10 h-10 ${content.iconBg} rounded-lg flex items-center justify-center`}>
+                    <span className="text-xl">{content.icon}</span>
+                </div>
+                <div>
+                    <div className="font-medium text-gray-900">{content.title}</div>
+                    <div className="text-sm text-gray-500">
+                        {content.type === 'Lesson' ? 'Bài giảng' : content.type === 'Quiz' ? 'Bài kiểm tra' : 'Thông báo'}
+                    </div>
+                </div>
+            </div>
+        </td>
+        <td className="px-6 py-4 text-sm text-gray-600">{content.chapterName}</td>
+        <td className="px-6 py-4 text-sm text-gray-600">{content.date}</td>
+        <td className="px-6 py-4 text-sm text-gray-600">{content.views}</td>
+        <td className="px-6 py-4">
+            <div className="flex items-center space-x-2">
+                <button
+                    onClick={() => onEdit(content.id)}
+                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                    title="Chỉnh sửa"
+                >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                </button>
+                <button
+                    onClick={() => onView(content.id)}
+                    className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                    title="Xem"
+                >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                </button>
+                <button
+                    onClick={() => onDelete(content.id)}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                    title="Xóa"
+                >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                </button>
+            </div>
+        </td>
+    </tr>
+);
+
+export default ContentManagement;

@@ -102,6 +102,10 @@ export interface Question {
     createdAt: string;
 }
 
+export interface QuestionBankItem extends Question {
+    // Already has all Question properties
+}
+
 export interface Answer {
     id: string;
     questionId: string;
@@ -138,6 +142,7 @@ export interface StudentProgress {
     completedQuizzes: number;
     totalQuizzes: number;
     averageQuizScore: number;
+    averageAssignmentScore: number;
     progressPercentage: number;
 }
 
@@ -240,6 +245,14 @@ export interface CreateQuestionRequest {
     mediaUrl?: string;
     type: QuestionType;
     answers: { contentText: string; isCorrect: boolean }[];
+}
+
+export interface UpdateQuestionRequest extends Partial<CreateQuestionRequest> {
+    id: string;
+}
+
+export interface CreateQuestionTopicRequest {
+    name: string;
 }
 
 export interface AddQuestionsToQuizRequest {

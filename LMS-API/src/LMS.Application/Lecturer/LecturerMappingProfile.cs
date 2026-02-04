@@ -81,6 +81,7 @@ namespace LMS.Application.Lecturer
                 .ForMember(dest => dest.StudentCode, opt => opt.MapFrom(src => src.Student != null ? src.Student.StudentCode : null))
                 .ForMember(dest => dest.QuizTitle, opt => opt.MapFrom(src => src.Quiz != null ? src.Quiz.Title : ""))
                 .ForMember(dest => dest.Answers, opt => opt.Ignore());
+            CreateMap<CourseContent, CourseContentDto>();
         }
     }
 }

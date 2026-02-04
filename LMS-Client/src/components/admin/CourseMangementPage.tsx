@@ -312,7 +312,7 @@ export function CourseManagementPage({ user }: CourseManagementPageProps) {
                 setIsEditing(true);
                 // populate selected lecturers from course data
                 if (data.lecturers && data.lecturers.length) {
-                    const list = data.lecturers.map(l => ({ id: l.id, fullName: l.fullName, email: l.email, isPrimary: l.isPrimary }));
+                    const list = data.lecturers.map(l => ({ id: l.id, fullName: l.fullName, email: l.email ?? '', isPrimary: l.isPrimary }));
                     setSelectedLecturers(list);
                     const primary = list.find(x => x.isPrimary);
                     setPrimaryLecturerId(primary ? primary.id : (list[0]?.id ?? null));

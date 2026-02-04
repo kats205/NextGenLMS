@@ -38,7 +38,7 @@ namespace LMS.Application.Lecturer
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
     }
-    public class CreateCourseDto
+    public class CreateCourseDtoLecturer
     {
         [Required]
         [StringLength(50)]
@@ -61,7 +61,7 @@ namespace LMS.Application.Lecturer
         public Guid MajorId { get; set; }
     }
 
-    public class UpdateCourseDto
+    public class UpdateCourseDtoLecturer
     {
         public string? CourseCode { get; set; }
         public string? Name { get; set; }

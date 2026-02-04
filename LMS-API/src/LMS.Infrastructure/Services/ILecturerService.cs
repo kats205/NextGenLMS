@@ -11,13 +11,13 @@ namespace LMS.Infrastructure.Services
     public interface ILecturerService
     {
         // Dashboard
-        Task<LecturerDashboardDto> GetDashboardAsync(Guid lecturerId);
+        Task<LecturerDashboardDto> GetDashboardAsync(Guid LecturerId);
 
         // Courses
         Task<PaginatedResponse<CourseDto>> GetCoursesAsync(Guid lecturerId, CourseFilterDto filter);
         Task<CourseDto> GetCourseByIdAsync(Guid courseId);
-        Task<CourseDto> CreateCourseAsync(Guid lecturerId, CreateCourseDto dto);
-        Task<CourseDto> UpdateCourseAsync(Guid courseId, UpdateCourseDto dto);
+        Task<CourseDto> CreateCourseAsync(Guid lecturerId, CreateCourseDtoLecturer dto);
+        Task<CourseDto> UpdateCourseAsync(Guid courseId, UpdateCourseDtoLecturer dto);
         Task DeleteCourseAsync(Guid courseId);
         Task<CourseReportDto> GetCourseReportAsync(Guid courseId);
 
@@ -46,8 +46,8 @@ namespace LMS.Infrastructure.Services
         Task DeleteQuizAsync(Guid quizId);
 
         // Questions
-        Task<List<QuestionTopicDto>> GetQuestionTopicsAsync(Guid lecturerId);
-        Task<QuestionTopicDto> CreateQuestionTopicAsync(Guid lecturerId, CreateQuestionTopicDto dto);
+        Task<List<QuestionTopicDto>> GetQuestionTopicsAsync(Guid LecturerId);
+        Task<QuestionTopicDto> CreateQuestionTopicAsync(Guid LecturerId, CreateQuestionTopicDto dto);
         Task DeleteQuestionTopicAsync(Guid topicId);
         Task<List<QuestionDto>> GetQuestionsByTopicAsync(Guid topicId);
         Task<List<QuizQuestionDto>> GetQuestionsByQuizAsync(Guid quizId);

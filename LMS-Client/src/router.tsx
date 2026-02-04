@@ -119,15 +119,27 @@ export const router: ReturnType<typeof createBrowserRouter> = createBrowserRoute
 
     // Lecturer Routes
     {
-        path: '/lecturer',
+        element: <ProtectedRoute allowedRoles={['lecturer']} />,
         children: [
             {
-                path: 'dashboard',
-                element: <LecturerDashboard />
+                path: '/lecturer',
+                element: <Navigate to="/lecturer/dashboard" replace />
             },
             {
-                path: 'courses/:courseId',
-                element: <CourseDetailPage />
+                path: '/lecturer/dashboard',
+                element: (
+                    <SuspenseLayout>
+                        <LecturerDashboard />
+                    </SuspenseLayout>
+                )
+            },
+            {
+                path: '/lecturer/courses/:courseId',
+                element: (
+                    <SuspenseLayout>
+                        <CourseDetailPage />
+                    </SuspenseLayout>
+                )
             }
         ]
     },

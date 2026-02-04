@@ -6,9 +6,9 @@ using System.Security.Claims;
 
 namespace LMS.API.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("[controller]")]
     [ApiController]
-    [Authorize(Roles = "Lecturer")]
+    [Authorize(Roles = "lecturer")]
     public class LecturerController : ControllerBase
     {
         private readonly ILecturerService _lecturerService;
@@ -55,6 +55,12 @@ namespace LMS.API.Controllers
                     Errors = ex.Message
                 });
             }
+        }
+
+        [HttpGet("debug/claims")]
+        public IActionResult DebugClaims()
+        {
+            return Ok(User.Claims.Select(c => new { c.Type, c.Value }));
         }
 
         // ========== COURSES ==========
@@ -108,7 +114,7 @@ namespace LMS.API.Controllers
         }
 
         [HttpPost("courses")]
-        public async Task<IActionResult> CreateCourse([FromBody] CreateCourseDto dto)
+        public async Task<IActionResult> CreateCourse([FromBody] CreateCourseDtoLecturer dto)
         {
             try
             {
@@ -135,7 +141,7 @@ namespace LMS.API.Controllers
         }
 
         [HttpPut("courses/{id}")]
-        public async Task<IActionResult> UpdateCourse(Guid id, [FromBody] UpdateCourseDto dto)
+        public async Task<IActionResult> UpdateCourse(Guid id, [FromBody] UpdateCourseDtoLecturer dto)
         {
             try
             {

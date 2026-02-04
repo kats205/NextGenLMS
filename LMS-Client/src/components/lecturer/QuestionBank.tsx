@@ -1,205 +1,284 @@
-import { useState } from 'react';
-import { mockTopics, mockQuestions } from '../../data/mockData';
-import { Plus, Folder, HelpCircle, Edit, Trash2 } from 'lucide-react';
-import { Badge } from '../shared/Badge';
+// src/components/lecturer/QuestionBank.tsx
+import React, { useEffect, useState } from 'react';
+import { toast } from 'react-toastify';
+import lecturerApi from '../../api/lecturerApi';
+import type { Question, QuestionTopic } from './lecturer.types';
 
 interface QuestionBankProps {
-  courseId: string;
+    courseId: string;
 }
 
-export function QuestionBank({ courseId }: QuestionBankProps) {
-  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
-  const [isCreatingQuestion, setIsCreatingQuestion] = useState(false);
+const QuestionBank: React.FC<QuestionBankProps> = ({ courseId }) => {
+    const [topics, setTopics] = useState<QuestionTopic[]>([]);
+    const [questions, setQuestions] = useState<Question[]>([]);
+    const [selectedTopic, setSelectedTopic] = useState<string>('all');
+    const [loading, setLoading] = useState(true);
 
-  const topics = mockTopics.filter(t => t.courseId === courseId);
-  const questions = mockQuestions.filter(q => q.courseId === courseId);
-  const filteredQuestions = selectedTopic
-    ? questions.filter(q => q.topicId === selectedTopic)
-    : questions;
+    useEffect(() => {
+        loadQuestionBank();
+    }, [courseId]);
 
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-      {/* Topics Sidebar */}
-      <div className="lg:col-span-1">
-        <div className="mb-4">
-          <button className="w-full flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm">
-            <Plus className="w-4 h-4" />
-            Thêm chủ đề
-          </button>
-        </div>
+    const loadQuestionBank = async () => {
+        try {
+            setLoading(true);
 
-        <div className="space-y-2">
-          <button
-            onClick={() => setSelectedTopic(null)}
-            className={`w-full flex items-center gap-2 px-4 py-2 rounded-lg text-left transition-colors ${
-              selectedTopic === null
-                ? 'bg-primary-50 text-primary-700 border border-primary-200'
-                : 'hover:bg-gray-100 text-gray-700'
-            }`}
-          >
-            <Folder className="w-4 h-4" />
-            <span className="text-sm font-medium">Tất cả</span>
-            <span className="ml-auto text-xs bg-gray-200 px-2 py-0.5 rounded-full">
-              {questions.length}
-            </span>
-          </button>
+            // Load topics
+            const topicsData = await lecturerApi.getQuestionTopics();
+            setTopics(topicsData);
 
-          {topics.map(topic => {
-            const topicQuestions = questions.filter(q => q.topicId === topic.id);
-            return (
-              <button
-                key={topic.id}
-                onClick={() => setSelectedTopic(topic.id)}
-                className={`w-full flex items-center gap-2 px-4 py-2 rounded-lg text-left transition-colors ${
-                  selectedTopic === topic.id
-                    ? 'bg-primary-50 text-primary-700 border border-primary-200'
-                    : 'hover:bg-gray-100 text-gray-700'
-                }`}
-              >
-                <Folder className="w-4 h-4" />
-                <span className="text-sm font-medium">{topic.name}</span>
-                <span className="ml-auto text-xs bg-gray-200 px-2 py-0.5 rounded-full">
-                  {topicQuestions.length}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+            // Load all questions
+            const allQuestions = await lecturerApi.getQuestionBank();
+            setQuestions(allQuestions);
+        } catch (error: any) {
+            console.error('Failed to load question bank:', error);
+            toast.error('Không thể tải ngân hàng câu hỏi');
+        } finally {
+            setLoading(false);
+        }
+    };
 
-      {/* Questions List */}
-      <div className="lg:col-span-3">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="font-semibold text-gray-900">
-            {selectedTopic
-              ? topics.find(t => t.id === selectedTopic)?.name
-              : 'Tất cả câu hỏi'}
-          </h3>
-          <button
-            onClick={() => setIsCreatingQuestion(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Thêm câu hỏi
-          </button>
-        </div>
+    const filteredQuestions = selectedTopic === 'all'
+        ? questions
+        : questions.filter(q => q.topicId === selectedTopic);
 
-        {isCreatingQuestion && (
-          <div className="mb-6 p-6 bg-white border-2 border-primary-300 rounded-lg">
-            <h4 className="font-medium text-gray-900 mb-4">Tạo câu hỏi mới</h4>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Loại câu hỏi
-                </label>
-                <select className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
-                  <option>Trắc nghiệm nhiều đáp án</option>
-                  <option>Đúng/Sai</option>
-                </select>
-              </div>
+    const handleCreateQuestion = () => {
+        toast.info('Modal tạo câu hỏi sẽ được hiển thị');
+    };
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Câu hỏi
-                </label>
-                <textarea
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
-                  rows={3}
-                  placeholder="Nhập nội dung câu hỏi..."
-                />
-              </div>
+    const handleCreateTopic = () => {
+        toast.info('Modal tạo chủ đề sẽ được hiển thị');
+    };
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Đáp án
-                </label>
-                <div className="space-y-2">
-                  {[1, 2, 3, 4].map(i => (
-                    <div key={i} className="flex items-center gap-2">
-                      <input type="checkbox" className="w-4 h-4 text-primary-600" />
-                      <input
-                        type="text"
-                        placeholder={`Đáp án ${i}`}
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      />
-                    </div>
-                  ))}
-                </div>
-                <p className="text-xs text-gray-500 mt-2">Chọn các đáp án đúng</p>
-              </div>
+    const handleEditQuestion = (questionId: string) => {
+        toast.info(`Chỉnh sửa câu hỏi: ${questionId}`);
+    };
 
-              <div className="flex gap-2">
-                <button className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
-                  Lưu câu hỏi
-                </button>
-                <button
-                  onClick={() => setIsCreatingQuestion(false)}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                >
-                  Hủy
-                </button>
-              </div>
+    const handleDeleteQuestion = async (questionId: string) => {
+        if (!window.confirm('Bạn có chắc chắn muốn xóa câu hỏi này?')) return;
+
+        try {
+            await lecturerApi.deleteQuestion(questionId);
+            toast.success('Xóa câu hỏi thành công');
+            loadQuestionBank();
+        } catch (error: any) {
+            console.error('Failed to delete question:', error);
+            toast.error('Không thể xóa câu hỏi');
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
             </div>
-          </div>
-        )}
+        );
+    }
 
-        <div className="space-y-4">
-          {filteredQuestions.map(question => (
-            <div key={question.id} className="p-4 border border-gray-200 rounded-lg hover:border-primary-300 transition-colors">
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <HelpCircle className="w-5 h-5 text-primary-600 flex-shrink-0" />
-                  <span className="font-medium text-gray-900">{question.questionText}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button className="p-2 hover:bg-gray-100 rounded-lg">
-                    <Edit className="w-4 h-4 text-gray-500" />
-                  </button>
-                  <button className="p-2 hover:bg-danger-50 rounded-lg">
-                    <Trash2 className="w-4 h-4 text-danger-600" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-2 mb-3 ml-7">
-                {question.options.map((option, index) => {
-                  const isCorrect = question.correctAnswers.includes(option.id);
-                  return (
-                    <div
-                      key={option.id}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
-                        isCorrect ? 'bg-success-50 border border-success-200' : 'bg-gray-50'
-                      }`}
+    return (
+        <div className="space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                    <select
+                        value={selectedTopic}
+                        onChange={(e) => setSelectedTopic(e.target.value)}
+                        className="px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <span className="text-sm font-medium text-gray-600">{String.fromCharCode(65 + index)}.</span>
-                      <span className="text-sm text-gray-700">{option.text}</span>
-                      {isCorrect && <Badge variant="success" size="sm">Đúng</Badge>}
-                    </div>
-                  );
-                })}
-              </div>
+                        <option value="all">Tất cả chủ đề</option>
+                        {topics.map(topic => (
+                            <option key={topic.id} value={topic.id}>
+                                {topic.name} ({topic.totalQuestions})
+                            </option>
+                        ))}
+                    </select>
+                </div>
 
-              <div className="flex items-center gap-3 ml-7">
-                <Badge variant="primary" size="sm">{question.type === 'multiple-choice' ? 'Trắc nghiệm' : 'Đúng/Sai'}</Badge>
-                <span className="text-sm text-gray-500">{question.points} điểm</span>
-              </div>
+                <div className="flex items-center space-x-3">
+                    <button
+                        onClick={handleCreateTopic}
+                        className="px-4 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center space-x-2"
+                    >
+                        <span>+</span>
+                        <span>Tạo chủ đề</span>
+                    </button>
+                    <button
+                        onClick={handleCreateQuestion}
+                        className="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2"
+                    >
+                        <span>+</span>
+                        <span>Tạo câu hỏi</span>
+                    </button>
+                </div>
             </div>
-          ))}
-        </div>
 
-        {filteredQuestions.length === 0 && (
-          <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
-            <HelpCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500 mb-4">Chưa có câu hỏi nào</p>
-            <button
-              onClick={() => setIsCreatingQuestion(true)}
-              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-            >
-              Tạo câu hỏi đầu tiên
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+            {/* Questions Grid */}
+            {filteredQuestions.length === 0 ? (
+                <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+                    <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">Chưa có câu hỏi</h3>
+                    <p className="mt-1 text-sm text-gray-500">Bắt đầu bằng cách tạo câu hỏi mới</p>
+                    <button
+                        onClick={handleCreateQuestion}
+                        className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    >
+                        Tạo câu hỏi đầu tiên
+                    </button>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 gap-4">
+                    {filteredQuestions.map((question) => (
+                        <QuestionCard
+                            key={question.id}
+                            question={question}
+                            onEdit={handleEditQuestion}
+                            onDelete={handleDeleteQuestion}
+                        />
+                    ))}
+                </div>
+            )}
+
+            {/* Summary */}
+            {filteredQuestions.length > 0 && (
+                <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+                    <div className="flex items-center justify-between text-sm text-gray-600">
+                        <span>Tổng số câu hỏi: <span className="font-semibold text-gray-900">{filteredQuestions.length}</span></span>
+                        <div className="flex items-center space-x-6">
+                            <span>Trắc nghiệm: <span className="font-semibold text-gray-900">
+                                {filteredQuestions.filter(q => q.type === 'MultipleChoice').length}
+                            </span></span>
+                            <span>Đúng/Sai: <span className="font-semibold text-gray-900">
+                                {filteredQuestions.filter(q => q.type === 'TrueFalse').length}
+                            </span></span>
+                            <span>Tự luận: <span className="font-semibold text-gray-900">
+                                {filteredQuestions.filter(q => q.type === 'Essay').length}
+                            </span></span>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+interface QuestionCardProps {
+    question: Question;
+    onEdit: (id: string) => void;
+    onDelete: (id: string) => void;
 }
+
+const QuestionCard: React.FC<QuestionCardProps> = ({ question, onEdit, onDelete }) => {
+    const getTypeLabel = (type: string) => {
+        switch (type) {
+            case 'MultipleChoice': return 'Trắc nghiệm';
+            case 'TrueFalse': return 'Đúng/Sai';
+            case 'Essay': return 'Tự luận';
+            default: return type;
+        }
+    };
+
+    const getTypeBadgeClass = (type: string) => {
+        switch (type) {
+            case 'MultipleChoice': return 'bg-blue-100 text-blue-700';
+            case 'TrueFalse': return 'bg-green-100 text-green-700';
+            case 'Essay': return 'bg-purple-100 text-purple-700';
+            default: return 'bg-gray-100 text-gray-700';
+        }
+    };
+
+    const getDifficultyBadgeClass = (difficulty?: string) => {
+        switch (difficulty) {
+            case 'EASY': return 'bg-green-100 text-green-700';
+            case 'MEDIUM': return 'bg-yellow-100 text-yellow-700';
+            case 'HARD': return 'bg-red-100 text-red-700';
+            default: return 'bg-gray-100 text-gray-700';
+        }
+    };
+
+    return (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow">
+            <div className="flex items-start justify-between">
+                <div className="flex-1">
+                    {/* Question Header */}
+                    <div className="flex items-center space-x-2 mb-2">
+                        <span className={`px-2.5 py-0.5 rounded text-xs font-medium ${getTypeBadgeClass(question.type)}`}>
+                            {getTypeLabel(question.type)}
+                        </span>
+                        {question.difficulty && (
+                            <span className={`px-2.5 py-0.5 rounded text-xs font-medium ${getDifficultyBadgeClass(question.difficulty)}`}>
+                                {question.difficulty}
+                            </span>
+                        )}
+                        <span className="text-xs text-gray-500">
+                            Đã dùng: {question.usageCount} lần
+                        </span>
+                    </div>
+
+                    {/* Question Content */}
+                    <p className="text-gray-900 font-medium mb-2">{question.contentText}</p>
+
+                    {/* Answers for Multiple Choice */}
+                    {question.type === 'MultipleChoice' && question.answers && question.answers.length > 0 && (
+                        <div className="mt-3 space-y-1">
+                            {question.answers.map((answer, index) => (
+                                <div
+                                    key={answer.id}
+                                    className={`text-sm px-3 py-1.5 rounded ${answer.isCorrect
+                                            ? 'bg-green-50 text-green-700 font-medium'
+                                            : 'bg-gray-50 text-gray-600'
+                                        }`}
+                                >
+                                    {String.fromCharCode(65 + index)}. {answer.contentText}
+                                    {answer.isCorrect && ' ✓'}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Tags */}
+                    {question.tags && question.tags.length > 0 && (
+                        <div className="mt-3 flex items-center flex-wrap gap-2">
+                            {question.tags.map((tag, index) => (
+                                <span key={index} className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">
+                                    #{tag}
+                                </span>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Topic */}
+                    {question.topicName && (
+                        <div className="mt-2 text-xs text-gray-500">
+                            Chủ đề: {question.topicName}
+                        </div>
+                    )}
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center space-x-2 ml-4">
+                    <button
+                        onClick={() => onEdit(question.id)}
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                        title="Chỉnh sửa"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                    </button>
+                    <button
+                        onClick={() => onDelete(question.id)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                        title="Xóa"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default QuestionBank;
