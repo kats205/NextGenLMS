@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { User } from '../../App';
 import { Header } from '../shared/Header';
 import { mockAssessments, mockQuestions } from '../../data/mockData';
@@ -232,7 +232,7 @@ export function AssessmentAttemptPage({ user }: AssessmentAttemptPageProps) {
                 <div>
                   <p className="text-gray-600 mb-1">Hạn nộp: 25/01/2026 23:59</p>
                   {assessment.allowLateSubmission && (
-                    <p className="text-sm text-gray-500">Cho phép nộp muộn đến {assessment.lateSubmissionMinutes ? assessment.lateSubmissionMinutes / 60 : 0} giờ</p>
+                    <p className="text-sm text-gray-500">Cho phép nộp muộn đến {assessment.lateSubmissionMinutes ? assessment.lateSubmissionMinutes / 60 : 0} giờ </p>
                   )}
                 </div>
                 <div className="flex gap-2">

@@ -1,4 +1,4 @@
-// src/components/lecturer/AssessmentManagement.tsx
+﻿// src/components/lecturer/AssessmentManagement.tsx
 import React, { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import lecturerApi from '../../api/lecturerApi';
@@ -105,9 +105,9 @@ const AssessmentManagement: React.FC<AssessmentManagementProps> = ({ courseId })
                     </button>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {quizzes.map((quiz) => (
-                        <AssessmentCard
+                        <QuizCard
                             key={quiz.id}
                             quiz={quiz}
                             onViewDetail={handleViewDetail}
@@ -121,123 +121,82 @@ const AssessmentManagement: React.FC<AssessmentManagementProps> = ({ courseId })
     );
 };
 
-interface AssessmentCardProps {
+interface QuizCardProps {
     quiz: Quiz;
     onViewDetail: (id: string) => void;
     onGrade: (id: string) => void;
     onEdit: (id: string) => void;
 }
 
-const AssessmentCard: React.FC<AssessmentCardProps> = ({ quiz, onViewDetail, onGrade, onEdit }) => {
-    const getTypeBadge = () => {
-        if (quiz.timeLimit && quiz.timeLimit > 0) {
-            return { label: 'Trắc nghiệm', class: 'bg-blue-100 text-blue-700' };
-        }
-        return { label: 'Tự luận', class: 'bg-purple-100 text-purple-700' };
-    };
-
-    const badge = getTypeBadge();
-    const submittedPercentage = quiz.totalSubmissions > 0
-        ? (quiz.completedSubmissions / quiz.totalSubmissions) * 100
-        : 0;
+const QuizCard: React.FC<QuizCardProps> = ({ quiz, onViewDetail, onGrade, onEdit }) => {
+    const isFinished = new Date(quiz.endTime) < new Date();
+    const isOngoing = new Date(quiz.startTime) <= new Date() && !isFinished;
 
     return (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-            <div className="p-6">
-                {/* Header */}
-                <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">{quiz.title}</h3>
-                        <span className={`inline-block px-2.5 py-0.5 rounded text-xs font-medium ${badge.class}`}>
-                            {badge.label}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex justify-between items-start mb-4">
+                <div className="flex-1">
+                    <h3 className="text-lg font-bold text-gray-900 mb-1">{quiz.title}</h3>
+                    <div className="flex items-center space-x-4 text-sm text-gray-500">
+                        <span className="flex items-center gap-1">
+                            🕒 {quiz.durationMinutes} phút
+                        </span>
+                        <span className="flex items-center gap-1">
+                            👥 {quiz.submissionCount} nộp
+                        </span>
+                        <span className="flex items-center gap-1">
+                            🧩 {quiz.totalQuestions} câu
                         </span>
                     </div>
-                    <button
-                        onClick={() => onEdit(quiz.id)}
-                        className="p-1 text-gray-400 hover:text-gray-600"
-                    >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                    </button>
                 </div>
 
-                {/* Dates */}
-                <div className="space-y-2 mb-4">
-                    {quiz.startDate && (
-                        <div className="flex items-center text-sm text-gray-600">
-                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            Mở: {new Date(quiz.startDate).toLocaleString('vi-VN')}
-                        </div>
-                    )}
-                    {quiz.endDate && (
-                        <div className="flex items-center text-sm text-gray-600">
-                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            Đóng: {new Date(quiz.endDate).toLocaleString('vi-VN')}
-                        </div>
-                    )}
-                    {quiz.timeLimit && (
-                        <div className="flex items-center text-sm text-gray-600">
-                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                            {quiz.totalQuestions} câu hỏi • {quiz.timeLimit} phút
-                        </div>
-                    )}
-                </div>
+                {isOngoing && (
+                    <span className="bg-green-100 text-green-700 text-xs font-medium px-2.5 py-1 rounded-full">
+                        Đang diễn ra
+                    </span>
+                )}
+                {isFinished && (
+                    <span className="bg-gray-100 text-gray-700 text-xs font-medium px-2.5 py-1 rounded-full">
+                        Đã kết thúc
+                    </span>
+                )}
+            </div>
 
-                {/* Stats */}
-                <div className="space-y-2 mb-4">
-                    <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600">Số lượt làm:</span>
-                        <span className="font-semibold text-gray-900">{quiz.totalSubmissions}</span>
+            <div className="space-y-4">
+                <div className="text-sm text-gray-600">
+                    <div className="flex justify-between mb-1">
+                        <span>Bắt đầu:</span>
+                        <span className="font-medium text-gray-900">
+                            {new Date(quiz.startTime).toLocaleString('vi-VN')}
+                        </span>
                     </div>
-                    {quiz.averageScore > 0 && (
-                        <div className="flex items-center justify-between text-sm">
-                            <span className="text-gray-600">Điểm trung bình:</span>
-                            <span className="font-semibold text-gray-900">
-                                {quiz.averageScore.toFixed(1)}/{quiz.totalPoints}
-                            </span>
-                        </div>
-                    )}
-                    {quiz.completedSubmissions > 0 && (
-                        <div className="mt-3">
-                            <div className="flex items-center justify-between text-sm mb-1">
-                                <span className="text-gray-600">Đã nộp:</span>
-                                <span className="font-semibold text-gray-900">
-                                    {quiz.completedSubmissions}/{quiz.totalSubmissions}
-                                </span>
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                                <div
-                                    className="bg-green-500 h-2 rounded-full transition-all"
-                                    style={{ width: `${submittedPercentage}%` }}
-                                />
-                            </div>
-                        </div>
-                    )}
+                    <div className="flex justify-between">
+                        <span>Kết thúc:</span>
+                        <span className="font-medium text-gray-900">
+                            {new Date(quiz.endTime).toLocaleString('vi-VN')}
+                        </span>
+                    </div>
                 </div>
 
-                {/* Actions */}
-                <div className="flex items-center space-x-2">
+                <div className="flex gap-2">
                     <button
                         onClick={() => onViewDetail(quiz.id)}
-                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50"
                     >
-                        Xem chi tiết
+                        Chi tiết
                     </button>
-                    {quiz.completedSubmissions > 0 && (
-                        <button
-                            onClick={() => onGrade(quiz.id)}
-                            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium"
-                        >
-                            Chấm bài
-                        </button>
-                    )}
+                    <button
+                        onClick={() => onGrade(quiz.id)}
+                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+                    >
+                        Chấm bài
+                    </button>
+                    <button
+                        onClick={() => onEdit(quiz.id)}
+                        className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                    >
+                        ⚙️
+                    </button>
                 </div>
             </div>
         </div>

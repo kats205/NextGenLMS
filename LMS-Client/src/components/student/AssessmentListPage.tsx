@@ -1,4 +1,4 @@
-import { User } from '../../App';
+﻿import { User } from '../../App';
 import { Header } from '../shared/Header';
 import { mockAssessments, mockSubmissions } from '../../data/mockData';
 import { BookOpen, TrendingUp, ClipboardList, AlertCircle, Calendar, Clock } from 'lucide-react';
@@ -110,7 +110,7 @@ export function AssessmentListPage({ user }: AssessmentListPageProps) {
                   {timeUntil}
                 </span>
               )}
-              {submission?.score !== undefined && (
+              {(submission?.score !== undefined && submission?.status === 'submitted') && (
                 <span className="font-medium text-success-600">Điểm: {submission.score}</span>
               )}
             </div>

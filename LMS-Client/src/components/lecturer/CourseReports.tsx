@@ -1,8 +1,8 @@
-// src/components/lecturer/CourseReports.tsx
+﻿// src/components/lecturer/CourseReports.tsx
 import React, { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import lecturerApi from '../../api/lecturerApi';
-import type { CourseReport, Student, StudentProgress } from './lecturer.types';
+import type { CourseReport, StudentProgress } from './lecturer.types';
 
 interface CourseReportsProps {
     courseId: string;
@@ -20,43 +20,23 @@ const CourseReports: React.FC<CourseReportsProps> = ({ courseId }) => {
     const loadReport = async () => {
         try {
             setLoading(true);
-
-            // Load course report
-            const reportData = await lecturerApi.getCourseReport(courseId);
-            setReport(reportData);
-
-            // Load students with progress
-            const studentsData = await lecturerApi.getStudentsByCourse(courseId);
-
-            // Load detailed progress for each student
-            const studentsWithProgress: StudentProgress[] = [];
-
-            for (const student of studentsData.data) {
-                try {
-                    const progress = await lecturerApi.getStudentProgress(courseId, student.id);
-                    studentsWithProgress.push(progress);
-                } catch (error) {
-                    console.error(`Failed to load progress for student ${student.id}:`, error);
-                }
-            }
-
-            setStudents(studentsWithProgress);
+            const data = await lecturerApi.getCourseReport(courseId);
+            setReport(data);
+            setStudents(data.studentsProgress || []);
         } catch (error: any) {
             console.error('Failed to load report:', error);
-            toast.error('Không thể tải báo cáo');
+            toast.error('Không thể tải báo cáo khóa học');
         } finally {
             setLoading(false);
         }
     };
 
     const handleExportExcel = () => {
-        toast.success('Đang xuất file Excel...');
-        // TODO: Implement Excel export
+        toast.info('Đang chuẩn bị xuất file Excel...');
     };
 
     const handleExportPDF = () => {
-        toast.success('Đang xuất file PDF...');
-        // TODO: Implement PDF export
+        toast.info('Đang chuẩn bị xuất file PDF...');
     };
 
     const handleViewStudentDetail = (studentId: string) => {
@@ -221,7 +201,7 @@ const StudentReportRow: React.FC<StudentReportRowProps> = ({ student, onViewDeta
             <td className="px-6 py-4 text-sm text-gray-900 font-medium">
                 {student.averageAssignmentScore.toFixed(1)}/10
             </td>
-            <td className="px-6 py-4 text-sm text-gray-900 font-medium">
+            <td className="px-6 py-3 text-sm text-gray-900 font-medium">
                 {participationRate.toFixed(0)}%
             </td>
             <td className="px-6 py-4">

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { User } from '../../App';
 import { Header } from '../shared/Header';
 import { Badge } from '../shared/Badge';
@@ -512,14 +512,16 @@ export function UserManagementPage({ user }: UserManagementPageProps) {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Tìm kiếm theo tên hoặc email..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 
+focus:ring-primary-500"
               />
             </div>
             <div>
               <select
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 
+focus:ring-primary-500"
               >
                 <option value="all">Tất cả vai trò</option>
                 <option value="Admin">Admin</option>
@@ -536,7 +538,8 @@ export function UserManagementPage({ user }: UserManagementPageProps) {
             {users.length === 0 ? (
               <div className="w-full py-12 text-center">
                 <p className="text-gray-500 text-lg">Không có dữ liệu người dùng</p>
-                <p className="text-gray-400 text-sm mt-2">Hãy thêm người dùng mới hoặc kiểm tra bộ lọc</p>
+                <p className="text-gray-400 text-sm mt-2">Hãy thêm người dùng mới hoặc kiểm tra bộ 
+lọc</p>
               </div>
             ) : (
               <table className="w-full">
@@ -621,7 +624,8 @@ export function UserManagementPage({ user }: UserManagementPageProps) {
           {/* Pagination */}
           <div className="flex items-center justify-between border-t border-gray-200 px-6 py-4">
             <div className="text-sm text-gray-500">
-              Hiển thị <span className="font-medium">{users.length}</span> trong tổng số <span className="font-medium">{totalItems}</span> người dùng
+              Hiển thị <span className="font-medium">{users.length}</span> trong tổng số <span 
+className="font-medium">{totalItems}</span> người dùng
             </div>
             <div className="flex gap-2">
               <button

@@ -1,5 +1,4 @@
-// src/components/lecturer/StudentList.tsx
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import lecturerApi from '../../api/lecturerApi';
 import type { QuizSubmission } from './lecturer.types';
