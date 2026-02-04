@@ -546,7 +546,20 @@ const CourseDetailPage = () => {
 
             {/* Add Chapter Modal */}
             {showAddChapter && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 9999
+                    }}
+                >
                     <div className="bg-white rounded-xl p-6 w-full max-w-md">
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="text-lg font-semibold">Thêm chương mới</h3>
@@ -583,7 +596,20 @@ const CourseDetailPage = () => {
 
             {/* Add/Edit Lesson Modal */}
             {showLessonModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 9999
+                    }}
+                >
                     <div className="bg-white rounded-xl p-6 w-full max-w-lg">
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="text-lg font-semibold">
@@ -761,7 +787,20 @@ const CourseDetailPage = () => {
 
             {/* Delete Confirmation Modal */}
             {showDeleteModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 9999
+                    }}
+                >
                     <div className="bg-white rounded-xl p-6 w-full max-w-sm">
                         <h3 className="text-lg font-semibold mb-2">Xác nhận xóa</h3>
                         <p className="text-gray-600 mb-6">
@@ -785,7 +824,20 @@ const CourseDetailPage = () => {
             )}
             {/* Delete Chapter Confirmation Modal */}
             {showDeleteChapterModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 9999
+                    }}
+                >
                     <div className="bg-white rounded-xl p-6 w-full max-w-sm">
                         <h3 className="text-lg font-semibold mb-2">Xác nhận xóa chương</h3>
                         <p className="text-gray-600 mb-6">
