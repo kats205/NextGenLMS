@@ -17,6 +17,8 @@ import {
   getCourseById, 
   getMajors,
   assignLecturer,
+  removeLecturer,
+  setPrimaryLecturer,
   CourseDto,
   CreateCourseDto,
   UpdateCourseDto,
@@ -253,13 +255,41 @@ export function CourseManagementPage({ user }: CourseManagementPageProps) {
   const addSelectedLecturer = (u: UserListItemDto) => {
     if (!u) return;
     if (selectedLecturers.find(s => s.id === u.id)) return;
-    setSelectedLecturers(prev => [...prev, { id: u.id, fullName: u.fullName, email: u.email || '' }]);
+    setSelectedLecturers(prev => [...prev, { id: u.id, fullName: u.fullName, email: u.email }]);
     if (!primaryLecturerId) setPrimaryLecturerId(u.id);
   };
 
-  const removeSelectedLecturer = (id: string) => {
+  const removeSelectedLecturer = async (id: string) => {
+    // If editing existing course, call API to remove relation
+    if (editingId) {
+      try {
+        await removeLecturer(editingId, id);
+        toast.success('Hủy phân công giảng viên thành công');
+      } catch (err: any) {
+        toast.error(err?.response?.data?.message || 'Hủy phân công thất bại');
+        return;
+      }
+    }
+
     setSelectedLecturers(prev => prev.filter(p => p.id !== id));
     if (primaryLecturerId === id) setPrimaryLecturerId(selectedLecturers[0]?.id ?? null);
+  };
+
+  const handleSetPrimaryLecturer = async (id: string) => {
+    // If editing course persisted, call API to set primary
+    if (editingId) {
+      try {
+        await setPrimaryLecturer(editingId, id);
+        toast.success('Cập nhật giảng viên chính thành công');
+      } catch (err: any) {
+        toast.error(err?.response?.data?.message || 'Cập nhật thất bại');
+        return;
+      }
+    }
+
+    setPrimaryLecturerId(id);
+    // update local selected list flags
+    setSelectedLecturers(prev => prev.map(s => ({ ...s, isPrimary: s.id === id })));
   };
 
   const handleCreateCourse = async () => {
@@ -270,9 +300,15 @@ export function CourseManagementPage({ user }: CourseManagementPageProps) {
     }
 
     try {
-      const lecturerIds = primaryLecturerId
-        ? [primaryLecturerId, ...selectedLecturers.map(s => s.id).filter(i => i !== primaryLecturerId)]
-        : selectedLecturers.map(s => s.id);
+      // ensure primary lecturer (if any) is first in the list so backend will mark it primary on create
+      const lecturerIds = selectedLecturers.map(s => s.id);
+      if (primaryLecturerId) {
+        const idx = lecturerIds.indexOf(primaryLecturerId);
+        if (idx > 0) {
+          lecturerIds.splice(idx, 1);
+          lecturerIds.unshift(primaryLecturerId);
+        }
+      }
 
       const createData: CreateCourseDto = {
         courseCode: formData.courseCode,
@@ -312,7 +348,7 @@ export function CourseManagementPage({ user }: CourseManagementPageProps) {
         setIsEditing(true);
         // populate selected lecturers from course data
         if (data.lecturers && data.lecturers.length) {
-          const list = data.lecturers.map(l => ({ id: l.id, fullName: l.fullName, email: l.email || '', isPrimary: l.isPrimary }));
+          const list = data.lecturers.map(l => ({ id: l.id, fullName: l.fullName, email: l.email, isPrimary: l.isPrimary }));
           setSelectedLecturers(list);
           const primary = list.find(x => x.isPrimary);
           setPrimaryLecturerId(primary ? primary.id : (list[0]?.id ?? null));
@@ -344,6 +380,14 @@ export function CourseManagementPage({ user }: CourseManagementPageProps) {
       // Assign selected lecturers after update (best-effort)
       if (selectedLecturers && selectedLecturers.length) {
         await Promise.all(selectedLecturers.map(s => assignLecturer(editingId, s.id)));
+        // ensure primary is set on server
+        if (primaryLecturerId) {
+          try {
+            await setPrimaryLecturer(editingId, primaryLecturerId);
+          } catch (err) {
+            console.warn('Set primary lecturer failed', err);
+          }
+        }
       }
       toast.success('Cập nhật khóa học thành công!');
       setIsEditing(false);
@@ -654,7 +698,7 @@ export function CourseManagementPage({ user }: CourseManagementPageProps) {
                                     type="radio"
                                     name="primaryLecturer"
                                     checked={primaryLecturerId === s.id}
-                                    onChange={() => setPrimaryLecturerId(s.id)}
+                                    onChange={() => handleSetPrimaryLecturer(s.id)}
                                   />
                                 </td>
                                 <td className="px-3 py-2 text-center">

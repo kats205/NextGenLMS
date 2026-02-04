@@ -15,5 +15,7 @@ namespace LMS.Application.Interfaces
         Task<ServiceResult> DeleteCourseAsync(Guid id);
         Task<ServiceResult> AssignLecturerAsync(Guid courseId, Guid lecturerId);
         Task<ServiceResult<CourseStatisticsDto>> GetCourseStatisticsAsync(Guid courseId);
+        Task<ServiceResult> RemoveLecturerAsync(Guid courseId, Guid lecturerId);
+        Task<ServiceResult> SetPrimaryLecturerAsync(Guid courseId, Guid lecturerId);
     }
 }

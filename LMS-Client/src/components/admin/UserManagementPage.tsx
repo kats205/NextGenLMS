@@ -4,7 +4,7 @@ import { Header } from '../shared/Header';
 import { Badge } from '../shared/Badge';
 import { ArrowLeft, Search, Plus, Upload, Download, Edit, Trash2, RefreshCw, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { getAdminUsers, UserListItemDto, createUser, updateUser, deleteUser, getUserById, CreateUserDto, UpdateUserDto } from '@/api/adminUser';
+import { getAdminUsers, UserListItemDto, createUser, updateUser, deleteUser, getUserById, CreateUserDto, UpdateUserDto, importUsers } from '@/api/adminUser';
 import { getDepartments, DepartmentDto } from '@/api/adminCourseService';
 import { toast } from 'react-toastify';
 
@@ -294,7 +294,7 @@ export function UserManagementPage({ user }: UserManagementPageProps) {
 
         {/* Action Buttons */}
         <div className="flex items-center justify-between mb-6">
-          <div className="flex gap-2">
+            <div className="flex gap-2">
             <button
               onClick={() => setIsCreatingUser(true)}
               className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
@@ -302,10 +302,42 @@ export function UserManagementPage({ user }: UserManagementPageProps) {
               <Plus className="w-4 h-4" />
               Thêm người dùng
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
-              <Upload className="w-4 h-4" />
-              Import Excel
-            </button>
+            <>
+              <input
+                id="import-users-file"
+                type="file"
+                accept=".xlsx"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  try {
+                    const res = await importUsers(file);
+                    if (res) {
+                      toast.success(`Import xong. Thêm: ${res.createdCount}, Cập nhật: ${res.updatedCount}`);
+                      if (res.errors && res.errors.length) {
+                        res.errors.slice(0,5).forEach(err => toast.error(err));
+                        if (res.errors.length > 5) toast.info(`Có ${res.errors.length - 5} lỗi khác...`);
+                      }
+                      // refresh list
+                      const refreshed = await getAdminUsers({ page, pageSize, search: debouncedSearch || undefined, role: roleFilter !== 'all' ? roleFilter : undefined });
+                      setUsers(refreshed?.items || []);
+                      setTotalItems(refreshed?.totalItems || 0);
+                      setTotalPages(refreshed?.totalPages || 1);
+                    }
+                  } catch (err: any) {
+                    toast.error(err?.response?.data?.message || 'Import thất bại');
+                  } finally {
+                    // clear input
+                    (e.target as HTMLInputElement).value = '';
+                  }
+                }}
+              />
+              <label htmlFor="import-users-file" className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 cursor-pointer">
+                <Upload className="w-4 h-4" />
+                Import Excel
+              </label>
+            </>
             <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
               <RefreshCw className="w-4 h-4" />
               Đồng bộ từ SIS
@@ -404,7 +436,9 @@ export function UserManagementPage({ user }: UserManagementPageProps) {
                     >
                       <option value="">-- Chọn Khoa/Bộ môn --</option>
                       {departments.map(d => (
-                        <option key={d.id} value={d.id}>{d.name ? d.name.trim() : ''}</option>
+                        <option key={d.id} value={d.id}>
+                            {(d.name || (d as any).Name || (d as any).departmentName || "").trim()}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -535,7 +569,9 @@ export function UserManagementPage({ user }: UserManagementPageProps) {
                     >
                       <option value="">-- Chọn Khoa/Bộ môn --</option>
                       {departments.map(d => (
-                        <option key={d.id} value={d.id}>{d.name ? d.name.trim() : ''}</option>
+                        <option key={d.id} value={d.id}>
+                            {(d.name || (d as any).Name || (d as any).departmentName || "").trim()}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -665,7 +701,7 @@ export function UserManagementPage({ user }: UserManagementPageProps) {
                           {u.role.toString()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {(u.department && u.department.trim()) ? u.department.trim() : 'N/A'}
+                          {(u.departmentName && u.departmentName.trim()) ? u.departmentName.trim() : 'N/A'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-center">
                           {u.status === 'active' ? (

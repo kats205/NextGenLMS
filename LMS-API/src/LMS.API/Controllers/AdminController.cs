@@ -115,7 +115,7 @@ namespace LMS.API.Controllers
             }
 
             if (!ModelState.IsValid)
-                return BadRequest(new ApiResponse<object> { Success = false, Message = "D? li?u khng h?p l?", Errors = ModelState });
+                return BadRequest(new ApiResponse<object> { Success = false, Message = "Dữ liệu không hợp lệ", Errors = ModelState });
 
             var result = await _service.UpdateUserAsync(dto);
 
@@ -511,6 +511,36 @@ namespace LMS.API.Controllers
         public async Task<IActionResult> AssignLecturer(Guid courseId, Guid lecturerId)
         {
             var result = await _courseService.AssignLecturerAsync(courseId, lecturerId);
+            var response = ApiResponse.SuccessResponse(result.Message);
+
+            if (!result.IsSuccess)
+            {
+                response = ApiResponse.FailureResponse(result.Message, result.Errors);
+            }
+
+            return result.IsSuccess ? Ok(response) : BadRequest(response);
+        }
+
+        [HttpDelete("{courseId}/lecturer/{lecturerId}")]
+        [Authorize(Roles = UserRoles.Admin)]
+        public async Task<IActionResult> RemoveLecturer(Guid courseId, Guid lecturerId)
+        {
+            var result = await _courseService.RemoveLecturerAsync(courseId, lecturerId);
+            var response = ApiResponse.SuccessResponse(result.Message);
+
+            if (!result.IsSuccess)
+            {
+                response = ApiResponse.FailureResponse(result.Message, result.Errors);
+            }
+
+            return result.IsSuccess ? Ok(response) : BadRequest(response);
+        }
+
+        [HttpPut("{courseId}/lecturer/{lecturerId}/primary")]
+        [Authorize(Roles = UserRoles.Admin)]
+        public async Task<IActionResult> SetPrimaryLecturer(Guid courseId, Guid lecturerId)
+        {
+            var result = await _courseService.SetPrimaryLecturerAsync(courseId, lecturerId);
             var response = ApiResponse.SuccessResponse(result.Message);
 
             if (!result.IsSuccess)

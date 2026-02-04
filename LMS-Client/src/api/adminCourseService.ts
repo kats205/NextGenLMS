@@ -168,6 +168,28 @@ export async function assignLecturer(courseId: string, lecturerId: string) {
 }
 
 /**
+ * DELETE /api/admin/courses/{courseId}/lecturer/{lecturerId}
+ * Hủy phân công giảng viên
+ */
+export async function removeLecturer(courseId: string, lecturerId: string) {
+  const response = await instance.delete<ApiResponse<boolean>>(
+    `/api/admin/courses/${courseId}/lecturer/${lecturerId}`
+  );
+  return response.data.data;
+}
+
+/**
+ * PUT /api/admin/courses/{courseId}/lecturer/{lecturerId}/primary
+ * Đặt giảng viên chính
+ */
+export async function setPrimaryLecturer(courseId: string, lecturerId: string) {
+  const response = await instance.put<ApiResponse<boolean>>(
+    `/api/admin/courses/${courseId}/lecturer/${lecturerId}/primary`
+  );
+  return response.data.data;
+}
+
+/**
  * GET /api/admin/courses/{courseId}/statistics
  * Lấy thống kê chi tiết của khóa học
  */

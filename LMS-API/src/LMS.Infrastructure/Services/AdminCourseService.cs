@@ -452,6 +452,80 @@ namespace LMS.Infrastructure.Services
             }
         }
 
+        public async Task<ServiceResult> RemoveLecturerAsync(Guid courseId, Guid lecturerId)
+        {
+            try
+            {
+                var course = await _context.Courses
+                    .Include(c => c.Lecturers)
+                    .FirstOrDefaultAsync(c => c.Id == courseId && !c.IsDeleted);
+
+                if (course == null || course.IsDeleted)
+                    return ServiceResult.Failure("Không tìm thấy khóa học");
+
+                var cl = course.Lecturers.FirstOrDefault(x => x.LecturerId == lecturerId && !x.IsDeleted);
+                if (cl == null)
+                    return ServiceResult.Failure("Giảng viên chưa được phân công cho khóa học");
+
+                // Soft delete the relation
+                cl.IsDeleted = true;
+                var wasPrimary = cl.IsPrimary;
+                cl.IsPrimary = false;
+
+                // If removed lecturer was primary, promote another lecturer (if any)
+                if (wasPrimary)
+                {
+                    var other = course.Lecturers.FirstOrDefault(x => !x.IsDeleted && x.LecturerId != lecturerId);
+                    if (other != null)
+                    {
+                        other.IsPrimary = true;
+                    }
+                }
+
+                course.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+
+                return ServiceResult.Success("Hủy phân công giảng viên thành công");
+            }
+            catch (Exception ex)
+            {
+                return ServiceResult.Failure("Lỗi khi hủy phân công giảng viên", ex.Message);
+            }
+        }
+
+        public async Task<ServiceResult> SetPrimaryLecturerAsync(Guid courseId, Guid lecturerId)
+        {
+            try
+            {
+                var course = await _context.Courses
+                    .Include(c => c.Lecturers)
+                    .FirstOrDefaultAsync(c => c.Id == courseId && !c.IsDeleted);
+
+                if (course == null || course.IsDeleted)
+                    return ServiceResult.Failure("Không tìm thấy khóa học");
+
+                var target = course.Lecturers.FirstOrDefault(x => x.LecturerId == lecturerId && !x.IsDeleted);
+                if (target == null)
+                    return ServiceResult.Failure("Giảng viên chưa được phân công cho khóa học");
+
+                // unset all
+                foreach (var cl in course.Lecturers.Where(x => !x.IsDeleted))
+                {
+                    cl.IsPrimary = false;
+                }
+
+                target.IsPrimary = true;
+                course.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+
+                return ServiceResult.Success("Đặt giảng viên chính thành công");
+            }
+            catch (Exception ex)
+            {
+                return ServiceResult.Failure("Lỗi khi đặt giảng viên chính", ex.Message);
+            }
+        }
+
         public async Task<ServiceResult<CourseStatisticsDto>> GetCourseStatisticsAsync(Guid courseId)
         {
             try
