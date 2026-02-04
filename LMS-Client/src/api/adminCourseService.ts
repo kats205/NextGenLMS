@@ -7,7 +7,7 @@ import instance, { ApiResponse } from './axiosClient';
 // Mapping from C# PagedResultDto<T>
 export interface PagedResultDto<T> {
   items: T[];
-  totalCount: number;
+  totalItems: number;
   pageNumber: number;
   pageSize: number;
   totalPages: number;
@@ -100,27 +100,27 @@ export interface CourseStatisticsDto {
 }
 
 export interface DepartmentDto {
-    id: string;
-    name: string;
-    code: string;
+  id: string;
+  name: string;
+  code: string;
 }
 
 export interface MajorDto {
-    id: string;
-    name: string;
-    departmentId: string;
-    departmentName: string;
+  id: string;
+  name: string;
+  departmentId: string;
+  departmentName: string;
 }
 
 export interface AssignLecturerDto {
-    lecturerId: string;
+  lecturerId: string;
 }
 
 export async function getCourses(filter: CourseFilterDto) {
-  const response = await instance.get<ApiResponse<PagedResultDto<CourseDto>>>('/api/admin/courses', { 
-    params: filter 
+  const response = await instance.get<ApiResponse<PagedResultDto<CourseDto>>>('/api/admin/courses', {
+    params: filter
   });
-  return response.data.data; 
+  return response.data.data;
 }
 
 export async function getCourseById(id: string) {
@@ -168,6 +168,28 @@ export async function assignLecturer(courseId: string, lecturerId: string) {
 }
 
 /**
+ * DELETE /api/admin/courses/{courseId}/lecturer/{lecturerId}
+ * Hủy phân công giảng viên
+ */
+export async function removeLecturer(courseId: string, lecturerId: string) {
+  const response = await instance.delete<ApiResponse<boolean>>(
+    `/api/admin/courses/${courseId}/lecturer/${lecturerId}`
+  );
+  return response.data.data;
+}
+
+/**
+ * PUT /api/admin/courses/{courseId}/lecturer/{lecturerId}/primary
+ * Đặt giảng viên chính
+ */
+export async function setPrimaryLecturer(courseId: string, lecturerId: string) {
+  const response = await instance.put<ApiResponse<boolean>>(
+    `/api/admin/courses/${courseId}/lecturer/${lecturerId}/primary`
+  );
+  return response.data.data;
+}
+
+/**
  * GET /api/admin/courses/{courseId}/statistics
  * Lấy thống kê chi tiết của khóa học
  */
@@ -177,11 +199,21 @@ export async function getCourseStatistics(courseId: string) {
 }
 
 export async function getDepartments() {
-    const response = await instance.get<ApiResponse<DepartmentDto[]>>('/api/admin/courses/departments');
-    return response.data.data;
+  const response = await instance.get<ApiResponse<DepartmentDto[]>>('/api/admin/courses/departments');
+  return response.data.data;
 }
 
-export async function getMajors(){
-    const response = await instance.get<ApiResponse<MajorDto[]>>('/api/admin/courses/majors');
-    return response.data.data;
+export async function getMajors() {
+  const response = await instance.get<ApiResponse<MajorDto[]>>('/api/admin/courses/majors');
+  return response.data.data;
+}
+
+export type ExportStudentsRequestDto = {
+  exportAll: boolean;
+  courseCodes?: string[];
+}
+
+export async function exportStudents(request: ExportStudentsRequestDto) {
+  const response = await instance.post('/api/admin/courses/export-students', request, { responseType: 'blob' });
+  return response.data as Blob;
 }

@@ -112,8 +112,18 @@ export function SystemConfigPage({ user }: SystemConfigPageProps) {
 
   const handleBackupNow = async () => {
     try {
-      const fileName = await backupNow();
-      toast.success(`Sao lưu thành công! File: ${fileName}`);
+      const blob = await backupNow();
+      if (blob) {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `backup_${new Date().getTime()}.bak`; // Usually browser gets filename from header but manual fallback is good
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+        toast.success(`Sao lưu và tải về thành công!`);
+      }
     } catch (error: any) {
       console.error('Error backup:', error);
       toast.error(error.response?.data?.message || 'Sao lưu thất bại');
@@ -135,7 +145,7 @@ export function SystemConfigPage({ user }: SystemConfigPageProps) {
     const newTypes = types.includes(type)
       ? types.filter(t => t !== type)
       : [...types, type];
-    
+
     setConfig({
       ...config,
       fileUpload: { ...config.fileUpload, allowedFileTypes: newTypes }

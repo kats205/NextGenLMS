@@ -18,5 +18,6 @@ namespace LMS.Application.Interfaces
         Task<ServiceResult<bool>> ToggleUserStatusAsync(ToggleUserStatusDto dto);
         Task<ServiceResult<string>> ResetPasswordAsync(Guid userId);
         Task<ServiceResult<ImportUserResultDto>> ImportUsersFromExcelAsync(Stream fileStream);
+        Task<ServiceResult<DashboardStatsDto>> GetDashboardStatsAsync();
     }
 }

@@ -11,6 +11,7 @@ namespace LMS.Application.DTOs.Admin
             public string Email { get; set; } = string.Empty;
             public string FullName { get; set; } = string.Empty;
             public string? Phone { get; set; }
+            public DateTime? DateOfBirth { get; set; }
             public string RoleName { get; set; } = string.Empty; // "Admin", "Lecturer", "Student"
             public Guid? DepartmentId { get; set; }
             public string? StudentCode { get; set; }
@@ -23,6 +24,7 @@ namespace LMS.Application.DTOs.Admin
             public Guid UserId { get; set; }
             public string Email { get; set; } = string.Empty;
             public string FullName { get; set; } = string.Empty;
+            public DateTime? DateOfBirth { get; set; }
             public string? Phone { get; set; }
             public string RoleName { get; set; } = string.Empty;
             public Guid? DepartmentId { get; set; }
@@ -37,6 +39,7 @@ namespace LMS.Application.DTOs.Admin
             public string Email { get; set; } = string.Empty;
             public string FullName { get; set; } = string.Empty;
             public string? Phone { get; set; }
+            public DateTime? DateOfBirth { get; set; }
             public string? AvatarUrl { get; set; }
             public string? StudentCode { get; set; }
             public string? TeacherCode { get; set; }
@@ -66,5 +69,23 @@ namespace LMS.Application.DTOs.Admin
             public int CreatedCount { get; set; }
             public int UpdatedCount { get; set; }
             public List<string> Errors { get; set; } = new List<string>();
+        }
+
+        public class DashboardStatsDto
+        {
+            public int TotalUsers { get; set; }
+            public int TotalLecturers { get; set; }
+            public int TotalStudents { get; set; }
+            public int TotalCourses { get; set; }
+            public int ActiveCourses { get; set; }
+            public List<RecentActivityDto> RecentActivities { get; set; } = new List<RecentActivityDto>();
+        }
+
+        public class RecentActivityDto
+        {
+            public string Type { get; set; } // "user", "course", "system"
+            public string Action { get; set; }
+            public DateTime Time { get; set; }
+            public string TimeFormatted { get; set; }
         }
 }
