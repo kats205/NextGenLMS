@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { User } from '../../App';
 import { Header } from '../shared/Header';
 import { Search, BookOpen, Clock, TrendingUp, ClipboardList } from 'lucide-react';
@@ -26,7 +26,7 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
       try {
         setLoading(true);
         // Gọi API thật: Backend cần endpoint này
-        // Tạm thời gọi endpoint test 'GET /v1/api/courses' hoặc tương tự
+        // Tạm thời gọi endpoint test 'GET /v1/api/courses' hoặc tương đương
         // Nếu chưa có API course, nó sẽ 404, ta sẽ handle catch
 
         // NOTE: Hiện tại backend chưa có API trả về list course
