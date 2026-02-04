@@ -321,6 +321,24 @@ export const uploadFile = async (file: File, type: string): Promise<string> => {
 };
 
 // ============================================
+// EXPORT SCORES (PDF)
+// ============================================
+
+export const exportQuizScore = async (quizId: string): Promise<Blob> => {
+    const response = await axiosClient.get(`/api/export/quiz/${quizId}`, {
+        responseType: 'blob'
+    });
+    return response.data;
+};
+
+export const exportAssignmentScore = async (assignmentId: string): Promise<Blob> => {
+    const response = await axiosClient.get(`/api/export/assignment/${assignmentId}`, {
+        responseType: 'blob'
+    });
+    return response.data;
+};
+
+// ============================================
 // EXPORT DEFAULT
 // ============================================
 
@@ -389,6 +407,10 @@ const lecturerApi = {
     getQuizSubmissions,
     getSubmissionById,
     gradeSubmission,
+
+    // Export
+    exportQuizScore,
+    exportAssignmentScore,
 
     // Files
     uploadFile,
