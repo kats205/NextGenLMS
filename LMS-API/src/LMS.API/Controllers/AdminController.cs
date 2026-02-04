@@ -515,7 +515,7 @@ namespace LMS.API.Controllers
         /// Cập nhật thông tin khóa học
         /// </summary>
         [HttpPut("{id}")]
-        [Authorize(Roles = "Admin,Lecturer")]
+        [Authorize(Roles = "Admin,lecturer")]
         public async Task<IActionResult> UpdateCourse(Guid id, [FromBody] UpdateCourseDto dto)
         {
             if (!ModelState.IsValid)
@@ -555,9 +555,9 @@ namespace LMS.API.Controllers
         /// </summary>
         [HttpPut("{courseId}/lecturer/{lecturerId}")]
         [Authorize(Roles = UserRoles.Admin)]
-        public async Task<IActionResult> AssignLecturer(Guid courseId, Guid lecturerId)
+        public async Task<IActionResult> AssignLecturer(Guid courseId, Guid LecturerId)
         {
-            var result = await _courseService.AssignLecturerAsync(courseId, lecturerId);
+            var result = await _courseService.AssignLecturerAsync(courseId, LecturerId);
             var response = ApiResponse.SuccessResponse(result.Message);
 
             if (!result.IsSuccess)

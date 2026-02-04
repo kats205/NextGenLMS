@@ -1,9 +1,13 @@
+using AutoMapper;
+using LMS.Application.Interfaces;
+using LMS.Application.Lecturer;
 using LMS.Application.Interfaces;
 using LMS.Domain.Constant;
 using LMS.Infrastructure.Data;
 using LMS.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using System.Text;
@@ -44,7 +48,10 @@ builder.Services.AddSwaggerGen(options =>
         }
     });
 });
-
+builder.Services.AddAutoMapper(cfg =>
+{
+    cfg.AddProfile<LecturerMappingProfile>();
+});
 
 // DB Context Setup
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -79,13 +86,13 @@ builder.Services.AddAuthentication(options =>
     {
         OnAuthenticationFailed = context =>
         {
-            Console.WriteLine($"[AUTH FAILED] {context.Exception.Message}");
+            // Console.WriteLine($"[AUTH FAILED] {context.Exception.Message}");
             return Task.CompletedTask;
         },
         OnTokenValidated = context =>
         {
             var claims = context.Principal?.Claims.Select(c => $"{c.Type}: {c.Value}");
-            Console.WriteLine($"[AUTH SUCCESS] Claims: {string.Join(", ", claims ?? Array.Empty<string>())}");
+            // Console.WriteLine($"[AUTH SUCCESS] Claims: {string.Join(", ", claims ?? Array.Empty<string>())}");
             return Task.CompletedTask;
         }
     };
@@ -122,28 +129,34 @@ builder.Services.AddScoped<IFileStorageService, CloudinaryService>();
 builder.Services.AddScoped<IEmailService, MockEmailService>();
 builder.Services.AddScoped<IAdminEmailService, AdminEmailService>();
 builder.Services.AddScoped<IMasterDataService, MasterDataService>();
+builder.Services.AddScoped<ILecturerService, LecturerService>();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+    });
 builder.Services.AddScoped<IBackUpService, BackupService>();
 builder.Services.AddHostedService<BackupWorker>();
 
 
 var app = builder.Build();
 
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await db.Database.MigrateAsync();
+//using (var scope = app.Services.CreateScope())
+//{
+//    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+//    await db.Database.MigrateAsync();
 
-    var seeder = new DataSeeder(db);
+//    var seeder = new DataSeeder(db);
 
-    try
-    {
-        await seeder.SeedAsync();
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"[ERROR] Seed failed: {ex.Message}");
-    }
-}
+//    try
+//    {
+//        await seeder.SeedAsync();
+//    }
+//    catch (Exception ex)
+//    {
+//        Console.WriteLine($"[ERROR] Seed failed: {ex.Message}");
+//    }
+//}
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -159,9 +172,10 @@ app.UseAuthentication();
 
 app.UseAuthorization();
 
+app.UseMiddleware<ErrorHandlerMiddleware>();
+
 app.Use(async (context, next) =>
 {
-    Console.WriteLine($"[REQUEST] {context.Request.Method} {context.Request.Path}");
     await next();
 });
 

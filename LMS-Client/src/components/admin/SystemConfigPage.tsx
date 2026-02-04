@@ -1,4 +1,4 @@
-// src/components/admin/SystemConfigPage.tsx
+﻿// src/components/admin/SystemConfigPage.tsx
 import { useState, useEffect } from 'react';
 import { User } from '../../App';
 import { Header } from '../shared/Header';
@@ -261,21 +261,20 @@ export function SystemConfigPage({ user }: SystemConfigPageProps) {
                 value={config.fileUpload.maxFileSizeMB}
                 onChange={(e) => setConfig({
                   ...config,
-                  fileUpload: { ...config.fileUpload, maxFileSizeMB: parseInt(e.target.value) || 10 }
+                  fileUpload: { ...config.fileUpload, maxFileSizeMB: parseInt(e.target.value) || 0 }
                 })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                min="1"
-                max="100"
+                placeholder="10"
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                Định dạng file cho phép
+            <div className="mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Các định dạng cho phép
               </label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {fileTypes.map(type => (
-                  <label key={type.id} className="flex items-center gap-2 cursor-pointer">
+                {fileTypes.map((type) => (
+                  <label key={type.id} className="flex items-center gap-2 cursor-pointer p-2 hover:bg-gray-50 rounded">
                     <input
                       type="checkbox"
                       checked={config.fileUpload.allowedFileTypes.includes(type.label)}

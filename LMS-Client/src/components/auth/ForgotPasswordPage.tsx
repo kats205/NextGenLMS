@@ -1,10 +1,8 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Mail, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-interface ForgotPasswordPageProps { }
-
-export function ForgotPasswordPage({ }: ForgotPasswordPageProps) {
+export function ForgotPasswordPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);

@@ -105,6 +105,9 @@ namespace LMS.Infrastructure.Data
                 .WithMany(qs => qs.Snapshots)
                 .HasForeignKey(s => s.QuizSubmissionId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // Seed Data
+            modelBuilder.Seed();
         }
     }
 }
