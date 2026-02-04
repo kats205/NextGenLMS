@@ -120,6 +120,7 @@ builder.Services.AddScoped<IAdminCourseService, AdminCourseService>();
 builder.Services.AddScoped<ICourseConfigService, CourseConfigService>();
 builder.Services.AddScoped<IFileStorageService, CloudinaryService>();
 builder.Services.AddScoped<IEmailService, MockEmailService>();
+builder.Services.AddScoped<IAdminEmailService, AdminEmailService>();
 builder.Services.AddScoped<IMasterDataService, MasterDataService>();
 builder.Services.AddScoped<IBackUpService, BackupService>();
 builder.Services.AddHostedService<BackupWorker>();

@@ -7,7 +7,7 @@ import instance, { ApiResponse } from './axiosClient';
 // Mapping from C# PagedResultDto<T>
 export interface PagedResultDto<T> {
   items: T[];
-  totalCount: number;
+  totalItems: number;
   pageNumber: number;
   pageSize: number;
   totalPages: number;
@@ -100,27 +100,27 @@ export interface CourseStatisticsDto {
 }
 
 export interface DepartmentDto {
-    id: string;
-    name: string;
-    code: string;
+  id: string;
+  name: string;
+  code: string;
 }
 
 export interface MajorDto {
-    id: string;
-    name: string;
-    departmentId: string;
-    departmentName: string;
+  id: string;
+  name: string;
+  departmentId: string;
+  departmentName: string;
 }
 
 export interface AssignLecturerDto {
-    lecturerId: string;
+  lecturerId: string;
 }
 
 export async function getCourses(filter: CourseFilterDto) {
-  const response = await instance.get<ApiResponse<PagedResultDto<CourseDto>>>('/api/admin/courses', { 
-    params: filter 
+  const response = await instance.get<ApiResponse<PagedResultDto<CourseDto>>>('/api/admin/courses', {
+    params: filter
   });
-  return response.data.data; 
+  return response.data.data;
 }
 
 export async function getCourseById(id: string) {
@@ -199,13 +199,13 @@ export async function getCourseStatistics(courseId: string) {
 }
 
 export async function getDepartments() {
-    const response = await instance.get<ApiResponse<DepartmentDto[]>>('/api/admin/courses/departments');
-    return response.data.data;
+  const response = await instance.get<ApiResponse<DepartmentDto[]>>('/api/admin/courses/departments');
+  return response.data.data;
 }
 
-export async function getMajors(){
-    const response = await instance.get<ApiResponse<MajorDto[]>>('/api/admin/courses/majors');
-    return response.data.data;
+export async function getMajors() {
+  const response = await instance.get<ApiResponse<MajorDto[]>>('/api/admin/courses/majors');
+  return response.data.data;
 }
 
 export type ExportStudentsRequestDto = {

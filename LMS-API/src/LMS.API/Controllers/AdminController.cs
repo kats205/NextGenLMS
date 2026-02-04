@@ -22,6 +22,17 @@ namespace LMS.API.Controllers
 
         public AdminController(IAdminUserService service) => _service = service;
 
+        [HttpGet("stats")]
+        public async Task<IActionResult> GetDashboardStats()
+        {
+            var result = await _service.GetDashboardStatsAsync();
+            if (!result.IsSuccess)
+            {
+                return BadRequest(new ApiResponse<DashboardStatsDto> { Success = false, Message = result.Message });
+            }
+            return Ok(new ApiResponse<DashboardStatsDto> { Success = true, Data = result.Data });
+        }
+
         [HttpGet("users")]
         public async Task<IActionResult> GetUsers([FromQuery] UserQueryParams query)
         {

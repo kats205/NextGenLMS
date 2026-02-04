@@ -462,5 +462,90 @@ namespace LMS.Infrastructure.Services
 
             return ServiceResult<ImportUserResultDto>.Success(result, $"Import hoàn tất. Thêm mới: {result.CreatedCount}, Cập nhật: {result.UpdatedCount}, Lỗi: {result.Errors.Count}");
         }
+        public async Task<ServiceResult<DashboardStatsDto>> GetDashboardStatsAsync()
+        {
+            try
+            {
+                var stats = new DashboardStatsDto();
+
+                // 1. Stats Counts
+                stats.TotalUsers = await _db.AppUsers.CountAsync(u => !u.IsDeleted);
+                stats.TotalLecturers = await _db.AppUsers.CountAsync(u => !u.IsDeleted && u.Role.RoleName == "Lecturer");
+                stats.TotalStudents = await _db.AppUsers.CountAsync(u => !u.IsDeleted && u.Role.RoleName == "Student");
+                stats.TotalCourses = await _db.Courses.CountAsync(c => !c.IsDeleted);
+                // Assuming active means not deleted for now. Or check Semester is current? Keep simple: Not Deleted
+                stats.ActiveCourses = stats.TotalCourses; 
+
+                // 2. Recent Activities (Mock by querying latest CreatedAt)
+                var activities = new List<RecentActivityDto>();
+
+                // Latest Users
+                var recentUsers = await _db.AppUsers
+                    .Include(u => u.Role)
+                    .Where(u => !u.IsDeleted)
+                    .OrderByDescending(u => u.CreatedAt)
+                    .Take(5)
+                    .Select(u => new 
+                    { 
+                        u.FullName, 
+                        u.Role.RoleName, 
+                        u.CreatedAt 
+                    })
+                    .ToListAsync();
+
+                foreach (var u in recentUsers)
+                {
+                    var roleText = u.RoleName == "Student" ? "sinh viên" : (u.RoleName == "Lecturer" ? "giảng viên" : "người dùng");
+                    activities.Add(new RecentActivityDto
+                    {
+                        Type = "user",
+                        Action = $"Thêm {roleText} mới: {u.FullName}",
+                        Time = u.CreatedAt,
+                        TimeFormatted = CalculateTimeAgo(u.CreatedAt)
+                    });
+                }
+
+                // Latest Courses
+                var recentCourses = await _db.Courses
+                    .Where(c => !c.IsDeleted)
+                    .OrderByDescending(c => c.CreatedAt)
+                    .Take(5)
+                    .Select(c => new { c.Name, c.CreatedAt })
+                    .ToListAsync();
+
+                foreach (var c in recentCourses)
+                {
+                    activities.Add(new RecentActivityDto
+                    {
+                        Type = "course",
+                        Action = $"Tạo khóa học \"{c.Name}\"",
+                        Time = c.CreatedAt,
+                        TimeFormatted = CalculateTimeAgo(c.CreatedAt)
+                    });
+                }
+
+                // Mix and sort
+                stats.RecentActivities = activities
+                    .OrderByDescending(a => a.Time)
+                    .Take(10)
+                    .ToList();
+
+                return ServiceResult<DashboardStatsDto>.Success(stats);
+            }
+            catch (Exception ex)
+            {
+                return ServiceResult<DashboardStatsDto>.Failure("Lỗi khi lấy dữ liệu thống kê", ex.Message);
+            }
+        }
+
+        private string CalculateTimeAgo(DateTime dateTime)
+        {
+            var span = DateTime.UtcNow - dateTime;
+            if (span.TotalMinutes < 1) return "Vừa xong";
+            if (span.TotalMinutes < 60) return $"{(int)span.TotalMinutes} phút trước";
+            if (span.TotalHours < 24) return $"{(int)span.TotalHours} giờ trước";
+            if (span.TotalDays < 30) return $"{(int)span.TotalDays} ngày trước";
+            return dateTime.ToString("dd/MM/yyyy");
+        }
     }
 }

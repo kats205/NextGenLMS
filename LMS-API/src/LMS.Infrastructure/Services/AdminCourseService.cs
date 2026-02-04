@@ -18,10 +18,12 @@ namespace LMS.Infrastructure.Services
     public class AdminCourseService : IAdminCourseService
     {
         private readonly AppDbContext _context;
+        private readonly IAdminEmailService _emailService;
 
-        public AdminCourseService(AppDbContext context)
+        public AdminCourseService(AppDbContext context, IAdminEmailService emailService)
         {
             _context = context;
+            _emailService = emailService;
         }
 
         public async Task<ServiceResult<PagedResultDto<CourseDto>>> GetCoursesAsync(CourseFilterDto filter)
@@ -250,7 +252,7 @@ namespace LMS.Infrastructure.Services
                     var distinctLecturerIds = dto.LecturerId.Distinct().ToList();
                     var lecturers = await _context.AppUsers
                         .Where(u => distinctLecturerIds.Contains(u.Id) && !u.IsDeleted)
-                        .Select(u => new { u.Id, u.RoleId })
+                        .Select(u => new { u.Id, u.RoleId, u.Email, u.FullName })
                         .ToListAsync();
 
                     if (lecturers.Count != distinctLecturerIds.Count)
@@ -302,6 +304,28 @@ namespace LMS.Infrastructure.Services
                     }
 
                     await _context.SaveChangesAsync();
+
+                    // Send Emails
+                     var distinctLecturerIds = dto.LecturerId.Distinct().ToList();
+                     var assignedLecturers = await _context.AppUsers
+                        .Where(u => distinctLecturerIds.Contains(u.Id) && !u.IsDeleted)
+                        .Select(u => new { u.Email, u.FullName })
+                        .ToListAsync();
+
+                     foreach (var l in assignedLecturers)
+                     {
+                         if (!string.IsNullOrEmpty(l.Email))
+                         {
+                             await _emailService.SendEmailAsync(
+                                l.Email,
+                                "Thông báo phân công giảng dạy",
+                                $"<h3>Kính chào thầy/cô {l.FullName},</h3>" +
+                                $"<p>Thầy/cô vừa được phân công giảng dạy cho học phần: <strong>{course.Name} ({course.CourseCode})</strong>.</p>" +
+                                $"<p>Vui lòng đăng nhập hệ thống LMS để xem chi tiết.</p>" +
+                                $"<br/><p>Trân trọng,</p><p>Phòng đào tạo</p>"
+                             );
+                         }
+                     }
                 }
 
                 var createdCourse = await GetCourseDtoAsync(course.Id);
@@ -457,6 +481,19 @@ namespace LMS.Infrastructure.Services
                 course.UpdatedAt = DateTime.UtcNow;
 
                 await _context.SaveChangesAsync();
+
+                // Send Email Notification
+                if (!string.IsNullOrEmpty(lecturer.Email))
+                {
+                    await _emailService.SendEmailAsync(
+                        lecturer.Email,
+                        "Thông báo phân công giảng dạy",
+                        $"<h3>Kính chào thầy/cô {lecturer.FullName},</h3>" +
+                        $"<p>Thầy/cô vừa được phân công giảng dạy cho học phần: <strong>{course.Name} ({course.CourseCode})</strong>.</p>" +
+                        $"<p>Vui lòng đăng nhập hệ thống LMS để xem chi tiết.</p>" +
+                        $"<br/><p>Trân trọng,</p><p>Phòng đào tạo</p>"
+                    );
+                }
 
                 return ServiceResult.Success("Phân quyền giảng viên thành công");
             }

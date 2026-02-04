@@ -127,7 +127,7 @@ export function CourseManagementPage({ user }: CourseManagementPageProps) {
 
         if (!ignore && res) {
           setCourses(res.items || []);
-          setTotalItems(res.totalCount || 0);
+          setTotalItems(res.totalItems || 0);
           setTotalPages(res.totalPages || 1);
         }
       } catch (error) {
@@ -875,7 +875,7 @@ export function CourseManagementPage({ user }: CourseManagementPageProps) {
                         if (primaryLecturerId) {
                           await setPrimaryLecturer(editingId, primaryLecturerId);
                         }
-                        toast.success('Phân công giảng viên thành công!');
+                        toast.success('Phân công giảng viên thành công! Đã gửi email thông báo.');
                         setIsAssigning(false);
                         setEditingId(null);
                         refreshData();
