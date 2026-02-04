@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Eye, EyeOff, LogIn } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axiosClient from '../../api/axiosClient';
@@ -99,71 +99,67 @@ export function LoginPage() {
             </div>
           </div>
 
-          {/* Error message */}
-          {error && (
-            <div className="mb-4 p-3 bg-danger-50 border border-danger-200 rounded-lg">
-              <p className="text-sm text-danger-700">{error}</p>
-            </div>
-          )}
-
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Email
               </label>
               <input
-                id="email"
                 type="email"
+                required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                placeholder="your.email@university.edu.vn"
-                required
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
+                placeholder="email@university.edu.vn"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Mật khẩu
-              </label>
+              <div className="flex justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Mật khẩu
+                </label>
+                <button
+                  type="button"
+                  onClick={() => navigate('/forgot-password')}
+                  className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+                >
+                  Quên mật khẩu?
+                </button>
+              </div>
               <div className="relative">
                 <input
-                  id="password"
                   type={showPassword ? 'text' : 'password'}
+                  required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent pr-12"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
                   placeholder="••••••••"
-                  required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => navigate('/forgot-password')}
-              className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-            >
-              Quên mật khẩu?
-            </button>
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-600 text-center">{error}</p>
+              </div>
+            )}
 
             <button
+              disabled={loading}
               type="submit"
               className="w-full bg-primary-600 text-white py-3 rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center gap-2 font-medium"
             >
               <LogIn className="w-5 h-5" />
-              Đăng nhập
+              {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
             </button>
-
-
           </form>
         </div>
 

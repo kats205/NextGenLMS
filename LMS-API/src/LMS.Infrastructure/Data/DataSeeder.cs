@@ -1,106 +1,99 @@
 using LMS.Domain.Entities.Users;
-using LMS.Domain.Entities.Courses;
-using LMS.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using LMS.Domain.Entities.System;
-using System.Linq;
+using System;
 
 namespace LMS.Infrastructure.Data
 {
-    public sealed class DataSeeder
+    public static class DataSeeder
     {
-        private readonly AppDbContext _db;
-
-        public DataSeeder(AppDbContext db) => _db = db;
-
-        public async Task SeedAsync(CancellationToken ct = default)
+        public static void Seed(this ModelBuilder modelBuilder)
         {
-            Console.WriteLine("[SEED] Running database seeding...");
+            // 1. Roles
+            var adminRoleId = new Guid("11111111-1111-1111-1111-111111111111");
+            var lecturerRoleId = new Guid("22222222-2222-2222-2222-222222222222");
+            var studentRoleId = new Guid("33333333-3333-3333-3333-333333333333");
 
-            var now = DateTime.UtcNow;
-            var passwordHash = BCrypt.Net.BCrypt.HashPassword("123456");
-
-            // 1. SEED ROLES
-            var roleAdminId = Guid.Parse("7F6A5FB8-10D6-4B31-9F64-0AE904225071");
-            var roleLecturerId = Guid.Parse("DDEB87B1-28F2-4B15-88D5-350CFF603FBA");
-            var roleStudentId = Guid.Parse("D06CDE01-4C8B-4F26-AD27-41E8DF3B64E7");
-
-            if (!await _db.AppRoles.AnyAsync(ct))
-            {
-                await _db.AppRoles.AddRangeAsync(new List<AppRole>
+            modelBuilder.Entity<AppRole>().HasData(
+                new AppRole
                 {
-                    new AppRole { Id = roleAdminId, RoleName = "Admin", Description = "Qu?n tr? viên", CreatedAt = now },
-                    new AppRole { Id = roleLecturerId, RoleName = "Lecturer", Description = "Gi?ng viên", CreatedAt = now },
-                    new AppRole { Id = roleStudentId, RoleName = "Student", Description = "Sinh viên", CreatedAt = now }
-                }, ct);
-                await _db.SaveChangesAsync(ct);
-                Console.WriteLine("  - Roles seeded.");
-            }
-
-            // 2. SEED DEPARTMENTS
-            var deptFitId = Guid.Parse("68D2BA61-E3E8-42FE-BD96-542C0FC033C3");
-            if (!await _db.Departments.AnyAsync(ct))
-            {
-                await _db.Departments.AddAsync(new Department
+                    Id = adminRoleId,
+                    RoleName = "Admin",
+                    Description = "Administrator with full access",
+                    CreatedAt = new DateTime(2024, 1, 1),
+                    UpdatedAt = new DateTime(2024, 1, 1),
+                    IsDeleted = false
+                },
+                new AppRole
                 {
-                    Id = deptFitId,
-                    Name = "Khoa Công ngh? Thông tin",
-                    Code = "FIT",
-                    CreatedAt = now
-                }, ct);
-                await _db.SaveChangesAsync(ct);
-                Console.WriteLine("  - Departments seeded.");
-            }
-
-            // 3. SEED USERS
-            if (!await _db.AppUsers.AnyAsync(u => u.Email == "admintest@gmail.com", ct))
-            {
-                var users = new List<AppUser>
+                    Id = lecturerRoleId,
+                    RoleName = "Lecturer",
+                    Description = "Teacher/Lecturer",
+                    CreatedAt = new DateTime(2024, 1, 1),
+                    UpdatedAt = new DateTime(2024, 1, 1),
+                    IsDeleted = false
+                },
+                new AppRole
                 {
-                    new AppUser
-                    {
-                        Id = Guid.Parse("F2CD183C-ECD7-4297-9237-BD306017E8AA"),
-                        Email = "admintest@gmail.com",
-                        PasswordHash = passwordHash,
-                        FullName = "System Admin",
-                        Status = "Active",
-                        IsActive = true,
-                        RoleId = roleAdminId,
-                        CreatedAt = now
-                    },
-                    new AppUser
-                    {
-                        Id = Guid.Parse("50ED565D-C2A9-4B86-81FF-D42C3290D4B8"),
-                        Email = "gv01test@gmail.com",
-                        PasswordHash = passwordHash,
-                        FullName = "Gi?ng viên 01",
-                        TeacherCode = "GV001",
-                        Status = "Active",
-                        IsActive = true,
-                        RoleId = roleLecturerId,
-                        DepartmentId = deptFitId,
-                        CreatedAt = now
-                    },
-                    new AppUser
-                    {
-                        Id = Guid.Parse("48C6A748-4B43-4EAA-9AA7-A610D3423139"),
-                        Email = "sv01test@gmail.com",
-                        PasswordHash = passwordHash,
-                        FullName = "Sinh viên 01",
-                        StudentCode = "SV001",
-                        Status = "Active",
-                        IsActive = true,
-                        RoleId = roleStudentId,
-                        DepartmentId = deptFitId,
-                        CreatedAt = now
-                    }
-                };
-                await _db.AppUsers.AddRangeAsync(users, ct);
-                await _db.SaveChangesAsync(ct);
-                Console.WriteLine("  - Users seeded.");
-            }
+                    Id = studentRoleId,
+                    RoleName = "Student",
+                    Description = "Student/Learner",
+                    CreatedAt = new DateTime(2024, 1, 1),
+                    UpdatedAt = new DateTime(2024, 1, 1),
+                    IsDeleted = false
+                }
+            );
 
-            Console.WriteLine("[SEED] Completed successfully!");
+            // 2. Users (Admin, Lecturer, Student)
+            // Password: Admin@123
+            // Important: Using BCrypt.HashPassword() directly here is convenient but will cause 
+            // a new hash to be generated every time you run 'add-migration', creating unnecessary changes.
+            // However, it ensures the hash is always valid regardless of the library version.
+            
+            var passwordHash = BCrypt.Net.BCrypt.HashPassword("Admin@123"); 
+
+            modelBuilder.Entity<AppUser>().HasData(
+                new AppUser
+                {
+                    Id = new Guid("99999999-9999-9999-9999-999999999999"),
+                    FullName = "System Admin",
+                    Email = "admin@utc.edu.vn",
+                    PasswordHash = passwordHash, 
+                    RoleId = adminRoleId,
+                    Status = "Active",
+                    IsActive = true,
+                    CreatedAt = new DateTime(2024, 1, 1),
+                    UpdatedAt = new DateTime(2024, 1, 1),
+                    IsDeleted = false
+                },
+                new AppUser
+                {
+                    Id = new Guid("88888888-8888-8888-8888-888888888888"),
+                    FullName = "Giáº£ng viÃªn máº«u",
+                    Email = "giangvien@utc.edu.vn",
+                    TeacherCode = "GV001",
+                    PasswordHash = passwordHash,
+                    RoleId = lecturerRoleId,
+                    Status = "Active",
+                    IsActive = true,
+                    CreatedAt = new DateTime(2024, 1, 1),
+                    UpdatedAt = new DateTime(2024, 1, 1),
+                    IsDeleted = false
+                },
+                new AppUser
+                {
+                    Id = new Guid("77777777-7777-7777-7777-777777777777"),
+                    FullName = "Sinh viÃªn máº«u",
+                    Email = "sinhvien@utc.edu.vn",
+                    StudentCode = "SV001",
+                    PasswordHash = passwordHash,
+                    RoleId = studentRoleId,
+                    Status = "Active",
+                    IsActive = true,
+                    CreatedAt = new DateTime(2024, 1, 1),
+                    UpdatedAt = new DateTime(2024, 1, 1),
+                    IsDeleted = false
+                }
+            );
         }
     }
 }

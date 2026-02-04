@@ -1,129 +1,219 @@
-import { BarChart, TrendingUp, Users, Award, Target } from 'lucide-react';
+﻿// src/components/lecturer/CourseReports.tsx
+import React, { useEffect, useState } from 'react';
+import { toast } from 'react-toastify';
+import lecturerApi from '../../api/lecturerApi';
+import type { CourseReport, StudentProgress } from './lecturer.types';
 
 interface CourseReportsProps {
-  courseId: string;
+    courseId: string;
 }
 
-export function CourseReports({ courseId }: CourseReportsProps) {
-  // Mock report data
-  const stats = {
-    totalStudents: 45,
-    averageCompletion: 62,
-    averageScore: 7.8,
-    passRate: 85,
-  };
+const CourseReports: React.FC<CourseReportsProps> = ({ courseId }) => {
+    const [report, setReport] = useState<CourseReport | null>(null);
+    const [students, setStudents] = useState<StudentProgress[]>([]);
+    const [loading, setLoading] = useState(true);
 
-  const scoreDistribution = [
-    { range: '9.0 - 10', count: 8, percentage: 18 },
-    { range: '8.0 - 8.9', count: 12, percentage: 27 },
-    { range: '7.0 - 7.9', count: 10, percentage: 22 },
-    { range: '6.0 - 6.9', count: 8, percentage: 18 },
-    { range: '5.0 - 5.9', count: 5, percentage: 11 },
-    { range: '< 5.0', count: 2, percentage: 4 },
-  ];
+    useEffect(() => {
+        loadReport();
+    }, [courseId]);
 
-  return (
-    <div className="space-y-6">
-      <h3 className="font-semibold text-gray-900">Báo cáo lớp học</h3>
+    const loadReport = async () => {
+        try {
+            setLoading(true);
+            const data = await lecturerApi.getCourseReport(courseId);
+            setReport(data);
+            setStudents(data.studentsProgress || []);
+        } catch (error: any) {
+            console.error('Failed to load report:', error);
+            toast.error('Không thể tải báo cáo khóa học');
+        } finally {
+            setLoading(false);
+        }
+    };
 
-      {/* Overview Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-4 bg-gradient-to-br from-primary-50 to-primary-100 rounded-lg border border-primary-200">
-          <div className="flex items-center justify-between mb-2">
-            <Users className="w-8 h-8 text-primary-600" />
-          </div>
-          <div className="text-2xl font-semibold text-gray-900">{stats.totalStudents}</div>
-          <div className="text-sm text-gray-600">Tổng sinh viên</div>
-        </div>
+    const handleExportExcel = () => {
+        toast.info('Đang chuẩn bị xuất file Excel...');
+    };
 
-        <div className="p-4 bg-gradient-to-br from-success-50 to-success-100 rounded-lg border border-success-200">
-          <div className="flex items-center justify-between mb-2">
-            <Target className="w-8 h-8 text-success-600" />
-          </div>
-          <div className="text-2xl font-semibold text-gray-900">{stats.averageCompletion}%</div>
-          <div className="text-sm text-gray-600">Tiến độ trung bình</div>
-        </div>
+    const handleExportPDF = () => {
+        toast.info('Đang chuẩn bị xuất file PDF...');
+    };
 
-        <div className="p-4 bg-gradient-to-br from-warning-50 to-warning-100 rounded-lg border border-warning-200">
-          <div className="flex items-center justify-between mb-2">
-            <Award className="w-8 h-8 text-warning-600" />
-          </div>
-          <div className="text-2xl font-semibold text-gray-900">{stats.averageScore.toFixed(1)}</div>
-          <div className="text-sm text-gray-600">Điểm trung bình</div>
-        </div>
+    const handleViewStudentDetail = (studentId: string) => {
+        toast.info(`Xem chi tiết sinh viên: ${studentId}`);
+    };
 
-        <div className="p-4 bg-gradient-to-br from-success-50 to-success-100 rounded-lg border border-success-200">
-          <div className="flex items-center justify-between mb-2">
-            <TrendingUp className="w-8 h-8 text-success-600" />
-          </div>
-          <div className="text-2xl font-semibold text-gray-900">{stats.passRate}%</div>
-          <div className="text-sm text-gray-600">Tỷ lệ đạt</div>
-        </div>
-      </div>
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+        );
+    }
 
-      {/* Score Distribution */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
-        <div className="flex items-center gap-2 mb-6">
-          <BarChart className="w-5 h-5 text-primary-600" />
-          <h4 className="font-medium text-gray-900">Phổ điểm</h4>
-        </div>
+    if (!report) {
+        return (
+            <div className="text-center py-12">
+                <p className="text-gray-500">Không có dữ liệu báo cáo</p>
+            </div>
+        );
+    }
 
-        <div className="space-y-4">
-          {scoreDistribution.map((item, index) => (
-            <div key={index}>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700">{item.range}</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">{item.count} sinh viên</span>
-                  <span className="text-sm font-medium text-gray-900">{item.percentage}%</span>
+    return (
+        <div className="space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <select
+                    disabled
+                    className="px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none w-80 bg-white"
+                >
+                    <option>Lập trình Web (IT301)</option>
+                </select>
+
+                <div className="flex items-center space-x-3">
+                    <button
+                        onClick={handleExportExcel}
+                        className="px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center space-x-2"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span>Xuất Excel</span>
+                    </button>
+                    <button
+                        onClick={handleExportPDF}
+                        className="px-4 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center space-x-2"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span>Xuất PDF</span>
+                    </button>
                 </div>
-              </div>
-              <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-primary-500 to-primary-600 rounded-full transition-all"
-                  style={{ width: `${item.percentage}%` }}
+            </div>
+
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <StatCard
+                    title="Tổng sinh viên"
+                    value={report.totalStudents.toString()}
                 />
-              </div>
+                <StatCard
+                    title="Tiến độ trung bình"
+                    value={`${report.averageProgress.toFixed(0)}%`}
+                />
+                <StatCard
+                    title="Điểm TB trắc nghiệm"
+                    value={report.averageQuizScore.toFixed(1)}
+                />
+                <StatCard
+                    title="Tỷ lệ tham gia"
+                    value={`${report.completionRate.toFixed(0)}%`}
+                />
             </div>
-          ))}
-        </div>
 
-        <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div>
-              <div className="text-sm text-gray-600 mb-1">Điểm cao nhất</div>
-              <div className="font-semibold text-gray-900">9.8</div>
-            </div>
-            <div>
-              <div className="text-sm text-gray-600 mb-1">Điểm thấp nhất</div>
-              <div className="font-semibold text-gray-900">4.2</div>
-            </div>
-            <div>
-              <div className="text-sm text-gray-600 mb-1">Trung vị</div>
-              <div className="font-semibold text-gray-900">7.5</div>
-            </div>
-          </div>
-        </div>
-      </div>
+            {/* Student Details Table */}
+            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-900">Báo cáo chi tiết sinh viên</h3>
+                </div>
 
-      {/* Engagement Stats */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
-        <h4 className="font-medium text-gray-900 mb-4">Mức độ tương tác</h4>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="p-4 border border-gray-200 rounded-lg">
-            <div className="text-2xl font-semibold text-gray-900 mb-1">382</div>
-            <div className="text-sm text-gray-600">Lượt xem bài giảng</div>
-          </div>
-          <div className="p-4 border border-gray-200 rounded-lg">
-            <div className="text-2xl font-semibold text-gray-900 mb-1">127</div>
-            <div className="text-sm text-gray-600">Bài kiểm tra đã nộp</div>
-          </div>
-          <div className="p-4 border border-gray-200 rounded-lg">
-            <div className="text-2xl font-semibold text-gray-900 mb-1">45 phút</div>
-            <div className="text-sm text-gray-600">Thời gian trung bình/tuần</div>
-          </div>
+                {students.length === 0 ? (
+                    <div className="text-center py-12">
+                        <p className="text-gray-500">Chưa có sinh viên nào</p>
+                    </div>
+                ) : (
+                    <table className="w-full">
+                        <thead className="bg-gray-50 border-b border-gray-200">
+                            <tr>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">SINH VIÊN</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">TIẾN ĐỘ</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ĐTB TRẮC NGHIỆM</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ĐTB TỰ LUẬN</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">THAM GIA</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">THAO TÁC</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                            {students.map((student) => (
+                                <StudentReportRow
+                                    key={student.studentId}
+                                    student={student}
+                                    onViewDetail={handleViewStudentDetail}
+                                />
+                            ))}
+                        </tbody>
+                    </table>
+                )}
+            </div>
         </div>
-      </div>
-    </div>
-  );
+    );
+};
+
+interface StatCardProps {
+    title: string;
+    value: string;
 }
+
+const StatCard: React.FC<StatCardProps> = ({ title, value }) => (
+    <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+        <p className="text-sm text-gray-600 mb-1">{title}</p>
+        <p className="text-3xl font-bold text-gray-900">{value}</p>
+    </div>
+);
+
+interface StudentReportRowProps {
+    student: StudentProgress;
+    onViewDetail: (studentId: string) => void;
+}
+
+const StudentReportRow: React.FC<StudentReportRowProps> = ({ student, onViewDetail }) => {
+    const participationRate = student.totalLessons > 0
+        ? ((student.completedLessons / student.totalLessons) * 100)
+        : 0;
+
+    return (
+        <tr className="hover:bg-gray-50">
+            <td className="px-6 py-4">
+                <div>
+                    <div className="font-medium text-gray-900">{student.studentName}</div>
+                    <div className="text-sm text-gray-500">{student.studentCode}</div>
+                </div>
+            </td>
+            <td className="px-6 py-4">
+                <div className="flex items-center space-x-3">
+                    <div className="flex-1">
+                        <div className="w-24 bg-gray-200 rounded-full h-2">
+                            <div
+                                className="bg-blue-600 h-2 rounded-full transition-all"
+                                style={{ width: `${student.progressPercentage}%` }}
+                            />
+                        </div>
+                    </div>
+                    <span className="text-sm font-medium text-gray-900">
+                        {student.progressPercentage.toFixed(0)}%
+                    </span>
+                </div>
+            </td>
+            <td className="px-6 py-4 text-sm text-gray-900 font-medium">
+                {student.averageQuizScore.toFixed(1)}/10
+            </td>
+            <td className="px-6 py-4 text-sm text-gray-900 font-medium">
+                {student.averageAssignmentScore.toFixed(1)}/10
+            </td>
+            <td className="px-6 py-3 text-sm text-gray-900 font-medium">
+                {participationRate.toFixed(0)}%
+            </td>
+            <td className="px-6 py-4">
+                <button
+                    onClick={() => onViewDetail(student.studentId)}
+                    className="text-blue-600 hover:text-blue-800 font-medium text-sm"
+                >
+                    Chi tiết
+                </button>
+            </td>
+        </tr>
+    );
+};
+
+export default CourseReports;
