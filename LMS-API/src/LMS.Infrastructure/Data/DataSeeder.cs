@@ -122,7 +122,7 @@ namespace LMS.Infrastructure.Data
                 new AppUser
                 {
                     Id = adminUserId,
-                    Email = "admin@test.com",
+                    Email = "admintest@gmail.com",
                     PasswordHash = passwordHash,
                     FullName = "Nguyễn Văn Admin",
                     Phone = "0901234567",
@@ -138,7 +138,7 @@ namespace LMS.Infrastructure.Data
                 new AppUser
                 {
                     Id = lecturer01Id,
-                    Email = "gv01@test.com",
+                    Email = "gv01test@gmail.com",
                     PasswordHash = passwordHash,
                     FullName = "Trần Thị Minh",
                     Phone = "0912345678",
@@ -156,7 +156,7 @@ namespace LMS.Infrastructure.Data
                 new AppUser
                 {
                     Id = lecturer02Id,
-                    Email = "gv02@test.com",
+                    Email = "gv02test@gmail.com",
                     PasswordHash = passwordHash,
                     FullName = "Lê Văn Hùng",
                     Phone = "0923456789",
@@ -174,7 +174,7 @@ namespace LMS.Infrastructure.Data
                 new AppUser
                 {
                     Id = student01Id,
-                    Email = "sv01@test.com",
+                    Email = "sv01test@gmail.com",
                     PasswordHash = passwordHash,
                     FullName = "Phạm Văn An",
                     Phone = "0934567890",
@@ -192,7 +192,7 @@ namespace LMS.Infrastructure.Data
                 new AppUser
                 {
                     Id = student02Id,
-                    Email = "sv02@test.com",
+                    Email = "sv02test@gmail.com",
                     PasswordHash = passwordHash,
                     FullName = "Hoàng Thị Bình",
                     Phone = "0945678901",
@@ -210,7 +210,7 @@ namespace LMS.Infrastructure.Data
                 new AppUser
                 {
                     Id = student03Id,
-                    Email = "sv03@test.com",
+                    Email = "sv03test@gmail.com",
                     PasswordHash = passwordHash,
                     FullName = "Vũ Minh Châu",
                     Phone = "0956789012",
