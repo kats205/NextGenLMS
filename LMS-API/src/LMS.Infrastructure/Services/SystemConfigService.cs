@@ -18,13 +18,16 @@ namespace LMS.Infrastructure.Services
     {
         private readonly AppDbContext _context;
         private readonly ILogger<SystemConfigService> _logger;
+        private readonly IBackUpService _backupService;
 
         public SystemConfigService(
             AppDbContext context,
-            ILogger<SystemConfigService> logger)
+            ILogger<SystemConfigService> logger,
+            IBackUpService backupService)
         {
             _context = context;
             _logger = logger;
+            _backupService = backupService;
         }
 
         public async Task<ServiceResult<SystemConfigResponse>> GetAllConfigsAsync()
@@ -33,32 +36,60 @@ namespace LMS.Infrastructure.Services
             {
                 var configs = await _context.SystemConfigs.ToListAsync();
 
+                string Read(string key, string def) => GetConfigValue(configs, key, def);
+
+                // Safe parsing helpers
+                int SafeInt(string value, int fallback)
+                {
+                    if (int.TryParse(value, out var v)) return v;
+                    return fallback;
+                }
+
+                bool SafeBool(string value, bool fallback)
+                {
+                    if (bool.TryParse(value, out var v)) return v;
+                    return fallback;
+                }
+
+                List<string> SafeList(string value, List<string> fallback)
+                {
+                    try
+                    {
+                        if (string.IsNullOrWhiteSpace(value)) return fallback;
+                        var parsed = JsonSerializer.Deserialize<List<string>>(value);
+                        return parsed ?? fallback;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to deserialize AllowedFileTypes: {Value}", value);
+                        return fallback;
+                    }
+                }
+
                 var response = new SystemConfigResponse
                 {
                     AcademicYear = new AcademicYearConfigDto
                     {
-                        CurrentAcademicYear = GetConfigValue(configs, "CurrentAcademicYear", "2025-2026"),
-                        CurrentSemester = GetConfigValue(configs, "CurrentSemester", "Học kỳ 1")
+                        CurrentAcademicYear = Read("CurrentAcademicYear", "2025-2026"),
+                        CurrentSemester = Read("CurrentSemester", "Học kỳ 1")
                     },
                     FileUpload = new FileUploadConfigDto
                     {
-                        MaxFileSizeMB = int.Parse(GetConfigValue(configs, "MaxFileSizeMB", "10")),
-                        AllowedFileTypes = JsonSerializer.Deserialize<List<string>>(
-                            GetConfigValue(configs, "AllowedFileTypes", "[\"PDF\",\"Word\",\"PowerPoint\",\"Excel\",\"Video (MP4)\",\"Ảnh (PNG, JPG)\",\"ZIP\",\"RAR\"]")
-                        ) ?? new List<string>()
+                        MaxFileSizeMB = SafeInt(Read("MaxFileSizeMB", "10"), 10),
+                        AllowedFileTypes = SafeList(Read("AllowedFileTypes", "[\"PDF\",\"Word\",\"PowerPoint\",\"Excel\",\"Video (MP4)\",\"Ảnh (PNG, JPG)\",\"ZIP\",\"RAR\"]"), new List<string>())
                     },
                     Email = new EmailConfigDto
                     {
-                        SmtpHost = GetConfigValue(configs, "SmtpHost", "smtp.gmail.com"),
-                        SmtpPort = int.Parse(GetConfigValue(configs, "SmtpPort", "587")),
-                        EmailSender = GetConfigValue(configs, "EmailSender", "noreply@university.edu.vn"),
-                        SmtpPassword = GetConfigValue(configs, "SmtpPassword", ""),
-                        EnableSsl = bool.Parse(GetConfigValue(configs, "EnableSsl", "true"))
+                        SmtpHost = Read("SmtpHost", "smtp.gmail.com"),
+                        SmtpPort = SafeInt(Read("SmtpPort", "587"), 587),
+                        EmailSender = Read("EmailSender", "noreply@university.edu.vn"),
+                        SmtpPassword = Read("SmtpPassword", ""),
+                        EnableSsl = SafeBool(Read("EnableSsl", "true"), true)
                     },
                     Backup = new BackupConfigDto
                     {
-                        AutoBackupEnabled = bool.Parse(GetConfigValue(configs, "AutoBackupEnabled", "false")),
-                        BackupTime = GetConfigValue(configs, "BackupTime", "02:00")
+                        AutoBackupEnabled = SafeBool(Read("AutoBackupEnabled", "false"), false),
+                        BackupTime = Read("BackupTime", "02:00")
                     }
                 };
 
@@ -66,8 +97,8 @@ namespace LMS.Infrastructure.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting system configs");
-                return ServiceResult<SystemConfigResponse>.Failure("Lỗi khi lấy cấu hình hệ thống");
+                _logger.LogError(ex, "Error getting system configs (unexpected)");
+                return ServiceResult<SystemConfigResponse>.Failure("Lỗi khi lấy cấu hình hệ thống", ex.Message);
             }
         }
 
@@ -240,19 +271,13 @@ namespace LMS.Infrastructure.Services
         {
             try
             {
-                // Implement backup logic here
-                var backupFileName = $"backup_{DateTime.UtcNow:yyyyMMdd_HHmmss}.sql";
-
-                // TODO: Implement actual backup logic
-                // This is a placeholder
-                _logger.LogInformation($"Backup created: {backupFileName}");
-
-                return ServiceResult<string>.Success(backupFileName, "Sao lưu dữ liệu thành công");
+                var backupPath = await _backupService.PerformBackupAsync();
+                return ServiceResult<string>.Success(backupPath, "Sao lưu dữ liệu thành công");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating backup");
-                return ServiceResult<string>.Failure("Lỗi khi sao lưu dữ liệu");
+                return ServiceResult<string>.Failure("Lỗi khi sao lưu dữ liệu: " + ex.Message);
             }
         }
 

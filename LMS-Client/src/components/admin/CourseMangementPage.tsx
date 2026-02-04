@@ -17,13 +17,15 @@ import {
   getCourseById,
   getMajors,
   assignLecturer,
+  removeLecturer,
+  setPrimaryLecturer,
   CourseDto,
   CreateCourseDto,
   UpdateCourseDto,
   CourseFilterDto,
   MajorDto
 } from '@/api/adminCourseService';
-import { getAdminUsers, UserListItemDto } from '@/api/adminUser';
+import { getAdminUsers, getUserById, UserListItemDto } from '@/api/adminUser';
 import { getAcademicYears, getSemesters, AcademicYearDto, SemesterDto } from '@/api/systemConfig';
 import instance from '@/api/axiosClient';
 
@@ -125,7 +127,7 @@ export function CourseManagementPage({ user }: CourseManagementPageProps) {
 
         if (!ignore && res) {
           setCourses(res.items || []);
-          setTotalItems(res.totalCount || 0);
+          setTotalItems(res.totalItems || 0);
           setTotalPages(res.totalPages || 1);
         }
       } catch (error) {
@@ -189,7 +191,7 @@ export function CourseManagementPage({ user }: CourseManagementPageProps) {
         if (formData.majorId) {
           const major = majors.find(m => m.id === formData.majorId);
           if (major?.departmentName) {
-            items = items.filter(i => i.department === major.departmentName);
+            items = items.filter(i => i.departmentName === major.departmentName);
           }
         }
 
@@ -257,9 +259,37 @@ export function CourseManagementPage({ user }: CourseManagementPageProps) {
     if (!primaryLecturerId) setPrimaryLecturerId(u.id);
   };
 
-  const removeSelectedLecturer = (id: string) => {
+  const removeSelectedLecturer = async (id: string) => {
+    // If editing existing course, call API to remove relation
+    if (editingId) {
+      try {
+        await removeLecturer(editingId, id);
+        toast.success('Hủy phân công giảng viên thành công');
+      } catch (err: any) {
+        toast.error(err?.response?.data?.message || 'Hủy phân công thất bại');
+        return;
+      }
+    }
+
     setSelectedLecturers(prev => prev.filter(p => p.id !== id));
     if (primaryLecturerId === id) setPrimaryLecturerId(selectedLecturers[0]?.id ?? null);
+  };
+
+  const handleSetPrimaryLecturer = async (id: string) => {
+    // If editing course persisted, call API to set primary
+    if (editingId) {
+      try {
+        await setPrimaryLecturer(editingId, id);
+        toast.success('Cập nhật giảng viên chính thành công');
+      } catch (err: any) {
+        toast.error(err?.response?.data?.message || 'Cập nhật thất bại');
+        return;
+      }
+    }
+
+    setPrimaryLecturerId(id);
+    // update local selected list flags
+    setSelectedLecturers(prev => prev.map(s => ({ ...s, isPrimary: s.id === id })));
   };
 
   const handleCreateCourse = async () => {
@@ -270,9 +300,15 @@ export function CourseManagementPage({ user }: CourseManagementPageProps) {
     }
 
     try {
-      const lecturerIds = primaryLecturerId
-        ? [primaryLecturerId, ...selectedLecturers.map(s => s.id).filter(i => i !== primaryLecturerId)]
-        : selectedLecturers.map(s => s.id);
+      // ensure primary lecturer (if any) is first in the list so backend will mark it primary on create
+      const lecturerIds = selectedLecturers.map(s => s.id);
+      if (primaryLecturerId) {
+        const idx = lecturerIds.indexOf(primaryLecturerId);
+        if (idx > 0) {
+          lecturerIds.splice(idx, 1);
+          lecturerIds.unshift(primaryLecturerId);
+        }
+      }
 
       const createData: CreateCourseDto = {
         courseCode: formData.courseCode,
@@ -312,12 +348,7 @@ export function CourseManagementPage({ user }: CourseManagementPageProps) {
         setIsEditing(true);
         // populate selected lecturers from course data
         if (data.lecturers && data.lecturers.length) {
-          const list = data.lecturers.map(l => ({
-            id: l.id,
-            fullName: l.fullName,
-            email: l.email || '',
-            isPrimary: l.isPrimary
-          }));
+          const list = data.lecturers.map(l => ({ id: l.id, fullName: l.fullName, email: l.email ?? '', isPrimary: l.isPrimary }));
           setSelectedLecturers(list);
           const primary = list.find(x => x.isPrimary);
           setPrimaryLecturerId(primary ? primary.id : (list[0]?.id ?? null));
@@ -348,7 +379,30 @@ export function CourseManagementPage({ user }: CourseManagementPageProps) {
       await updateCourse(editingId, updateData);
       // Assign selected lecturers after update (best-effort)
       if (selectedLecturers && selectedLecturers.length) {
-        await Promise.all(selectedLecturers.map(s => assignLecturer(editingId, s.id)));
+        // Assign sequentially so we can surface per-lecturer errors (400 etc.)
+        for (const s of selectedLecturers) {
+          try {
+            await assignLecturer(editingId, s.id);
+          } catch (err: any) {
+            // Log detailed server response for debugging
+            console.error('Assign lecturer failed for', s.id, err.response?.data ?? err.message ?? err);
+            const serverMsg = err?.response?.data?.message || err?.response?.data || err?.message || 'Không thể phân công giảng viên';
+            toast.error(`${s.fullName || s.id}: ${typeof serverMsg === 'string' ? serverMsg : JSON.stringify(serverMsg)}`);
+            // continue attempting to assign remaining lecturers
+            continue;
+          }
+        }
+
+        // ensure primary is set on server (best-effort)
+        if (primaryLecturerId) {
+          try {
+            await setPrimaryLecturer(editingId, primaryLecturerId);
+          } catch (err: any) {
+            console.error('Set primary lecturer failed', err.response?.data ?? err.message ?? err);
+            const serverMsg = err?.response?.data?.message || err?.response?.data || err?.message || 'Đặt giảng viên chính thất bại';
+            toast.error(typeof serverMsg === 'string' ? serverMsg : JSON.stringify(serverMsg));
+          }
+        }
       }
       toast.success('Cập nhật khóa học thành công!');
       setIsEditing(false);
@@ -383,21 +437,85 @@ export function CourseManagementPage({ user }: CourseManagementPageProps) {
   const handleAssignClick = (courseId: string) => {
     setEditingId(courseId);
     setAssignData({ lecturerId: '' });
+    // preload current lecturers for this course into the selector
+    (async () => {
+      try {
+        const data = await getCourseById(courseId);
+        if (data) {
+          if (data.lecturers && data.lecturers.length) {
+            const list = data.lecturers.map(l => ({ id: l.id, fullName: l.fullName, email: l.email ?? '', isPrimary: l.isPrimary }));
+            setSelectedLecturers(list);
+            const primary = list.find(x => x.isPrimary);
+            setPrimaryLecturerId(primary ? primary.id : (list[0]?.id ?? null));
+          } else {
+            setSelectedLecturers([]);
+            setPrimaryLecturerId(null);
+          }
+        }
+      } catch (err) {
+        // ignore preload errors
+      }
+    })();
     setIsAssigning(true);
   };
 
   const handleAssignLecturer = async () => {
     if (!editingId || !assignData.lecturerId) {
-      toast.error("Vui lòng nhập ID giảng viên!");
+      toast.error("Vui lòng chọn giảng viên!");
+      return;
+    }
+
+    // basic GUID validation
+    const guidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+    if (!guidRegex.test(assignData.lecturerId)) {
+      toast.error('ID giảng viên không hợp lệ (không phải GUID)');
       return;
     }
 
     try {
       await assignLecturer(editingId, assignData.lecturerId);
       toast.success("Phân công giảng viên thành công!");
-      setIsAssigning(false);
-      setEditingId(null);
-      refreshData();
+
+      // If we're currently editing this course in the create/edit modal,
+      // also add the assigned lecturer into the selected list so the UIs stay in sync.
+      if (isEditing && editingId) {
+        // try to find lecturer info in cached options
+        let u = lecturerOptions.find(l => l.id === assignData.lecturerId) as UserListItemDto | undefined;
+        if (!u) {
+          try {
+            const detail = await getUserById(assignData.lecturerId);
+            if (detail) {
+              u = { id: detail.id, fullName: detail.fullName, email: detail.email, role: (detail as any).roleName ?? (detail as any).role ?? 'Lecturer', departmentName: (detail as any).departmentName ?? null, status: (detail as any).isActive ? 'active' : 'inactive' } as UserListItemDto;
+            }
+          } catch (err) {
+            // ignore; we'll still add minimal info below
+          }
+        }
+
+        // Add to selected list if not present
+        setSelectedLecturers(prev => {
+          if (prev.find(s => s.id === assignData.lecturerId)) return prev;
+          const newEntry = { id: assignData.lecturerId, fullName: u?.fullName ?? assignData.lecturerId, email: u?.email ?? '' };
+          const next = [...prev, newEntry];
+          // If no primary set yet, set this one
+          if (!primaryLecturerId) {
+            setPrimaryLecturerId(assignData.lecturerId);
+            return next.map(s => ({ ...s, isPrimary: s.id === assignData.lecturerId }));
+          }
+          return next;
+        });
+
+        // close assign modal
+        setIsAssigning(false);
+      } else {
+        // Not editing in-place: close assign modal and refresh list
+        setIsAssigning(false);
+        setEditingId(null);
+        refreshData();
+      }
+
+      // reset assign input
+      setAssignData({ lecturerId: '' });
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Phân công thất bại!");
     }
@@ -467,15 +585,7 @@ export function CourseManagementPage({ user }: CourseManagementPageProps) {
               <Plus className="w-4 h-4" />
               Thêm khóa học
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
-              <Upload className="w-4 h-4" />
-              Import Excel
-            </button>
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
-            <Download className="w-4 h-4" />
-            Xuất danh sách
-          </button>
         </div>
 
         {/* --- Create/Edit Modal --- */}
@@ -584,30 +694,6 @@ export function CourseManagementPage({ user }: CourseManagementPageProps) {
                       placeholder="Mô tả ngắn về nội dung khóa học..."
                     />
                   </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Ảnh khóa học
-                    </label>
-                    <div className="flex items-center gap-4">
-                      {formData.thumbnailUrl && (
-                        <img
-                          src={formData.thumbnailUrl}
-                          alt="Thumbnail"
-                          className="w-16 h-16 rounded-lg object-cover border"
-                        />
-                      )}
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            handleThumbnailUpload(file);
-                          }
-                        }}
-                      />
-                    </div>
-                  </div>
 
                   {/* --- Lecturer Selector & Selected Table --- */}
                   <div className="md:col-span-2">
@@ -659,7 +745,7 @@ export function CourseManagementPage({ user }: CourseManagementPageProps) {
                                     type="radio"
                                     name="primaryLecturer"
                                     checked={primaryLecturerId === s.id}
-                                    onChange={() => setPrimaryLecturerId(s.id)}
+                                    onChange={() => handleSetPrimaryLecturer(s.id)}
                                   />
                                 </td>
                                 <td className="px-3 py-2 text-center">
@@ -693,10 +779,10 @@ export function CourseManagementPage({ user }: CourseManagementPageProps) {
           </div>
         )}
 
-        {/* --- Assign Lecturer Modal --- */}
+        {/* --- Assign Lecturer Modal (uses same selector UI) --- */}
         {isAssigning && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl shadow-lg max-w-md w-full mx-4">
+            <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between p-6 border-b border-gray-200">
                 <h3 className="text-xl font-semibold text-gray-900">Phân công giảng viên</h3>
                 <button onClick={handleCloseForms} className="p-2 hover:bg-gray-100 rounded-lg">
@@ -704,25 +790,98 @@ export function CourseManagementPage({ user }: CourseManagementPageProps) {
                 </button>
               </div>
               <div className="p-6">
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Nhập ID Giảng viên
-                  </label>
-                  {/* Trong thực tế nên là Select search từ danh sách User role Lecturer */}
-                  <input
-                    type="text"
-                    value={assignData.lecturerId}
-                    onChange={(e) => setAssignData({ lecturerId: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    placeholder="Nhập GUID của giảng viên..."
-                  />
-                  <p className="text-sm text-gray-500 mt-2">
-                    Giảng viên được chọn sẽ có quyền quản lý nội dung và điểm số.
-                  </p>
+                <div className="grid grid-cols-1 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Giảng viên</label>
+                    <div>
+                      <input
+                        type="text"
+                        value={lecturerSearch}
+                        onChange={(e) => setLecturerSearch(e.target.value)}
+                        placeholder="Gõ để tìm giảng viên (email hoặc tên)..."
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      />
+                      {/* Dropdown suggestions */}
+                      {lecturerOptions.length > 0 && lecturerSearch.trim() !== '' && (
+                        <ul className="mt-1 border border-gray-200 rounded bg-white max-h-48 overflow-y-auto z-50">
+                          {lecturerOptions.map(opt => (
+                            <li
+                              key={opt.id}
+                              onClick={() => { addSelectedLecturer(opt); setLecturerSearch(''); }}
+                              className="px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm"
+                            >
+                              {opt.email} ({getFirstName(opt.fullName)})
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      <p className="text-xs text-gray-400 mt-2">Danh sách lọc theo Khoa (nếu đã chọn Ngành), có thể gõ để tìm và chọn.</p>
+                    </div>
+                  </div>
+
+                  {/* Selected lecturers table */}
+                  {selectedLecturers.length > 0 && (
+                    <div className="mt-3 border rounded overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50 border-b">
+                          <tr>
+                            <th className="px-3 py-2 text-left">Họ & Tên</th>
+                            <th className="px-3 py-2 text-left">Email</th>
+                            <th className="px-3 py-2 text-center">Chính</th>
+                            <th className="px-3 py-2 text-center">Xóa</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selectedLecturers.map(s => (
+                            <tr key={s.id} className="border-b">
+                              <td className="px-3 py-2">{s.fullName}</td>
+                              <td className="px-3 py-2">{s.email}</td>
+                              <td className="px-3 py-2 text-center">
+                                <input
+                                  type="radio"
+                                  name="primaryLecturer"
+                                  checked={primaryLecturerId === s.id}
+                                  onChange={() => handleSetPrimaryLecturer(s.id)}
+                                />
+                              </td>
+                              <td className="px-3 py-2 text-center">
+                                <button onClick={() => removeSelectedLecturer(s.id)} className="text-sm text-danger-600 hover:underline">Xóa</button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
                 </div>
+
                 <div className="flex gap-2 mt-6">
                   <button
-                    onClick={handleAssignLecturer}
+                    onClick={async () => {
+                      if (!editingId) {
+                        toast.error('Không có khóa học để phân công');
+                        return;
+                      }
+                      if (selectedLecturers.length === 0) {
+                        toast.error('Vui lòng chọn ít nhất 1 giảng viên');
+                        return;
+                      }
+                      try {
+                        // assign all selected lecturers (best-effort)
+                        await Promise.all(selectedLecturers.map(s => assignLecturer(editingId, s.id)));
+                        // set primary if chosen
+                        if (primaryLecturerId) {
+                          await setPrimaryLecturer(editingId, primaryLecturerId);
+                        }
+                        toast.success('Phân công giảng viên thành công! Đã gửi email thông báo.');
+                        setIsAssigning(false);
+                        setEditingId(null);
+                        refreshData();
+                      } catch (err: any) {
+                        toast.error(err?.response?.data?.message || 'Phân công thất bại');
+                      }
+                    }}
                     className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 w-full"
                   >
                     Xác nhận phân công

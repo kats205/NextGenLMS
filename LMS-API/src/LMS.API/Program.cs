@@ -11,8 +11,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using System.Text;
+using OfficeOpenXml;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// EPPlus license (non-commercial use)
+ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -123,6 +127,7 @@ builder.Services.AddScoped<IAdminCourseService, AdminCourseService>();
 builder.Services.AddScoped<ICourseConfigService, CourseConfigService>();
 builder.Services.AddScoped<IFileStorageService, CloudinaryService>();
 builder.Services.AddScoped<IEmailService, MockEmailService>();
+builder.Services.AddScoped<IAdminEmailService, AdminEmailService>();
 builder.Services.AddScoped<IMasterDataService, MasterDataService>();
 builder.Services.AddScoped<ILecturerService, LecturerService>();
 builder.Services.AddControllers()
@@ -130,6 +135,10 @@ builder.Services.AddControllers()
     {
         options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
     });
+builder.Services.AddScoped<IBackUpService, BackupService>();
+builder.Services.AddHostedService<BackupWorker>();
+
+
 var app = builder.Build();
 
 //using (var scope = app.Services.CreateScope())
