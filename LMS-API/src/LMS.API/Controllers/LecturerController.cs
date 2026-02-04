@@ -802,15 +802,18 @@ namespace LMS.API.Controllers
             });
         }
         [HttpPost("upload")]
-        public async Task<IActionResult> UploadFile([FromForm] IFormFile file, [FromForm] string type)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UploadFile([FromForm] UploadFileRequest request)
         {
             try
             {
+                var file = request.File;
+                var type = request.Type;
+
                 if (file == null || file.Length == 0)
                     return BadRequest("Vui lòng chọn file");
 
-                // Determine folder based on file extension
-                var extension = System.IO.Path.GetExtension(file.FileName).ToLower();
+                var extension = Path.GetExtension(file.FileName).ToLower();
                 string folderName = "documents/other";
 
                 if (extension == ".pdf")

@@ -695,6 +695,7 @@ export function CourseManagementPage({ user }: CourseManagementPageProps) {
                     />
                   </div>
 
+
                   {/* --- Lecturer Selector & Selected Table --- */}
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Giảng viên</label>
