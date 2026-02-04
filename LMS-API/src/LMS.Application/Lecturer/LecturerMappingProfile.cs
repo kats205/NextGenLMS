@@ -32,6 +32,10 @@ namespace LMS.Application.Lecturer
             CreateMap<Chapter, ChapterDto>()
                 .ForMember(dest => dest.TotalLessons, opt => opt.MapFrom(src => src.Contents.Count(c => c is Lesson)))
                 .ForMember(dest => dest.TotalQuizzes, opt => opt.MapFrom(src => src.Contents.Count(c => c is Quiz)));
+            
+            CreateMap<CreateChapterDto, Chapter>();
+            CreateMap<UpdateChapterDto, Chapter>()
+                .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
 
             // Lesson mappings
             CreateMap<Lesson, LessonDto>()
@@ -40,6 +44,11 @@ namespace LMS.Application.Lecturer
                 .ForMember(dest => dest.TotalViews, opt => opt.Ignore())
                 .ForMember(dest => dest.CompletedStudents, opt => opt.Ignore())
                 .ForMember(dest => dest.CompletionRate, opt => opt.Ignore());
+            
+            CreateMap<CreateLessonDto, Lesson>()
+                .ForMember(dest => dest.IsDeleted, opt => opt.MapFrom(src => false));
+            CreateMap<UpdateLessonDto, Lesson>()
+                .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
 
             // Quiz mappings
             CreateMap<Quiz, QuizDto>()

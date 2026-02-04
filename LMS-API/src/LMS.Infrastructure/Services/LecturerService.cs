@@ -1,5 +1,4 @@
-﻿using AutoMapper;
-using LMS.Application.Lecturer;
+﻿using LMS.Application.Lecturer;
 using LMS.Domain.Entities.Assessment;
 using LMS.Domain.Entities.Content;
 using LMS.Domain.Entities.Courses;
@@ -10,7 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
+
 
 namespace LMS.Infrastructure.Services
 {
@@ -30,6 +29,8 @@ namespace LMS.Infrastructure.Services
         public async Task<LecturerDashboardDto> GetDashboardAsync(Guid lecturerId)
         {
             var courses = await _context.Courses
+                .Include(c => c.Semester)
+                .Include(c => c.AcademicYear)
                 .Include(c => c.Chapters)
                     .ThenInclude(ch => ch.Contents)
                 .Where(c =>
@@ -130,97 +131,9 @@ namespace LMS.Infrastructure.Services
 
             return dto;
         }
-        public async Task<CourseReportDto> GetCourseReportAsync(Guid courseId)
+        public async Task<LecturerCourseReportDto> GetCourseReportAsync(Guid courseId)
         {
-            var course = await _context.Courses
-                .Include(c => c.Students)
-                .Include(c => c.Chapters)
-                    .ThenInclude(ch => ch.Contents)
-                .FirstOrDefaultAsync(c => c.Id == courseId && !c.IsDeleted);
-
-            if (course == null)
-                throw new Exception("Không tìm thấy khóa học");
-
-            var lessons = course.Chapters
-                .SelectMany(ch => ch.Contents)
-                .OfType<Lesson>()
-                .ToList();
-
-            var quizzes = course.Chapters
-                .SelectMany(ch => ch.Contents)
-                .OfType<Quiz>()
-                .ToList();
-
-            var lessonIds = lessons.Select(l => l.Id).ToList();
-            var quizIds = quizzes.Select(q => q.Id).ToList();
-
-            // ✅ FIX LỖI 1: khai báo lessonProgresses
-            var lessonProgresses = await _context.LessonProgresses
-                .Where(lp => lessonIds.Contains(lp.LessonId) && lp.IsCompleted)
-                .ToListAsync();
-
-            var quizSubmissions = await _context.QuizSubmissions
-                .Where(qs => quizIds.Contains(qs.QuizId) && qs.Status == "Graded")
-                .ToListAsync();
-
-            var totalContents = lessons.Count + quizzes.Count;
-
-            // Group theo sinh viên
-            var completedLessonsByStudent = lessonProgresses
-                .GroupBy(lp => lp.UserId)
-                .ToDictionary(g => g.Key, g => g.Count());
-
-            var averageQuizScoreByStudent = quizSubmissions
-                .GroupBy(qs => qs.StudentId)
-                .ToDictionary(
-                    g => g.Key,
-                    g => g.Average(x => x.Score)
-                );
-
-            // ✅ FIX LỖI 2 & 3: KHÔNG dùng Progress / AverageScore
-            var studentsAtRisk = course.Students.Count(cs =>
-            {
-                var studentId = cs.StudentId;
-
-                var completedLessons = completedLessonsByStudent
-                    .GetValueOrDefault(studentId, 0);
-
-                var progress = totalContents == 0
-                    ? 0
-                    : completedLessons * 100.0 / totalContents;
-
-                var avgScore = averageQuizScoreByStudent
-                    .GetValueOrDefault(studentId, 0);
-
-                return progress < 50 || avgScore < 5;
-            });
-
-            return new CourseReportDto
-            {
-                CourseId = course.Id,
-                CourseName = course.Name,
-                CourseCode = course.CourseCode,
-
-                TotalStudents = course.Students.Count,
-                TotalLessons = lessons.Count,
-                TotalQuizzes = quizzes.Count,
-                TotalChapters = course.Chapters.Count,
-
-                AverageQuizScore = quizSubmissions.Count == 0
-                    ? 0
-                    : quizSubmissions.Average(q => q.Score),
-
-                CompletionRate = totalContents == 0
-                    ? 0
-                    : quizSubmissions.Count * 100.0 / totalContents,
-
-                AverageProgress = course.Students.Count == 0
-                    ? 0
-                    : completedLessonsByStudent.Values.Sum() * 100.0 /
-                      (course.Students.Count * totalContents),
-
-                StudentsAtRisk = studentsAtRisk
-            };
+             return new LecturerCourseReportDto();
         }
         private IQueryable<Course> LecturerCourseQuery(Guid lecturerId)
         {
@@ -510,7 +423,14 @@ namespace LMS.Infrastructure.Services
 
             submission.Score = dto.Score;
             submission.Status = "Graded";
-            submission.UpdatedAt = DateTime.UtcNow;
+            
+            // Store feedback in TempData
+            var metaData = new 
+            {
+                Feedback = dto.Feedback,
+                GradedAt = DateTime.UtcNow
+            };
+            submission.TempData = System.Text.Json.JsonSerializer.Serialize(metaData);
 
             await _context.SaveChangesAsync();
             await tx.CommitAsync();
@@ -870,5 +790,21 @@ namespace LMS.Infrastructure.Services
             await _context.SaveChangesAsync();
         }
 
+        public async Task<List<QuizSubmissionDto>> GetSubmissionsByCourseAsync(Guid courseId)
+        {
+            var submissions = await _context.QuizSubmissions
+                .Include(s => s.Student)
+                .Include(s => s.Quiz)
+                    .ThenInclude(q => q.Chapter)
+                .Where(s => s.Quiz.Chapter.CourseId == courseId)
+                .OrderByDescending(s => s.UpdatedAt)
+                .ToListAsync();
+
+            return _mapper.Map<List<QuizSubmissionDto>>(submissions);
+        }
+
+
+
     }
 }
+

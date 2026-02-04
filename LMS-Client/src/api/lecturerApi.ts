@@ -35,7 +35,7 @@ import type {
     StudentFilterParams,
 } from '../components/lecturer/lecturer.types';
 
-const BASE_URL = '/lecturer';
+const BASE_URL = '/api/lecturer';
 
 // ============================================
 // DASHBOARD
@@ -280,6 +280,13 @@ export const getQuizSubmissions = async (quizId: string): Promise<QuizSubmission
     return response.data.data;
 };
 
+export const getSubmissionsByCourse = async (courseId: string): Promise<QuizSubmission[]> => {
+    const response = await axiosClient.get(`${BASE_URL}/courses/${courseId}/submissions`);
+    return response.data.data;
+};
+
+
+
 export const getSubmissionById = async (submissionId: string): Promise<QuizSubmission> => {
     const response = await axiosClient.get(`${BASE_URL}/submissions/${submissionId}`);
     return response.data.data;
@@ -371,6 +378,7 @@ const lecturerApi = {
     removeStudent,
 
     // Grading
+    getSubmissionsByCourse,
     getQuizSubmissions,
     getSubmissionById,
     gradeSubmission,

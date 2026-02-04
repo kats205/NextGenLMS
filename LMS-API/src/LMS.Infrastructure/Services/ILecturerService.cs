@@ -19,7 +19,7 @@ namespace LMS.Infrastructure.Services
         Task<CourseDto> CreateCourseAsync(Guid lecturerId, CreateCourseDtoLecturer dto);
         Task<CourseDto> UpdateCourseAsync(Guid courseId, UpdateCourseDtoLecturer dto);
         Task DeleteCourseAsync(Guid courseId);
-        Task<CourseReportDto> GetCourseReportAsync(Guid courseId);
+        Task<LecturerCourseReportDto> GetCourseReportAsync(Guid courseId);
 
         // Chapters
         Task<List<ChapterDto>> GetChaptersByCourseAsync(Guid courseId);
@@ -63,7 +63,9 @@ namespace LMS.Infrastructure.Services
         // Files
         Task<string> UploadFileAsync(IFormFile file, string type);
 
+        Task<List<QuizSubmissionDto>> GetSubmissionsByCourseAsync(Guid courseId);
         Task<List<QuizSubmissionDto>> GetQuizSubmissionsAsync(Guid quizId);
+
         Task<QuizSubmissionDto> GetSubmissionByIdAsync(Guid submissionId);
         Task GradeSubmissionAsync(Guid submissionId, GradeSubmissionDto dto);
     }

@@ -14,12 +14,13 @@ export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
         return <Navigate to="/login" replace />;
     }
 
-    // Nếu có role requirement, check role
-    if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+    // Nếu có role requirement, check role (case-insensitive)
+    const userRoleLower = user?.role?.toLowerCase();
+    if (allowedRoles && user && !allowedRoles.some(r => r.toLowerCase() === userRoleLower)) {
         // Đá về trang dashboard tương ứng với role của họ hoặc 403
-        if (user.role === 'admin') return <Navigate to="/admin/dashboard" replace />;
-        if (user.role === 'lecturer') return <Navigate to="/lecturer/dashboard" replace />;
-        if (user.role === 'student') return <Navigate to="/student/dashboard" replace />;
+        if (userRoleLower === 'admin') return <Navigate to="/admin/dashboard" replace />;
+        if (userRoleLower === 'lecturer') return <Navigate to="/lecturer/dashboard" replace />;
+        if (userRoleLower === 'student') return <Navigate to="/student/dashboard" replace />;
 
         return <Navigate to="/login" replace />;
     }

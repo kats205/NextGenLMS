@@ -5,7 +5,6 @@ import { toast } from "react-toastify";
 import lecturerApi from "../../api/lecturerApi";
 import type { LecturerDashboard as DashboardType } from "./lecturer.types";
 import { LecturerNav } from "./LecturerNav";
-import { Header } from "../shared/Header";
 import { LecturerHeader } from "./LecturerHeader";
 
 export type User = {
@@ -78,7 +77,7 @@ const LecturerDashboard: React.FC = () => {
                                 <div>
                                     <h2 className="text-lg font-semibold">{course.name}</h2>
                                     <p className="text-sm text-gray-500">
-                                        {course.courseCode} - {course.semesterName} {course.academicYearName ?? ""}
+                                        {course.courseCode} - {course.semesterName} - {course.academicYearName ?? ""}
                                     </p>
                                 </div>
 

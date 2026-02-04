@@ -1,48 +1,17 @@
-import { Link, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { Button } from "../ui/button";
 
 export function LecturerNav() {
-    const location = useLocation();
-
-    // ch? hi?n th? menu ??y ?? khi ?ang ? trang course detail
-    const isCourseDetailPage = location.pathname.startsWith("/lecturer/courses/");
+    const navigate = useNavigate();
 
     return (
-        <div className="bg-white rounded-xl shadow mb-6 px-4 py-3">
-            <div className="flex gap-2">
-
-                {/* TAB KH”A H?C (luÙn luÙn hi?n v‡ l‡ link) */}
-                <Link
-                    to="/lecturer/dashboard"
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition ${location.pathname === "/lecturer/dashboard" ||
-                            location.pathname.startsWith("/lecturer/courses/")
-                            ? "bg-primary-600 text-white"
-                            : "text-gray-600 hover:bg-gray-100"
-                        }`}
-                >
-                    KhÛa h?c c?a tÙi
-                </Link>
-
-                {/* 4 TAB CH? HI?N KHI ? COURSE DETAIL */}
-                {isCourseDetailPage && (
-                    <>
-                        <button className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition">
-                            Qu?n l˝ n?i dung
-                        </button>
-
-                        <button className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition">
-                            B‡i ki?m tra
-                        </button>
-
-                        <button className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition">
-                            Ch?m b‡i
-                        </button>
-
-                        <button className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition">
-                            B·o c·o l?p
-                        </button>
-                    </>
-                )}
-            </div>
+        <div className="mb-6">
+            <Button
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={() => navigate("/lecturer/dashboard")}
+            >
+                Kh√≥a h·ªçc c·ªßa t√¥i
+            </Button>
         </div>
     );
 }

@@ -17,8 +17,15 @@ const AssessmentAttemptPage = lazy(() => import('./components/student/Assessment
 const CoursePlayerPage = lazy(() => import('./components/student/CoursePlayerPage').then(module => ({ default: module.CoursePlayerPage })));
 
 // Lecturer
-const LecturerDashboard = lazy(() => import('./components/lecturer/LecturerDashboard'));
-const CourseDetailPage = lazy(() => import('./components/lecturer/CourseDetailPage'));
+const LecturerDashboard = lazy(() =>
+    import('./components/lecturer/LecturerDashboard')
+        .then(module => ({ default: module.default }))
+);
+
+const CourseDetailPage = lazy(() =>
+    import('./components/lecturer/CourseDetailPage')
+        .then(module => ({ default: module.default }))
+);
 
 // Admin
 const AdminDashboard = lazy(() => import('./components/admin/AdminDashboard').then(module => ({ default: module.AdminDashboard })));
@@ -135,6 +142,30 @@ export const router: ReturnType<typeof createBrowserRouter> = createBrowserRoute
             },
             {
                 path: '/lecturer/courses/:courseId',
+                element: (
+                    <SuspenseLayout>
+                        <CourseDetailPage />
+                    </SuspenseLayout>
+                )
+            },
+            {
+                path: '/lecturer/courses/:courseId/quizzes',
+                element: (
+                    <SuspenseLayout>
+                        <CourseDetailPage />
+                    </SuspenseLayout>
+                )
+            },
+            {
+                path: '/lecturer/courses/:courseId/grading',
+                element: (
+                    <SuspenseLayout>
+                        <CourseDetailPage />
+                    </SuspenseLayout>
+                )
+            },
+            {
+                path: '/lecturer/courses/:courseId/report',
                 element: (
                     <SuspenseLayout>
                         <CourseDetailPage />

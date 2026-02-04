@@ -6,9 +6,9 @@ using System.Security.Claims;
 
 namespace LMS.API.Controllers
 {
-    [Route("[controller]")]
+    [Route("api/lecturer")]
     [ApiController]
-    [Authorize(Roles = "lecturer")]
+    [Authorize(Roles = "Lecturer")]
     public class LecturerController : ControllerBase
     {
         private readonly ILecturerService _lecturerService;
@@ -385,6 +385,102 @@ namespace LMS.API.Controllers
                     Errors = ex.Message
                 });
             }
+        }
+
+        [HttpGet("chapters/{chapterId}/quizzes")]
+        public async Task<IActionResult> GetQuizzesByChapter(Guid chapterId)
+        {
+            try
+            {
+                var quizzes = await _lecturerService.GetQuizzesByChapterAsync(chapterId);
+
+                return Ok(new ApiResponse<List<QuizDto>>
+                {
+                    Success = true,
+                    Data = quizzes
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Lỗi khi tải danh sách bài kiểm tra",
+                    Errors = ex.Message
+                });
+            }
+        }
+
+        [HttpGet("courses/{courseId}/quizzes")]
+        public async Task<IActionResult> GetQuizzesByCourse(Guid courseId)
+        {
+            try
+            {
+                var quizzes = await _lecturerService.GetQuizzesByCourseAsync(courseId);
+
+                return Ok(new ApiResponse<List<QuizDto>>
+                {
+                    Success = true,
+                    Data = quizzes
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Lỗi khi tải danh sách bài kiểm tra của khóa học",
+                    Errors = ex.Message
+                });
+            }
+
+        [HttpGet("courses/{courseId}/submissions")]
+        public async Task<IActionResult> GetSubmissionsByCourse(Guid courseId)
+        {
+            try
+            {
+                var submissions = await _lecturerService.GetSubmissionsByCourseAsync(courseId);
+
+                return Ok(new ApiResponse<List<QuizSubmissionDto>>
+                {
+                    Success = true,
+                    Data = submissions
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Lỗi khi tải danh sách bài nộp",
+                    Errors = ex.Message
+                });
+            }
+        }
+
+        [HttpGet("courses/{courseId}/report")]
+        public async Task<IActionResult> GetCourseReport(Guid courseId)
+        {
+            try
+            {
+                var report = await _lecturerService.GetCourseReportAsync(courseId);
+
+                return Ok(new ApiResponse<LecturerCourseReportDto>
+                {
+                    Success = true,
+                    Data = report
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Lỗi khi tải báo cáo khóa học",
+                    Errors = ex.Message
+                });
+            }
+        }
         }
 
         //========== LESSONS ==========

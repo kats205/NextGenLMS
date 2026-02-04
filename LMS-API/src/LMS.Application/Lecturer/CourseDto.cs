@@ -71,7 +71,7 @@ namespace LMS.Application.Lecturer
         public Guid? AcademicYearId { get; set; }
         public Guid? MajorId { get; set; }
     }
-    public class CourseReportDto
+    public class LecturerCourseReportDto
     {
         public Guid CourseId { get; set; }
         public string CourseName { get; set; } = string.Empty;
@@ -99,5 +99,19 @@ namespace LMS.Application.Lecturer
 
         // Time metrics
         public double AverageTimeSpentHours { get; set; }
+        
+        // Full Details
+        public List<StudentReportDto> Students { get; set; } = new();
+    }
+
+    public class StudentReportDto
+    {
+        public Guid StudentId { get; set; }
+        public string FullName { get; set; }
+        public string StudentCode { get; set; }
+        public double Progress { get; set; } // 0-100
+        public double AvgQuizScore { get; set; } // 0-10
+        public double AvgAssignmentScore { get; set; } // 0-10
+        public double ParticipationRate { get; set; } // 0-100
     }
 }
