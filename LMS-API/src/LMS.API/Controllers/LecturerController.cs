@@ -609,6 +609,84 @@ namespace LMS.API.Controllers
             }
         }
 
+        [HttpPut("quizzes/{id}")]
+        public async Task<IActionResult> UpdateQuiz(Guid id, [FromBody] UpdateQuizDto dto)
+        {
+            try
+            {
+                var quiz = await _lecturerService.UpdateQuizAsync(id, dto);
+
+                return Ok(new ApiResponse<QuizDto>
+                {
+                    Success = true,
+                    Message = "Cập nhật quiz thành công",
+                    Data = quiz
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Lỗi khi cập nhật quiz",
+                    Errors = ex.Message
+                });
+            }
+        }
+
+        [HttpPost("quizzes/{quizId}/add-questions")]
+        public async Task<IActionResult> AddQuestionsToQuiz(Guid quizId, [FromBody] AddQuestionsToQuizDto dto)
+        {
+            try
+            {
+                // Ensure quizId matches
+                if (quizId != dto.QuizId && dto.QuizId != Guid.Empty)
+                {
+                    return BadRequest(new ApiResponse<object> { Success = false, Message = "Quiz ID mismatch" });
+                }
+
+                await _lecturerService.AddQuestionsToQuizAsync(quizId, dto.Questions);
+
+                return Ok(new ApiResponse<object>
+                {
+                    Success = true,
+                    Message = "Thêm câu hỏi vào đề thành công"
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Lỗi khi thêm câu hỏi",
+                    Errors = ex.Message
+                });
+            }
+        }
+
+        [HttpGet("quizzes/{quizId}/questions")]
+        public async Task<IActionResult> GetQuestionsByQuiz(Guid quizId)
+        {
+            try
+            {
+                var questions = await _lecturerService.GetQuestionsByQuizAsync(quizId);
+                return Ok(new ApiResponse<List<QuizQuestionDto>>
+                {
+                    Success = true,
+                    Data = questions
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Lỗi khi tải danh sách câu hỏi",
+                    Errors = ex.Message
+                });
+            }
+        }
+
         [HttpDelete("quizzes/{id}")]
         public async Task<IActionResult> DeleteQuiz(Guid id)
         {
@@ -727,6 +805,53 @@ namespace LMS.API.Controllers
                 Message = "Tạo câu hỏi thành công",
                 Data = question
             });
+        }
+
+        [HttpPut("questions/{id}")]
+        public async Task<IActionResult> UpdateQuestion(Guid id, [FromBody] UpdateQuestionDto dto)
+        {
+            try 
+            {
+                var question = await _lecturerService.UpdateQuestionAsync(id, dto);
+                return Ok(new ApiResponse<QuestionDto>
+                {
+                    Success = true,
+                    Message = "Cập nhật câu hỏi thành công",
+                    Data = question
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Lỗi khi cập nhật câu hỏi",
+                    Errors = ex.Message
+                });
+            }
+        }
+
+        [HttpDelete("questions/{id}")]
+        public async Task<IActionResult> DeleteQuestion(Guid id)
+        {
+            try
+            {
+                await _lecturerService.DeleteQuestionAsync(id);
+                return Ok(new ApiResponse<object>
+                {
+                    Success = true,
+                    Message = "Xóa câu hỏi thành công"
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Lỗi khi xóa câu hỏi",
+                    Errors = ex.Message
+                });
+            }
         }
 
         //========== STUDENTS ==========

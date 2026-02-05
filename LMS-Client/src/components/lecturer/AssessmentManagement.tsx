@@ -37,10 +37,6 @@ const AssessmentManagement: React.FC<AssessmentManagementProps> = ({ courseId })
         toast.info('Modal tạo bài tự luận sẽ được hiển thị');
     };
 
-    const handleOpenQuestionBank = () => {
-        toast.info('Chuyển đến Ngân hàng câu hỏi');
-    };
-
     const handleViewDetail = (quizId: string) => {
         toast.info(`Xem chi tiết quiz: ${quizId}`);
     };
@@ -78,15 +74,6 @@ const AssessmentManagement: React.FC<AssessmentManagementProps> = ({ courseId })
                 >
                     <span>+</span>
                     <span>Tạo bài tự luận</span>
-                </button>
-                <button
-                    onClick={handleOpenQuestionBank}
-                    className="px-4 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center space-x-2"
-                >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                    </svg>
-                    <span>Ngân hàng câu hỏi</span>
                 </button>
             </div>
 
@@ -129,8 +116,12 @@ interface QuizCardProps {
 }
 
 const QuizCard: React.FC<QuizCardProps> = ({ quiz, onViewDetail, onGrade, onEdit }) => {
-    const isFinished = new Date(quiz.endTime) < new Date();
-    const isOngoing = new Date(quiz.startTime) <= new Date() && !isFinished;
+    const now = new Date();
+    const startDate = quiz.startDate ? new Date(quiz.startDate) : null;
+    const endDate = quiz.endDate ? new Date(quiz.endDate) : null;
+
+    const isFinished = endDate ? endDate < now : false;
+    const isOngoing = startDate && endDate ? (startDate <= now && !isFinished) : false;
 
     return (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -139,10 +130,10 @@ const QuizCard: React.FC<QuizCardProps> = ({ quiz, onViewDetail, onGrade, onEdit
                     <h3 className="text-lg font-bold text-gray-900 mb-1">{quiz.title}</h3>
                     <div className="flex items-center space-x-4 text-sm text-gray-500">
                         <span className="flex items-center gap-1">
-                            🕒 {quiz.durationMinutes} phút
+                            🕒 {quiz.timeLimit || '--'} phút
                         </span>
                         <span className="flex items-center gap-1">
-                            👥 {quiz.submissionCount} nộp
+                            👥 {quiz.totalSubmissions} nộp
                         </span>
                         <span className="flex items-center gap-1">
                             🧩 {quiz.totalQuestions} câu
@@ -167,13 +158,13 @@ const QuizCard: React.FC<QuizCardProps> = ({ quiz, onViewDetail, onGrade, onEdit
                     <div className="flex justify-between mb-1">
                         <span>Bắt đầu:</span>
                         <span className="font-medium text-gray-900">
-                            {new Date(quiz.startTime).toLocaleString('vi-VN')}
+                            {startDate ? startDate.toLocaleString('vi-VN') : '--'}
                         </span>
                     </div>
                     <div className="flex justify-between">
                         <span>Kết thúc:</span>
                         <span className="font-medium text-gray-900">
-                            {new Date(quiz.endTime).toLocaleString('vi-VN')}
+                            {endDate ? endDate.toLocaleString('vi-VN') : '--'}
                         </span>
                     </div>
                 </div>

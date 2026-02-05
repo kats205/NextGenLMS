@@ -70,6 +70,10 @@ namespace LMS.Application.Lecturer
             CreateMap<Quiz, QuizDto>()
                 .IncludeBase<CourseContent, CourseContentDto>()
                 .ForMember(dest => dest.ContentType, opt => opt.MapFrom(src => "Quiz"))
+                .ForMember(dest => dest.StartDate, opt => opt.MapFrom(src => src.OpenTime))
+                .ForMember(dest => dest.EndDate, opt => opt.MapFrom(src => src.CloseTime))
+                .ForMember(dest => dest.TimeLimit, opt => opt.MapFrom(src => src.DurationMinutes))
+                .ForMember(dest => dest.IsRandomQuestion, opt => opt.MapFrom(src => src.ShuffleQuestions))
                 .ForMember(dest => dest.TotalQuestions, opt => opt.Ignore())
                 .ForMember(dest => dest.TotalSubmissions, opt => opt.Ignore())
                 .ForMember(dest => dest.CompletedSubmissions, opt => opt.Ignore())
@@ -106,6 +110,21 @@ namespace LMS.Application.Lecturer
                 .ForMember(dest => dest.StudentCode, opt => opt.MapFrom(src => src.Student != null ? src.Student.StudentCode : null))
                 .ForMember(dest => dest.QuizTitle, opt => opt.MapFrom(src => src.Quiz != null ? src.Quiz.Title : ""))
                 .ForMember(dest => dest.Answers, opt => opt.Ignore());
+            CreateMap<CreateQuestionTopicDto, QuestionTopic>();
+            CreateMap<CreateQuizDto, Quiz>()
+                .ForMember(dest => dest.OpenTime, opt => opt.MapFrom(src => src.StartDate))
+                .ForMember(dest => dest.CloseTime, opt => opt.MapFrom(src => src.EndDate))
+                .ForMember(dest => dest.DurationMinutes, opt => opt.MapFrom(src => src.TimeLimit))
+                .ForMember(dest => dest.ShuffleQuestions, opt => opt.MapFrom(src => src.IsRandomQuestion));
+
+            CreateMap<UpdateQuizDto, Quiz>()
+                 .ForMember(dest => dest.OpenTime, opt => opt.MapFrom(src => src.StartDate))
+                 .ForMember(dest => dest.CloseTime, opt => opt.MapFrom(src => src.EndDate))
+                 .ForMember(dest => dest.DurationMinutes, opt => opt.MapFrom(src => src.TimeLimit))
+                 .ForMember(dest => dest.ShuffleQuestions, opt => opt.MapFrom(src => src.IsRandomQuestion))
+                 .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
+            CreateMap<CreateQuestionDto, Question>();
+            CreateMap<CreateAnswerDto, Answer>();
             CreateMap<CourseContent, CourseContentDto>();
         }
     }

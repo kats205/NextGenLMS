@@ -68,6 +68,23 @@ namespace LMS.Application.Lecturer
         public List<CreateAnswerDto> Answers { get; set; } = new();
     }
 
+    public class UpdateQuestionDto
+    {
+        [Required]
+        public Guid TopicId { get; set; }
+
+        [Required]
+        public string ContentText { get; set; } = string.Empty;
+
+        public string? MediaUrl { get; set; }
+
+        [Required]
+        public QuestionType Type { get; set; }
+
+        [Required]
+        public List<CreateAnswerDto> Answers { get; set; } = new();
+    }
+
     public class CreateAnswerDto
     {
         [Required]
