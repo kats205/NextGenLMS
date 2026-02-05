@@ -6,9 +6,12 @@ interface MediaViewerProps {
   src: string;
   title: string;
   className?: string;
+  durationSeconds?: number;
+  onProgressUpdate?: (currentTime: number) => void;
+  onCanMarkComplete?: (canMark: boolean) => void;
 }
 
-export function MediaViewer({ type, src, title, className = '' }: MediaViewerProps) {
+export function MediaViewer({ type, src, title, className = '', durationSeconds = 0, onProgressUpdate, onCanMarkComplete }: MediaViewerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -18,6 +21,8 @@ export function MediaViewer({ type, src, title, className = '' }: MediaViewerPro
   const [imagePosition, setImagePosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [hasError, setHasError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
@@ -26,7 +31,18 @@ export function MediaViewer({ type, src, title, className = '' }: MediaViewerPro
     const video = videoRef.current;
     if (!video) return;
 
-    const updateTime = () => setCurrentTime(video.currentTime);
+    const updateTime = () => {
+      setCurrentTime(video.currentTime);
+      // Gọi callback khi tiến độ thay đổi
+      if (onProgressUpdate) {
+        onProgressUpdate(Math.floor(video.currentTime));
+      }
+      // Kiểm tra xem có thể đánh dấu hoàn thành không (70% video)
+      if (onCanMarkComplete && durationSeconds > 0) {
+        const watchPercentage = (video.currentTime / durationSeconds) * 100;
+        onCanMarkComplete(watchPercentage >= 70);
+      }
+    };
     const updateDuration = () => setDuration(video.duration);
 
     video.addEventListener('timeupdate', updateTime);
@@ -40,7 +56,7 @@ export function MediaViewer({ type, src, title, className = '' }: MediaViewerPro
       video.removeEventListener('play', () => setIsPlaying(true));
       video.removeEventListener('pause', () => setIsPlaying(false));
     };
-  }, []);
+  }, [onProgressUpdate, onCanMarkComplete, durationSeconds]);
 
   const togglePlay = () => {
     const video = videoRef.current;
@@ -129,14 +145,59 @@ export function MediaViewer({ type, src, title, className = '' }: MediaViewerPro
   };
 
   if (type === 'video') {
+    console.log("MediaViewer rendering video with src:", src);
+    
+    if (hasError) {
+      return (
+        <div className={`relative bg-gray-100 rounded-lg overflow-hidden ${className} flex items-center justify-center`}>
+          <div className="text-center p-8">
+            <div className="text-red-600 mb-2">❌ Không thể tải video</div>
+            <div className="text-sm text-gray-600 mb-4">{errorMessage}</div>
+            <div className="text-xs text-gray-500 break-all">URL: {src}</div>
+            <button 
+              onClick={() => {
+                setHasError(false);
+                setErrorMessage('');
+                if (videoRef.current) {
+                  videoRef.current.load();
+                }
+              }}
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Thử lại
+            </button>
+          </div>
+        </div>
+      );
+    }
+    
     return (
       <div className={`relative bg-black rounded-lg overflow-hidden ${className}`}>
         <video
           ref={videoRef}
           className="w-full h-full"
-          src={src}
           onClick={togglePlay}
+          onError={(e) => {
+            console.error("Video error:", e);
+            console.error("Video src:", src);
+            console.error("Video error details:", e.currentTarget.error);
+            setHasError(true);
+            setErrorMessage(e.currentTarget.error?.message || 'Lỗi không xác định');
+          }}
+          onLoadStart={() => {
+            console.log("Video load started");
+            setHasError(false);
+          }}
+          onCanPlay={() => console.log("Video can play")}
+          onLoadedData={() => console.log("Video loaded data")}
+          onLoadedMetadata={() => console.log("Video loaded metadata")}
+          controls={false}
+          preload="metadata"
+          crossOrigin="anonymous"
         >
+          <source src={src} type="video/mp4" />
+          <source src={src} type="video/webm" />
+          <source src={src} type="video/ogg" />
           Trình duyệt của bạn không hỗ trợ video.
         </video>
         

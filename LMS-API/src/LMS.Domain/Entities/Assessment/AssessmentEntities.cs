@@ -54,8 +54,8 @@ namespace LMS.Domain.Entities.Assessment
         public Guid LessonId { get; set; }
         public bool IsCompleted { get; set; }
         public DateTime LastAccess { get; set; } = DateTime.UtcNow;
-        public int VideoProgressSeconds { get; set; }
-
+        public int VideoProgressSeconds { get; set; } // Tổng thời gian đã xem (để tính 70%)
+        public int DurationLastAccesstSeconds { get; set; } // Vị trí hiện tại trong video (để restore position) - match với DB
         public AppUser? User { get; set; }
         public LMS.Domain.Entities.Content.Lesson? Lesson { get; set; }
     }

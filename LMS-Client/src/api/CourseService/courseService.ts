@@ -73,9 +73,24 @@ export interface CourseContentDto {
   dueDate?: string;
   maxScore?: number;
   description?: string;
+  instructions?: string;
+  attachmentsJson?: string; // JSON array of reference files from teacher
+  attachments?: AttachmentFile[]; // Parsed attachments from backend
+  allowLateSubmission?: boolean;
+  latePenaltyPercent?: number;
+  maxAttempts?: number;
+  requireTextSubmission?: boolean;
+  allowFileSubmission?: boolean;
+  allowLinkSubmission?: boolean;
+  allowedFileTypes?: string;
+  maxFileSize?: number;
   
-  // Announcement specific
-  attachmentsJson?: string;
+}
+
+export interface AttachmentFile {
+  fileName: string;
+  fileUrl: string;
+  fileSize: number;
 }
 
 export interface CreateCourseDto {

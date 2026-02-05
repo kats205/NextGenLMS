@@ -1,238 +1,160 @@
-import { useState, useEffect } from 'react';
-import assignmentService, { 
-  AssignmentDetailDto, 
-  AssignmentSubmissionDto, 
-  CreateSubmissionDto, 
-  UpdateSubmissionDto,
-  CreateCommentDto,
-  UpdateCommentDto,
-  SubmissionCommentDto
-} from '../api/AssignmentService/assignmentService';
+import { useState, useEffect, useCallback } from 'react';
+import { assignmentService, AssignmentDetailDto, AssignmentSubmissionDto } from '../api/AssignmentService/assignmentService';
 
-export function useAssignment(assignmentId?: string) {
+export function useAssignment(assignmentId: string | undefined) {
   const [assignment, setAssignment] = useState<AssignmentDetailDto | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchAssignment = async (id: string) => {
+  const fetchAssignment = useCallback(async () => {
+    if (!assignmentId) return;
+
+    setLoading(true);
+    setError(null);
+
     try {
-      setLoading(true);
-      setError(null);
-      const data = await assignmentService.getAssignment(id);
-      setAssignment(data);
+      const response = await assignmentService.getAssignment(assignmentId);
+      
+      if (response.success) {
+        setAssignment(response.data);
+      } else {
+        setError(response.message || 'Không thể tải thông tin bài tập');
+      }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Có lỗi xảy ra khi tải bài tập');
+      setError(err.message || 'Có lỗi xảy ra khi tải bài tập');
     } finally {
       setLoading(false);
     }
-  };
+  }, [assignmentId]);
 
   useEffect(() => {
-    if (assignmentId) {
-      fetchAssignment(assignmentId);
-    }
-  }, [assignmentId]);
+    fetchAssignment();
+  }, [fetchAssignment]);
 
   return {
     assignment,
     loading,
     error,
-    refetch: () => assignmentId && fetchAssignment(assignmentId)
+    refetch: fetchAssignment
   };
 }
 
-export function useMySubmission(assignmentId?: string) {
+export function useAssignmentSubmission(assignmentId: string | undefined) {
   const [submission, setSubmission] = useState<AssignmentSubmissionDto | null>(null);
+  const [submissions, setSubmissions] = useState<AssignmentSubmissionDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchMySubmission = async (id: string) => {
+  const fetchMySubmission = useCallback(async () => {
+    if (!assignmentId) return;
+
+    setLoading(true);
+    setError(null);
+
     try {
-      setLoading(true);
-      setError(null);
-      const data = await assignmentService.getMySubmission(id);
-      setSubmission(data);
-    } catch (err: any) {
-      // If no submission exists, that's not an error
-      if (err.response?.status === 404 || err.response?.data?.message?.includes('chưa có bài nộp')) {
-        setSubmission(null);
-        setError(null);
+      const response = await assignmentService.getMySubmission(assignmentId);
+      
+      if (response.success) {
+        setSubmission(response.data);
       } else {
-        setError(err.response?.data?.message || 'Có lỗi xảy ra khi tải bài nộp');
+        setSubmission(null);
+        // Don't set error for "no submission found" case
+        if (!response.message?.includes('chưa có bài nộp')) {
+          setError(response.message || 'Không thể tải bài nộp');
+        }
+      }
+    } catch (err: any) {
+      setSubmission(null);
+      // Don't set error for 404 cases
+      if (!err.message?.includes('404')) {
+        setError(err.message || 'Có lỗi xảy ra khi tải bài nộp');
       }
     } finally {
       setLoading(false);
     }
-  };
+  }, [assignmentId]);
 
-  useEffect(() => {
-    if (assignmentId) {
-      fetchMySubmission(assignmentId);
+  const fetchSubmissionHistory = useCallback(async () => {
+    if (!assignmentId) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await assignmentService.getMySubmissionHistory(assignmentId);
+      
+      if (response.success) {
+        setSubmissions(response.data);
+      } else {
+        setSubmissions([]);
+        setError(response.message || 'Không thể tải lịch sử nộp bài');
+      }
+    } catch (err: any) {
+      setSubmissions([]);
+      setError(err.message || 'Có lỗi xảy ra khi tải lịch sử nộp bài');
+    } finally {
+      setLoading(false);
     }
   }, [assignmentId]);
 
-  return {
-    submission,
-    loading,
-    error,
-    refetch: () => assignmentId && fetchMySubmission(assignmentId)
-  };
-}
+  const submitAssignment = useCallback(async (submissionId: string) => {
+    setLoading(true);
+    setError(null);
 
-export function useSubmissionActions() {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const createSubmission = async (createDto: CreateSubmissionDto): Promise<AssignmentSubmissionDto | null> => {
     try {
-      setLoading(true);
-      setError(null);
-      const result = await assignmentService.createSubmission(createDto);
-      return result;
+      const response = await assignmentService.submitAssignment(submissionId);
+      
+      if (response.success) {
+        setSubmission(response.data);
+        return response.data;
+      } else {
+        setError(response.message || 'Không thể nộp bài');
+        return null;
+      }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Có lỗi xảy ra khi tạo bài nộp');
+      setError(err.message || 'Có lỗi xảy ra khi nộp bài');
       return null;
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const updateSubmission = async (submissionId: string, updateDto: UpdateSubmissionDto): Promise<AssignmentSubmissionDto | null> => {
-    try {
-      setLoading(true);
-      setError(null);
-      const result = await assignmentService.updateSubmission(submissionId, updateDto);
-      return result;
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Có lỗi xảy ra khi cập nhật bài nộp');
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  };
+  const deleteSubmission = useCallback(async (submissionId: string) => {
+    setLoading(true);
+    setError(null);
 
-  const deleteSubmission = async (submissionId: string): Promise<boolean> => {
     try {
-      setLoading(true);
-      setError(null);
-      await assignmentService.deleteSubmission(submissionId);
-      return true;
+      const response = await assignmentService.deleteSubmission(submissionId);
+      
+      if (response.success) {
+        setSubmission(null);
+        await fetchSubmissionHistory(); // Refresh history
+        return true;
+      } else {
+        setError(response.message || 'Không thể xóa bài nộp');
+        return false;
+      }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Có lỗi xảy ra khi xóa bài nộp');
+      setError(err.message || 'Có lỗi xảy ra khi xóa bài nộp');
       return false;
     } finally {
       setLoading(false);
     }
-  };
-
-  const submitAssignment = async (submissionId: string): Promise<AssignmentSubmissionDto | null> => {
-    try {
-      setLoading(true);
-      setError(null);
-      const result = await assignmentService.submitAssignment(submissionId);
-      return result;
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Có lỗi xảy ra khi nộp bài tập');
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const unsubmitAssignment = async (submissionId: string): Promise<AssignmentSubmissionDto | null> => {
-    try {
-      setLoading(true);
-      setError(null);
-      const result = await assignmentService.unsubmitAssignment(submissionId);
-      return result;
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Có lỗi xảy ra khi hủy nộp bài');
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return {
-    loading,
-    error,
-    createSubmission,
-    updateSubmission,
-    deleteSubmission,
-    submitAssignment,
-    unsubmitAssignment,
-    clearError: () => setError(null)
-  };
-}
-
-export function useSubmissionComments(submissionId?: string) {
-  const [comments, setComments] = useState<SubmissionCommentDto[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchComments = async (id: string) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await assignmentService.getSubmissionComments(id);
-      setComments(data);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Có lỗi xảy ra khi tải bình luận');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const createComment = async (createDto: CreateCommentDto): Promise<SubmissionCommentDto | null> => {
-    try {
-      setError(null);
-      const result = await assignmentService.createComment(createDto);
-      setComments(prev => [...prev, result]);
-      return result;
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Có lỗi xảy ra khi thêm bình luận');
-      return null;
-    }
-  };
-
-  const updateComment = async (commentId: string, updateDto: UpdateCommentDto): Promise<SubmissionCommentDto | null> => {
-    try {
-      setError(null);
-      const result = await assignmentService.updateComment(commentId, updateDto);
-      setComments(prev => prev.map(c => c.id === commentId ? result : c));
-      return result;
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Có lỗi xảy ra khi cập nhật bình luận');
-      return null;
-    }
-  };
-
-  const deleteComment = async (commentId: string): Promise<boolean> => {
-    try {
-      setError(null);
-      await assignmentService.deleteComment(commentId);
-      setComments(prev => prev.filter(c => c.id !== commentId));
-      return true;
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Có lỗi xảy ra khi xóa bình luận');
-      return false;
-    }
-  };
+  }, [fetchSubmissionHistory]);
 
   useEffect(() => {
-    if (submissionId) {
-      fetchComments(submissionId);
-    }
-  }, [submissionId]);
+    fetchMySubmission();
+  }, [fetchMySubmission]);
 
   return {
-    comments,
+    submission,
+    submissions,
     loading,
     error,
-    createComment,
-    updateComment,
-    deleteComment,
-    refetch: () => submissionId && fetchComments(submissionId),
-    clearError: () => setError(null)
+    fetchMySubmission,
+    fetchSubmissionHistory,
+    submitAssignment,
+    deleteSubmission,
+    refetch: fetchMySubmission
   };
 }

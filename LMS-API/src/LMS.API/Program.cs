@@ -114,25 +114,28 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IFileStorageService, CloudinaryService>();
 builder.Services.AddScoped<ICourseService, CourseService>();
 builder.Services.AddScoped<IAssignmentService, AssignmentService>();
+builder.Services.AddScoped<ILessonProgressService, LessonProgressService>();
+builder.Services.AddScoped<ICourseProgressService, CourseProgressService>();
+builder.Services.AddScoped<IQuizService, QuizService>();
 
 var app = builder.Build();
 
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await db.Database.MigrateAsync();
+//using (var scope = app.Services.CreateScope())
+//{
+//    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+//    await db.Database.MigrateAsync();
 
-    var seeder = new DataSeeder(db);
+//    var seeder = new DataSeeder(db);
 
-    try
-    {
-        await seeder.SeedAsync();
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"[ERROR] Seed failed: {ex.Message}");
-    }
-}
+//    try
+//    {
+//        await seeder.SeedAsync();
+//    }
+//    catch (Exception ex)
+//    {
+//        Console.WriteLine($"[ERROR] Seed failed: {ex.Message}");
+//    }
+//}
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {

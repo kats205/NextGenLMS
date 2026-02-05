@@ -572,10 +572,14 @@ namespace LMS.Infrastructure.Services
                         contentDto.DurationSeconds = lesson.DurationSeconds;
                         contentDto.ContentHtml = lesson.ContentHtml;
                         
-                        // Process file URL through Cloudinary if it's a media file
-                        if (!string.IsNullOrEmpty(lesson.FileUrl) && (lesson.FileType == "Video" || lesson.FileType == "Image"))
+                        // Process file URL through Cloudinary if it's an image file (not video)
+                        if (!string.IsNullOrEmpty(lesson.FileUrl) && lesson.FileType == "Image")
                         {
                             contentDto.FileUrl = await _fileStorageService.GetOptimizedUrlAsync(lesson.FileUrl);
+                        }
+                        else
+                        {
+                            contentDto.FileUrl = lesson.FileUrl; // Use original URL for videos and other files
                         }
                         break;
 
@@ -591,11 +595,68 @@ namespace LMS.Infrastructure.Services
                         contentDto.DueDate = assignment.DueDate;
                         contentDto.MaxScore = assignment.MaxScore;
                         contentDto.Description = assignment.Description;
+                        contentDto.Instructions = assignment.Instructions;
+                        contentDto.AttachmentsJson = assignment.AttachmentsJson;
+                        contentDto.AllowLateSubmission = assignment.AllowLateSubmission;
+                        contentDto.LatePenaltyPercent = assignment.LatePenaltyPercent;
+                        contentDto.MaxAttempts = assignment.MaxAttempts;
+                        contentDto.RequireTextSubmission = assignment.RequireTextSubmission;
+                        contentDto.AllowFileSubmission = assignment.AllowFileSubmission;
+                        contentDto.AllowLinkSubmission = assignment.AllowLinkSubmission;
+                        contentDto.AllowedFileTypes = assignment.AllowedFileTypes;
+                        contentDto.MaxFileSize = assignment.MaxFileSize;
+                        
+                        // Parse AttachmentsJson into structured data
+                        if (!string.IsNullOrEmpty(assignment.AttachmentsJson))
+                        {
+                            try
+                            {
+                                var attachmentData = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(assignment.AttachmentsJson);
+                                
+                                // Handle both single object and array formats
+                                if (attachmentData.ValueKind == System.Text.Json.JsonValueKind.Array)
+                                {
+                                    foreach (var item in attachmentData.EnumerateArray())
+                                    {
+                                        if (item.TryGetProperty("fileName", out var fileName) &&
+                                            item.TryGetProperty("fileUrl", out var fileUrl) &&
+                                            item.TryGetProperty("fileSize", out var fileSize))
+                                        {
+                                            contentDto.Attachments.Add(new AttachmentFileDto
+                                            {
+                                                FileName = fileName.GetString() ?? "",
+                                                FileUrl = fileUrl.GetString() ?? "",
+                                                FileSize = fileSize.GetInt64()
+                                            });
+                                        }
+                                    }
+                                }
+                                else if (attachmentData.ValueKind == System.Text.Json.JsonValueKind.Object)
+                                {
+                                    if (attachmentData.TryGetProperty("fileName", out var fileName) &&
+                                        attachmentData.TryGetProperty("fileUrl", out var fileUrl) &&
+                                        attachmentData.TryGetProperty("fileSize", out var fileSize))
+                                    {
+                                        contentDto.Attachments.Add(new AttachmentFileDto
+                                        {
+                                            FileName = fileName.GetString() ?? "",
+                                            FileUrl = fileUrl.GetString() ?? "",
+                                            FileSize = fileSize.GetInt64()
+                                        });
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                // Log error but don't fail the entire request
+                                Console.WriteLine($"Error parsing AttachmentsJson for assignment {assignment.Id}: {ex.Message}");
+                            }
+                        }
                         break;
 
                     case Announcement announcement:
                         contentDto.ContentHtml = announcement.ContentHtml;
-                        contentDto.AttachmentsJson = announcement.AttachmentsJson;
+                        contentDto.AnnouncementAttachmentsJson = announcement.AttachmentsJson;
                         break;
                 }
 

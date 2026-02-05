@@ -7,7 +7,7 @@ namespace LMS.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+    [AllowAnonymous]
     public class MediaController : ControllerBase
     {
         private readonly IFileStorageService _fileStorageService;

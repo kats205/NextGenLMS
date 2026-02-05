@@ -139,9 +139,28 @@ namespace LMS.Application.Common
         public DateTime? DueDate { get; set; }
         public int MaxScore { get; set; }
         public string? Description { get; set; }
+        public string? Instructions { get; set; }
+        public string? AttachmentsJson { get; set; } // JSON array of reference files from teacher
+        public List<AttachmentFileDto> Attachments { get; set; } = new(); // Parsed attachments
+        public bool AllowLateSubmission { get; set; }
+        public int LatePenaltyPercent { get; set; }
+        public int MaxAttempts { get; set; }
+        public bool RequireTextSubmission { get; set; }
+        public bool AllowFileSubmission { get; set; }
+        public bool AllowLinkSubmission { get; set; }
+        public string? AllowedFileTypes { get; set; }
+        public long MaxFileSize { get; set; }
 
-        // Announcement specific
-        public string? AttachmentsJson { get; set; }
+        // Announcement specific  
+        public string? AnnouncementAttachmentsJson { get; set; }
+        public List<AttachmentFileDto> AnnouncementAttachments { get; set; } = new();
+    }
+
+    public class AttachmentFileDto
+    {
+        public string FileName { get; set; } = string.Empty;
+        public string FileUrl { get; set; } = string.Empty;
+        public long FileSize { get; set; }
     }
 
     public class ChapterDto

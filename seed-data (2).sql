@@ -51,6 +51,7 @@ DECLARE @Chapter2NET101Id UNIQUEIDENTIFIER = 'B8C9D0E1-F2A3-4B5C-8D9E-0F1A2B3C4D
 -- Content IDs (FIXED GUIDs - DO NOT CHANGE)
 DECLARE @Lesson1Id UNIQUEIDENTIFIER = 'C9D0E1F2-A3B4-4C5D-8E9F-0A1B2C3D4E5F';
 DECLARE @Quiz1Id UNIQUEIDENTIFIER = 'D0E1F2A3-B4C5-4D5E-8F9A-0B1C2D3E4F5A';
+DECLARE @Assignment1Id UNIQUEIDENTIFIER = 'F2A3B4C5-D6E7-4F5A-8B9C-0D1E2F3A4B5C';
 DECLARE @Announcement1Id UNIQUEIDENTIFIER = 'E1F2A3B4-C5D6-4E5F-8A9B-0C1D2E3F4A5B';
 
 -- Topic & Question IDs (FIXED GUIDs - DO NOT CHANGE)
@@ -338,13 +339,14 @@ PRINT '▶ Inserting Course Contents...';
 INSERT INTO [CourseContents] ([Id], [ChapterId], [Title], [Type], [OrderIndex], [CreatedAt], [UpdatedAt], [IsDeleted])
 VALUES 
     (@Lesson1Id, @Chapter1NET101Id, N'Bài 1: Cài đặt môi trường', 1, 1, @Now, NULL, 0), -- Type 1 = Lesson
-    (@Quiz1Id, @Chapter1NET101Id, N'Quiz 1: Kiểm tra kiến thức cơ bản', 2, 2, @Now, NULL, 0), -- Type 2 = Quiz
-    (@Announcement1Id, @Chapter1NET101Id, N'Thông báo: Thay đổi lịch học', 4, 3, @Now, NULL, 0); -- Type 4 = Announcement
+    (@Quiz1Id, @Chapter1NET101Id, N'Quiz 1: Kiểm tra kiến thức cơ bản', 3, 2, @Now, NULL, 0), -- Type 3 = Quiz (Trắc nghiệm)
+    (@Assignment1Id, @Chapter1NET101Id, N'Bài tập 1: Tạo ứng dụng đầu tiên', 2, 3, @Now, NULL, 0), -- Type 2 = Assignment (Tự luận)
+    (@Announcement1Id, @Chapter1NET101Id, N'Thông báo: Thay đổi lịch học', 4, 4, @Now, NULL, 0); -- Type 4 = Announcement
 
 -- 13.2. Child Table: Lessons
 INSERT INTO [Lessons] ([Id], [FileUrl], [FileType], [FileSize], [DurationSeconds], [ContentHtml])
 VALUES 
-    (@Lesson1Id, N'https://cloudinary.com/videos/lesson1.mp4', N'video/mp4', 15728640, 1200, 
+    (@Lesson1Id, N'https://www.w3schools.com/html/mov_bbb.mp4', N'Video', 15728640, 1200, 
      N'<h2>Hướng dẫn cài đặt Visual Studio 2022</h2><p>Các bước chi tiết...</p>');
 
 -- 13.3. Child Table: Quizzes
@@ -352,14 +354,23 @@ INSERT INTO [Quizzes] ([Id], [OpenTime], [CloseTime], [DurationMinutes], [Shuffl
 VALUES 
     (@Quiz1Id, DATEADD(DAY, 1, @Now), DATEADD(DAY, 8, @Now), 30, 1, 1);
 
--- 13.4. Child Table: Announcements
+-- 13.4. Child Table: Assignments
+INSERT INTO [Assignments] ([Id], [DueDate], [MaxScore], [Description], [Instructions], [AttachmentsJson], [AllowLateSubmission], [LatePenaltyPercent], [MaxAttempts], [RequireTextSubmission], [AllowFileSubmission], [AllowLinkSubmission], [AllowedFileTypes], [MaxFileSize])
+VALUES 
+    (@Assignment1Id, DATEADD(DAY, 7, @Now), 100, 
+     N'Tạo một ứng dụng ASP.NET Core đơn giản với các chức năng cơ bản', 
+     N'<h3>Yêu cầu:</h3><ul><li>Tạo project ASP.NET Core MVC</li><li>Tạo Controller và View</li><li>Kết nối cơ sở dữ liệu</li><li>Upload source code lên GitHub</li></ul>', 
+     N'{"fileName": "assignment-template.docx","fileUrl": "https://res.cloudinary.com/dtzncc4fw/raw/upload/v1770217535/assignment-template.docx","fileSize": 1048576}',
+     1, 10, 3, 1, 1, 1, N'.pdf,.docx,.zip,.rar', 52428800);
+
+-- 13.5. Child Table: Announcements
 INSERT INTO [Announcements] ([Id], [ContentHtml], [AttachmentsJson])
 VALUES 
     (@Announcement1Id, 
      N'<p>Thông báo: Lớp học buổi 3 chuyển từ phòng 301 sang phòng 405. Thời gian giữ nguyên.</p>', 
      N'[]');
 
-PRINT '✓ Inserted 3 Course Contents (1 Lesson, 1 Quiz, 1 Announcement) successfully.';
+PRINT '✓ Inserted 4 Course Contents (1 Lesson, 1 Quiz, 1 Assignment, 1 Announcement) successfully.';
 
 
 -- =============================================

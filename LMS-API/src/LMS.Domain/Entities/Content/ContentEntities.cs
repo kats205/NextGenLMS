@@ -6,8 +6,8 @@ namespace LMS.Domain.Entities.Content
     public enum ContentType
     {
         Lesson = 1,
-        Quiz = 2,
-        Assignment = 3,
+        Assignment = 2,  // Tự luận
+        Quiz = 3,        // Trắc nghiệm  
         Announcement = 4
     }
 

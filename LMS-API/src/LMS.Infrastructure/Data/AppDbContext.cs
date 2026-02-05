@@ -102,6 +102,12 @@ namespace LMS.Infrastructure.Data
                 .HasForeignKey(lp => lp.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            modelBuilder.Entity<LessonProgress>()
+                .HasOne(lp => lp.Lesson)
+                .WithMany()
+                .HasForeignKey(lp => lp.LessonId)
+                .OnDelete(DeleteBehavior.Cascade);
+
             // Assignment relationships - sử dụng EssaySubmission thay vì AssignmentSubmission
             // Không cần thêm relationship vì sử dụng bảng có sẵn
                 

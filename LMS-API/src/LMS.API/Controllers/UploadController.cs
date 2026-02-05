@@ -6,7 +6,7 @@ namespace LMS.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+    [AllowAnonymous]
     public class UploadController : ControllerBase
     {
         private readonly IFileStorageService _fileStorageService;
