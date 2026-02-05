@@ -65,6 +65,8 @@ export interface Quiz extends CourseContent {
     totalPoints: number;
     passingScore: number;
     isRandomQuestion: boolean;
+    shuffleAnswers: boolean;
+    showAnswersAfterClose: boolean;
     maxAttempts: number;
     startDate?: string;
     endDate?: string;
@@ -75,6 +77,7 @@ export interface Quiz extends CourseContent {
     averageScore: number;
     passedCount: number;
     failedCount: number;
+    isEssay: boolean;
 }
 
 export interface QuestionTopic {
@@ -93,7 +96,7 @@ export interface Question {
     topicId: string;
     contentText: string;
     mediaUrl?: string;
-    type: QuestionType;
+    type: QuestionType | number;
     topicName?: string;
     answers: Answer[];
     usageCount: number;
@@ -230,6 +233,8 @@ export interface CreateQuizRequest {
     totalPoints: number;
     passingScore: number;
     isRandomQuestion: boolean;
+    shuffleAnswers: boolean;
+    showAnswersAfterClose: boolean;
     maxAttempts: number;
     startDate?: string;
     endDate?: string;
@@ -243,7 +248,7 @@ export interface CreateQuestionRequest {
     topicId: string;
     contentText: string;
     mediaUrl?: string;
-    type: QuestionType;
+    type: number | string;
     answers: { contentText: string; isCorrect: boolean }[];
 }
 
@@ -253,6 +258,7 @@ export interface UpdateQuestionRequest extends Partial<CreateQuestionRequest> {
 
 export interface CreateQuestionTopicRequest {
     name: string;
+    Name?: string;
 }
 
 export interface AddQuestionsToQuizRequest {

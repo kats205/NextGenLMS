@@ -13,6 +13,7 @@ namespace LMS.Application.Lecturer
         public int TotalPoints { get; set; }
         public int PassingScore { get; set; }
         public bool IsRandomQuestion { get; set; }
+        public bool ShuffleAnswers { get; set; }
         public int MaxAttempts { get; set; }
         public DateTime? StartDate { get; set; }
         public DateTime? EndDate { get; set; }
@@ -27,6 +28,7 @@ namespace LMS.Application.Lecturer
         public double AverageScore { get; set; }
         public int PassedCount { get; set; }
         public int FailedCount { get; set; }
+        public bool IsEssay { get; set; }
     }
     public class CreateQuizDto
     {
@@ -49,6 +51,7 @@ namespace LMS.Application.Lecturer
         public int PassingScore { get; set; }
 
         public bool IsRandomQuestion { get; set; }
+        public bool ShuffleAnswers { get; set; }
         public int MaxAttempts { get; set; } = 1;
         public DateTime? StartDate { get; set; }
         public DateTime? EndDate { get; set; }
@@ -61,11 +64,19 @@ namespace LMS.Application.Lecturer
         public int? TotalPoints { get; set; }
         public int? PassingScore { get; set; }
         public bool? IsRandomQuestion { get; set; }
+        public bool? ShuffleAnswers { get; set; }
         public int? MaxAttempts { get; set; }
         public DateTime? StartDate { get; set; }
         public DateTime? EndDate { get; set; }
         public bool? IsPublished { get; set; }
     }
+
+    public class AddQuestionsToQuizDto
+    {
+        public Guid QuizId { get; set; }
+        public List<AddQuestionDto> Questions { get; set; } = new();
+    }
+
     public class QuestionTopicDto
     {
         public Guid Id { get; set; }

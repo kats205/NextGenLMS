@@ -57,7 +57,7 @@ export function CourseNav({ courseName }: CourseNavProps) {
                             key={tab.id}
                             variant={active ? "default" : "ghost"}
                             className={active
-                                ? "bg-blue-600 text-white"
+                                ? "bg-blue-600 "
                                 : "text-gray-600 hover:text-blue-600 hover:bg-blue-50"
                             }
                             onClick={() => navigate(tab.path)}

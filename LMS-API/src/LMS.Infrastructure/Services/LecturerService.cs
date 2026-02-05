@@ -19,11 +19,37 @@ namespace LMS.Infrastructure.Services
     {
         private readonly AppDbContext _context;
         private readonly IMapper _mapper;
+        private readonly LMS.Application.Interfaces.IFileStorageService _fileStorage;
 
-        public LecturerService(AppDbContext context, IMapper mapper)
+        public LecturerService(AppDbContext context, IMapper mapper, LMS.Application.Interfaces.IFileStorageService fileStorage)
         {
             _context = context;
             _mapper = mapper;
+            _fileStorage = fileStorage;
+        }
+
+        // ==================== DASHBOARD ====================
+
+        public async Task<string> UploadFileAsync(IFormFile file, string type)
+        {
+            if (file == null || file.Length == 0)
+                throw new Exception("File không hợp lệ");
+
+            // Map type to valid Cloudinary folders if needed, or pass through
+            // type usually is like "question-images", "lessons"
+            
+            // Check file type to decide Image/Video/File
+            var contentType = file.ContentType.ToLower();
+            if (contentType.StartsWith("image/"))
+            {
+                return await _fileStorage.UploadImageAsync(file, type);
+            }
+            else if (contentType.StartsWith("video/"))
+            {
+                return await _fileStorage.UploadVideoAsync(file, type);
+            }
+
+            return await _fileStorage.UploadFileAsync(file, type);
         }
 
         // ==================== DASHBOARD ====================
@@ -307,23 +333,23 @@ namespace LMS.Infrastructure.Services
             return _mapper.Map<QuizDto>(quiz);
         }
 
-        public async Task AddQuestionsToQuizAsync(Guid quizId, List<AddQuestionDto> questions)
-        {
-            using var tx = await _context.Database.BeginTransactionAsync();
+        //public async Task AddQuestionsToQuizAsync(Guid quizId, List<AddQuestionDto> questions)
+        //{
+        //    using var tx = await _context.Database.BeginTransactionAsync();
 
-            foreach (var q in questions)
-            {
-                _context.QuizQuestions.Add(new QuizQuestion
-                {
-                    QuizId = quizId,
-                    QuestionId = q.QuestionId,
-                    Points = q.Points
-                });
-            }
+        //    foreach (var q in questions)
+        //    {
+        //        _context.QuizQuestions.Add(new QuizQuestion
+        //        {
+        //            QuizId = quizId,
+        //            QuestionId = q.QuestionId,
+        //            Points = q.Points
+        //        });
+        //    }
 
-            await _context.SaveChangesAsync();
-            await tx.CommitAsync();
-        }
+        //    await _context.SaveChangesAsync();
+        //    await tx.CommitAsync();
+        //}
 
         public async Task<PaginatedResponse<StudentDto>> GetStudentsByCourseAsync(
     Guid courseId, PaginationDto pagination)
@@ -410,6 +436,7 @@ namespace LMS.Infrastructure.Services
                 throw new Exception("Không tìm thấy bài kiểm tra");
 
             var dto = _mapper.Map<QuizDto>(quiz);
+            dto.TotalPoints = quiz.Questions.Sum(q => q.Points);
 
             dto.TotalQuestions = quiz.Questions.Count;
 
@@ -425,6 +452,7 @@ namespace LMS.Infrastructure.Services
 
             dto.PassedCount = submissions.Count(s => s.Score >= dto.PassingScore);
             dto.FailedCount = dto.CompletedSubmissions - dto.PassedCount;
+            dto.IsEssay = quiz.Questions.Any(qq => qq.Question.Type == QuestionType.Essay);
 
             return dto;
         }
@@ -442,12 +470,21 @@ namespace LMS.Infrastructure.Services
         public async Task<List<QuizDto>> GetQuizzesByCourseAsync(Guid courseId)
         {
             var quizzes = await _context.Quizzes
+                .Include(q => q.Questions)
+                    .ThenInclude(k => k.Question)
                 .Where(q => q.Chapter.CourseId == courseId && !q.IsDeleted)
                 .OrderBy(q => q.Chapter.OrderIndex)
                 .ThenBy(q => q.OrderIndex)
                 .ToListAsync();
 
-            return _mapper.Map<List<QuizDto>>(quizzes);
+            var dtos = _mapper.Map<List<QuizDto>>(quizzes);
+            foreach (var dto in dtos)
+            {
+                var quiz = quizzes.First(q => q.Id == dto.Id);
+                dto.IsEssay = quiz.Questions.Any(qq => qq.Question.Type == QuestionType.Essay);
+            }
+
+            return dtos;
         }
 
         public async Task<QuizDto> UpdateQuizAsync(Guid quizId, UpdateQuizDto dto)
@@ -522,24 +559,7 @@ namespace LMS.Infrastructure.Services
             await tx.CommitAsync();
         }
 
-        public async Task<string> UploadFileAsync(IFormFile file, string type)
-        {
-            if (file == null || file.Length == 0)
-                throw new Exception("File không hợp lệ");
 
-            var folder = Path.Combine("uploads", type.ToLower());
-            if (!Directory.Exists(folder))
-                Directory.CreateDirectory(folder);
-
-            var ext = Path.GetExtension(file.FileName);
-            var fileName = $"{Guid.NewGuid()}{ext}";
-            var path = Path.Combine(folder, fileName);
-
-            using var stream = new FileStream(path, FileMode.Create);
-            await file.CopyToAsync(stream);
-
-            return $"/{folder.Replace("\\", "/")}/{fileName}";
-        }
 
         //==================== COURSES ====================
 
@@ -818,8 +838,49 @@ namespace LMS.Infrastructure.Services
 
             return _mapper.Map<List<QuizQuestionDto>>(quizQuestions);
         }
+
+        public async Task AddQuestionsToQuizAsync(Guid quizId, List<AddQuestionDto> questions)
+        {
+            var quiz = await _context.Quizzes
+                .Include(q => q.Questions)
+                .FirstOrDefaultAsync(q => q.Id == quizId);
+
+            if (quiz == null) throw new Exception("Bài kiểm tra không tồn tại");
+
+            // Remove existing links (Replace strategy)
+            _context.QuizQuestions.RemoveRange(quiz.Questions);
+
+            // Add new links
+            foreach (var q in questions)
+            {
+                _context.QuizQuestions.Add(new QuizQuestion
+                {
+                    QuizId = quizId,
+                    QuestionId = q.QuestionId,
+                    Points = q.Points
+                });
+            }
+
+            // Optional: Update TotalPoints based on questions?
+            // quiz.TotalPoints = questions.Sum(q => q.Points);
+
+            await _context.SaveChangesAsync();
+        }
         public async Task<QuestionDto> CreateQuestionAsync(CreateQuestionDto dto)
         {
+            if (dto.Type != QuestionType.Essay)
+            {
+                if (dto.Answers.Count <= 2)
+                {
+                    throw new Exception("Câu hỏi phải có nhiều hơn 2 đáp án.");
+                }
+
+                if (dto.Answers.Count(a => a.IsCorrect) != 1)
+                {
+                    throw new Exception("Phải chọn đúng 1 đáp án đúng.");
+                }
+            }
+
             using var tx = await _context.Database.BeginTransactionAsync();
 
             var question = new Question
@@ -847,6 +908,67 @@ namespace LMS.Infrastructure.Services
             await tx.CommitAsync();
 
             return _mapper.Map<QuestionDto>(question);
+        }
+
+        public async Task<QuestionDto> UpdateQuestionAsync(Guid questionId, UpdateQuestionDto dto)
+        {
+            if (dto.Type != QuestionType.Essay)
+            {
+                if (dto.Answers.Count <= 2)
+                    throw new Exception("Câu hỏi phải có nhiều hơn 2 đáp án.");
+
+                if (dto.Answers.Count(a => a.IsCorrect) != 1)
+                    throw new Exception("Phải chọn đúng 1 đáp án đúng.");
+            }
+
+            using var tx = await _context.Database.BeginTransactionAsync();
+
+            var question = await _context.Questions
+                .Include(q => q.Answers)
+                .FirstOrDefaultAsync(q => q.Id == questionId && !q.IsDeleted)
+                ?? throw new Exception("Không tìm thấy câu hỏi");
+
+            // Update Header
+            question.TopicId = dto.TopicId;
+            question.ContentText = dto.ContentText;
+            question.MediaUrl = dto.MediaUrl;
+            question.Type = dto.Type;
+            question.UpdatedAt = DateTime.UtcNow;
+
+            // Update Answer: Strategy -> Delete all existing, insert new ones
+            _context.Answers.RemoveRange(question.Answers);
+            await _context.SaveChangesAsync();
+
+            foreach (var ans in dto.Answers)
+            {
+                _context.Answers.Add(new Answer
+                {
+                    QuestionId = question.Id,
+                    ContentText = ans.ContentText,
+                    IsCorrect = ans.IsCorrect,
+                    CreatedAt = DateTime.UtcNow // Ensure created date is fresh
+                });
+            }
+
+            await _context.SaveChangesAsync();
+            await tx.CommitAsync();
+
+            // Reload to get fresh data
+            return _mapper.Map<QuestionDto>(question);
+        }
+
+        public async Task DeleteQuestionAsync(Guid questionId)
+        {
+            var question = await _context.Questions.FindAsync(questionId)
+                ?? throw new Exception("Không tìm thấy câu hỏi");
+
+            question.IsDeleted = true;
+            question.UpdatedAt = DateTime.UtcNow;
+
+            // Optionally delete answers? Or just leave them orphaned/soft-deleted by association (if cascading). 
+            // Usually Soft Delete on parent is enough if queries filter by parent.
+            
+            await _context.SaveChangesAsync();
         }
         public async Task EnrollStudentAsync(Guid courseId, string studentEmail)
         {
