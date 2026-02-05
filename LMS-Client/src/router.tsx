@@ -19,19 +19,37 @@ const QuizViewerPage = lazy(() => import('./components/student/QuizViewerPage').
 const QuizResult = lazy(() => import('./components/student/QuizResult').then(module => ({ default: module.QuizResult })));
 
 // Lecturer
-const LecturerDashboard = lazy(() => import('./components/lecturer/LecturerDashboard').then(module => ({ default: module.LecturerDashboard })));
-const CourseDetailPage = lazy(() => import('./components/lecturer/CourseDetailPage').then(module => ({ default: module.CourseDetailPage })));
+const LecturerDashboard = lazy(() =>
+    import('./components/lecturer/LecturerDashboard')
+        .then(module => ({ default: module.default }))
+);
+
+const CourseDetailPage = lazy(() =>
+    import('./components/lecturer/CourseDetailPage')
+        .then(module => ({ default: module.default }))
+);
+
+const CourseEditPage = lazy(() =>
+    import('./components/lecturer/CourseEditPage')
+        .then(module => ({ default: module.default }))
+);
+
+const CourseStudentsPage = lazy(() =>
+    import('./components/lecturer/CourseStudentsPage')
+        .then(module => ({ default: module.default }))
+);
 
 // Admin
 const AdminDashboard = lazy(() => import('./components/admin/AdminDashboard').then(module => ({ default: module.AdminDashboard })));
 const UserManagementPage = lazy(() => import('./components/admin/UserManagementPage').then(module => ({ default: module.UserManagementPage })));
 const SystemConfigPage = lazy(() => import('./components/admin/SystemConfigPage').then(module => ({ default: module.SystemConfigPage })));
+const CourseManagementPage = lazy(() => import('./components/admin/CourseMangementPage').then(module => ({ default: module.CourseManagementPage })));
 
 const SuspenseLayout = ({ children }: { children: React.ReactNode }) => (
     <Suspense fallback={<LoadingFallback />}>{children}</Suspense>
 );
 
-export const router = createBrowserRouter([
+export const router: ReturnType<typeof createBrowserRouter> = createBrowserRouter([
     {
         path: '/',
         element: <Navigate to="/login" replace />,
@@ -140,25 +158,65 @@ export const router = createBrowserRouter([
         children: [
             {
                 path: '/lecturer',
-                element: <Navigate to="/lecturer/dashboard" replace />,
+                element: <Navigate to="/lecturer/dashboard" replace />
             },
             {
                 path: '/lecturer/dashboard',
                 element: (
                     <SuspenseLayout>
-                        <LecturerDashboard user={getStoredUser()} />
+                        <LecturerDashboard />
                     </SuspenseLayout>
-                ),
+                )
             },
             {
                 path: '/lecturer/courses/:courseId',
                 element: (
                     <SuspenseLayout>
-                        <CourseDetailPage user={getStoredUser()} />
+                        <CourseDetailPage />
                     </SuspenseLayout>
-                ),
+                )
             },
-        ],
+            {
+                path: '/lecturer/courses/:courseId/quizzes',
+                element: (
+                    <SuspenseLayout>
+                        <CourseDetailPage />
+                    </SuspenseLayout>
+                )
+            },
+            {
+                path: '/lecturer/courses/:courseId/grading',
+                element: (
+                    <SuspenseLayout>
+                        <CourseDetailPage />
+                    </SuspenseLayout>
+                )
+            },
+            {
+                path: '/lecturer/courses/:courseId/report',
+                element: (
+                    <SuspenseLayout>
+                        <CourseDetailPage />
+                    </SuspenseLayout>
+                )
+            },
+            {
+                path: '/lecturer/courses/:courseId/edit',
+                element: (
+                    <SuspenseLayout>
+                        <CourseEditPage />
+                    </SuspenseLayout>
+                )
+            },
+            {
+                path: '/lecturer/courses/:courseId/students',
+                element: (
+                    <SuspenseLayout>
+                        <CourseStudentsPage />
+                    </SuspenseLayout>
+                )
+            }
+        ]
     },
 
     // Admin Routes
@@ -192,6 +250,10 @@ export const router = createBrowserRouter([
                         <SystemConfigPage user={getStoredUser()} />
                     </SuspenseLayout>
                 ),
+            },
+            {
+                path: '/admin/courses',
+                element: <CourseManagementPage user={JSON.parse(localStorage.getItem('user') || '{}')} />,
             },
         ],
     },

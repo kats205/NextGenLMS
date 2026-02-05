@@ -90,7 +90,7 @@ instance.interceptors.response.use(
                 console.error(" Refresh token failed:", refreshErr);
                 isRefreshing = false;
 
-                console.log("🚪 Clearing session and redirecting to login...");
+                console.log("Clearing session and redirecting to login...");
 
                 toastify.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!");
                 localStorage.removeItem("token");
@@ -108,6 +108,24 @@ instance.interceptors.response.use(
         if (error.response?.status === 403) {
             toastify.error("Bạn không có quyền truy cập!");
         }
+
+        // Handle 400 Bad Request
+        if (error.response?.status === 400) {
+            const msg = (error.response?.data && (error.response.data.message || error.response.data)) || error.message;
+            toastify.error(typeof msg === 'string' ? msg : JSON.stringify(msg));
+        }
+
+        // Handle 404 Not Found
+        if (error.response?.status === 404) {
+            const msg = (error.response?.data && (error.response.data.message || error.response.data)) || error.message;
+            toastify.error(typeof msg === 'string' ? msg : JSON.stringify(msg));
+        }
+
+        // Handle 500 Internal Server Error
+        if (error.response?.status === 500) {
+            toastify.error("Lỗi hệ thống. Vui lòng thử lại sau!");
+        }
+
 
         return Promise.reject(error);
     }

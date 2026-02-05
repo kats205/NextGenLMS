@@ -1,0 +1,1114 @@
+﻿using AutoMapper;
+using LMS.Application.Lecturer;
+using LMS.Domain.Entities.Assessment;
+using LMS.Domain.Entities.Content;
+using LMS.Domain.Entities.Courses;
+using LMS.Infrastructure.Data;
+using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+
+
+
+namespace LMS.Infrastructure.Services
+{
+    public class LecturerService : ILecturerService
+    {
+        private readonly AppDbContext _context;
+        private readonly IMapper _mapper;
+        private readonly LMS.Application.Interfaces.IFileStorageService _fileStorage;
+
+        public LecturerService(AppDbContext context, IMapper mapper, LMS.Application.Interfaces.IFileStorageService fileStorage)
+        {
+            _context = context;
+            _mapper = mapper;
+            _fileStorage = fileStorage;
+        }
+
+        // ==================== DASHBOARD ====================
+
+        public async Task<string> UploadFileAsync(IFormFile file, string type)
+        {
+            if (file == null || file.Length == 0)
+                throw new Exception("File không hợp lệ");
+
+            // Map type to valid Cloudinary folders if needed, or pass through
+            // type usually is like "question-images", "lessons"
+            
+            // Check file type to decide Image/Video/File
+            var contentType = file.ContentType.ToLower();
+            if (contentType.StartsWith("image/"))
+            {
+                return await _fileStorage.UploadImageAsync(file, type);
+            }
+            else if (contentType.StartsWith("video/"))
+            {
+                return await _fileStorage.UploadVideoAsync(file, type);
+            }
+
+            return await _fileStorage.UploadFileAsync(file, type);
+        }
+
+        // ==================== DASHBOARD ====================
+
+        public async Task<LecturerDashboardDto> GetDashboardAsync(Guid lecturerId)
+        {
+            var courses = await _context.Courses
+                .Include(c => c.Semester)
+                .Include(c => c.AcademicYear)
+                .Include(c => c.Students)
+                .Include(c => c.Chapters)
+                    .ThenInclude(ch => ch.Contents)
+                .Where(c =>
+                    !c.IsDeleted &&
+                    c.Lecturers.Any(l => l.LecturerId == lecturerId)
+                )
+                .ToListAsync();
+
+            var courseIds = courses.Select(c => c.Id).ToList();
+
+            var totalLessons = courses.SelectMany(c => c.Chapters)
+                .SelectMany(ch => ch.Contents)
+                .Count(content => content is Lesson);
+
+            var totalQuizzes = courses.SelectMany(c => c.Chapters)
+                .SelectMany(ch => ch.Contents)
+                .Count(content => content is Quiz);
+
+            var pendingGrading = await _context.QuizSubmissions
+                .CountAsync(qs => qs.Status == "Submitted" &&
+                    _context.Quizzes.Any(q => courseIds.Contains(q.Chapter.CourseId)));
+
+            var dashboard = new LecturerDashboardDto
+            {
+                TotalCourses = courses.Count,
+                TotalStudents = courses.Sum(c => c.Students.Count),
+                TotalLessons = totalLessons,
+                TotalQuizzes = totalQuizzes,
+                PendingGrading = pendingGrading,
+                Courses = _mapper.Map<List<CourseDto>>(courses)
+            };
+
+            // Ensure stats are correctly set for mapped courses
+            foreach (var dto in dashboard.Courses)
+            {
+                var course = courses.First(c => c.Id == dto.Id);
+                dto.TotalLessons = course.Chapters.SelectMany(ch => ch.Contents).Count(c => c is Lesson);
+                dto.TotalQuizzes = course.Chapters.SelectMany(ch => ch.Contents).Count(c => c is Quiz);
+                dto.TotalStudents = course.Students.Count;
+            }
+
+            return dashboard;
+        }
+        public async Task<List<LessonDto>> GetLessonsByChapterAsync(Guid chapterId)
+        {
+            var lessons = await _context.Lessons
+                .Where(l => l.ChapterId == chapterId && !l.IsDeleted)
+                .OrderBy(l => l.OrderIndex)
+                .ToListAsync();
+
+            var lessonIds = lessons.Select(l => l.Id).ToList();
+
+            var progressStats = await _context.LessonProgresses
+                .Where(lp => lessonIds.Contains(lp.LessonId))
+                .GroupBy(lp => lp.LessonId)
+                .Select(g => new
+                {
+                    LessonId = g.Key,
+                    TotalViews = g.Count(),
+                    Completed = g.Count(x => x.IsCompleted)
+                })
+                .ToListAsync();
+
+            var result = _mapper.Map<List<LessonDto>>(lessons);
+
+            foreach (var dto in result)
+            {
+                var stat = progressStats.FirstOrDefault(s => s.LessonId == dto.Id);
+                dto.TotalViews = stat?.TotalViews ?? 0;
+                dto.CompletedStudents = stat?.Completed ?? 0;
+                dto.CompletionRate = dto.TotalViews == 0
+                    ? 0
+                    : dto.CompletedStudents * 100.0 / dto.TotalViews;
+            }
+
+            return result;
+        }
+        public async Task DeleteChapterAsync(Guid chapterId)
+        {
+            var chapter = await _context.Chapters
+                .Include(ch => ch.Contents)
+                .FirstOrDefaultAsync(ch => ch.Id == chapterId);
+
+            if (chapter == null)
+                throw new Exception("Không tìm thấy chương");
+
+            chapter.IsDeleted = true;
+            chapter.UpdatedAt = DateTime.UtcNow;
+
+            foreach (var content in chapter.Contents)
+            {
+                content.IsDeleted = true;
+                content.UpdatedAt = DateTime.UtcNow;
+            }
+
+            await _context.SaveChangesAsync();
+        }
+        public async Task<ChapterDto> GetChapterByIdAsync(Guid chapterId)
+        {
+            var chapter = await _context.Chapters
+                .Include(ch => ch.Contents)
+                .FirstOrDefaultAsync(ch => ch.Id == chapterId && !ch.IsDeleted);
+
+            if (chapter == null)
+                throw new Exception("Không tìm thấy chương");
+
+            var dto = _mapper.Map<ChapterDto>(chapter);
+
+            dto.TotalLessons = chapter.Contents.Count(c => c is Lesson);
+            dto.TotalQuizzes = chapter.Contents.Count(c => c is Quiz);
+
+            return dto;
+        }
+        public async Task<LecturerCourseReportDto> GetCourseReportAsync(Guid courseId)
+        {
+            var course = await _context.Courses
+                .FirstOrDefaultAsync(c => c.Id == courseId);
+
+            if (course == null)
+                throw new Exception("Không tìm thấy khóa học");
+
+            // 1. Get Students
+            var students = await _context.CourseStudents
+                .Include(cs => cs.Student)
+                .Where(cs => cs.CourseId == courseId)
+                .Select(cs => cs.Student)
+                .ToListAsync();
+
+            // 2. Get Progress & Scores (Simplification for now: Mock calculation or fetch from related tables if exist)
+            // Assuming tables: StudentProgress, QuizSubmission
+            
+            var studentReports = new List<StudentReportDto>();
+            double totalProgress = 0;
+            double totalQuizScore = 0;
+
+            foreach (var student in students)
+            {
+                // TODO: Fetch real progress and scores
+                // For now, return mock data or 0 to enable the structure
+                // In real implementation, fetching this in a loop is N+1, should optimize later
+                
+                // Mock logic:
+                double progress = 0; 
+                double quizScore = 0;
+
+                studentReports.Add(new StudentReportDto
+                {
+                    StudentId = student.Id,
+                    FullName = student.FullName ?? "Unknown",
+                    StudentCode = student.StudentCode ?? "",
+                    Progress = progress,
+                    AvgQuizScore = quizScore,
+                    AvgAssignmentScore = 0,
+                    ParticipationRate = 0
+                });
+
+                totalProgress += progress;
+                totalQuizScore += quizScore;
+            }
+
+            var totalStudents = students.Count;
+
+            return new LecturerCourseReportDto
+            {
+                CourseId = course.Id,
+                CourseName = course.Name,
+                CourseCode = course.CourseCode,
+                TotalStudents = totalStudents,
+                AverageProgress = totalStudents > 0 ? Math.Round(totalProgress / totalStudents, 1) : 0,
+                AverageQuizScore = totalStudents > 0 ? Math.Round(totalQuizScore / totalStudents, 1) : 0,
+                CompletionRate = 0, // Placeholder
+                Students = studentReports
+            };
+        }
+        private IQueryable<Course> LecturerCourseQuery(Guid lecturerId)
+        {
+            return _context.Courses
+                .Include(c => c.Lecturers)
+                .Where(c =>
+                    !c.IsDeleted &&
+                    c.Lecturers.Any(l => l.LecturerId == lecturerId));
+        }
+        public async Task<List<ChapterDto>> GetChaptersByCourseAsync(Guid courseId)
+        {
+            var chapters = await _context.Chapters
+                .Include(ch => ch.Contents)
+                .Where(ch => ch.CourseId == courseId && !ch.IsDeleted)
+                .OrderBy(ch => ch.OrderIndex)
+                .ToListAsync();
+
+            var result = _mapper.Map<List<ChapterDto>>(chapters);
+
+            foreach (var dto in result)
+            {
+                var ch = chapters.First(c => c.Id == dto.Id);
+                dto.TotalLessons = ch.Contents.Count(c => c is Lesson);
+                dto.TotalQuizzes = ch.Contents.Count(c => c is Quiz);
+            }
+
+            return result;
+        }
+
+        public async Task<ChapterDto> CreateChapterAsync(CreateChapterDto dto)
+        {
+            var chapter = _mapper.Map<Chapter>(dto);
+
+            _context.Chapters.Add(chapter);
+            await _context.SaveChangesAsync();
+
+            return _mapper.Map<ChapterDto>(chapter);
+        }
+
+        public async Task<ChapterDto> UpdateChapterAsync(Guid chapterId, UpdateChapterDto dto)
+        {
+            var chapter = await _context.Chapters.FindAsync(chapterId)
+                ?? throw new Exception("Không tìm thấy chương");
+
+            _mapper.Map(dto, chapter);
+            chapter.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return _mapper.Map<ChapterDto>(chapter);
+        }
+
+        public async Task ReorderChaptersAsync(Guid courseId, List<Guid> chapterIds)
+        {
+            using var tx = await _context.Database.BeginTransactionAsync();
+
+            var chapters = await _context.Chapters
+                .Where(c => c.CourseId == courseId && chapterIds.Contains(c.Id))
+                .ToListAsync();
+
+            for (int i = 0; i < chapterIds.Count; i++)
+            {
+                var ch = chapters.First(c => c.Id == chapterIds[i]);
+                ch.OrderIndex = i + 1;
+            }
+
+            await _context.SaveChangesAsync();
+            await tx.CommitAsync();
+        }
+
+        public async Task<LessonDto> CreateLessonAsync(CreateLessonDto dto)
+        {
+            var lesson = _mapper.Map<Lesson>(dto);
+
+            _context.Add(lesson);
+            await _context.SaveChangesAsync();
+
+            return _mapper.Map<LessonDto>(lesson);
+        }
+
+        public async Task<LessonDto> PublishLessonAsync(Guid lessonId, bool isPublished)
+        {
+            var lesson = await _context.Set<Lesson>()
+                .FindAsync(lessonId)
+                ?? throw new Exception("Không tìm thấy bài học");
+
+            lesson.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return _mapper.Map<LessonDto>(lesson);
+        }
+
+        public async Task<QuizDto> CreateQuizAsync(CreateQuizDto dto)
+        {
+            var quiz = _mapper.Map<Quiz>(dto);
+            _context.Add(quiz);
+            await _context.SaveChangesAsync();
+
+            return _mapper.Map<QuizDto>(quiz);
+        }
+
+        //public async Task AddQuestionsToQuizAsync(Guid quizId, List<AddQuestionDto> questions)
+        //{
+        //    using var tx = await _context.Database.BeginTransactionAsync();
+
+        //    foreach (var q in questions)
+        //    {
+        //        _context.QuizQuestions.Add(new QuizQuestion
+        //        {
+        //            QuizId = quizId,
+        //            QuestionId = q.QuestionId,
+        //            Points = q.Points
+        //        });
+        //    }
+
+        //    await _context.SaveChangesAsync();
+        //    await tx.CommitAsync();
+        //}
+
+        public async Task<PaginatedResponse<StudentDto>> GetStudentsByCourseAsync(
+    Guid courseId, PaginationDto pagination)
+        {
+            var query = _context.CourseStudents
+                .Include(cs => cs.Student)
+                .Where(cs => cs.CourseId == courseId);
+
+            var total = await query.CountAsync();
+
+            var data = await query
+                .Skip((pagination.Page - 1) * pagination.Limit)
+                .Take(pagination.Limit)
+                .ToListAsync();
+
+            // Map manually since we need to include EnrolledDate from CourseStudent
+            var studentDtos = data.Select(cs => new StudentDto
+            {
+                Id = cs.Student.Id,
+                FullName = cs.Student.FullName ?? "",
+                Email = cs.Student.Email ?? "",
+                StudentCode = cs.Student.StudentCode,
+                AvatarUrl = cs.Student.AvatarUrl,
+                EnrolledDate = cs.CreatedAt,
+                Progress = 0, // Could calculate later
+                AverageScore = null
+            }).ToList();
+
+            return new PaginatedResponse<StudentDto>
+            {
+                Data = studentDtos,
+                Total = total,
+                Page = pagination.Page,
+                Limit = pagination.Limit,
+                TotalPages = (int)Math.Ceiling(total / (double)pagination.Limit)
+            };
+        }
+
+        public async Task<StudentProgressDto> GetStudentProgressAsync(Guid courseId, Guid studentId)
+        {
+            var lessons = await _context.Chapters
+                .Where(c => c.CourseId == courseId)
+                .SelectMany(c => c.Contents)
+                .OfType<Lesson>()
+                .ToListAsync();
+
+            var completedLessons = await _context.LessonProgresses
+                .CountAsync(lp => lp.UserId == studentId && lp.IsCompleted);
+
+            var quizzes = await _context.Quizzes
+                .Where(q => q.Chapter.CourseId == courseId)
+                .ToListAsync();
+
+            var completedQuizzes = await _context.QuizSubmissions
+                .CountAsync(qs =>
+                    qs.StudentId == studentId &&
+                    qs.Status == "Graded" &&
+                    quizzes.Select(q => q.Id).Contains(qs.QuizId));
+
+            return new StudentProgressDto
+            {
+                StudentId = studentId,
+                TotalLessons = lessons.Count,
+                CompletedLessons = completedLessons,
+                LessonCompletionRate = lessons.Count == 0 ? 0 : completedLessons * 100.0 / lessons.Count,
+                TotalQuizzes = quizzes.Count,
+                CompletedQuizzes = completedQuizzes,
+                QuizCompletionRate = quizzes.Count == 0 ? 0 : completedQuizzes * 100.0 / quizzes.Count,
+                ProgressPercentage =
+                    (completedLessons + completedQuizzes) * 100.0 /
+                    Math.Max(1, lessons.Count + quizzes.Count)
+            };
+        }
+
+        public async Task<QuizDto> GetQuizByIdAsync(Guid quizId)
+        {
+            var quiz = await _context.Quizzes
+                .Include(q => q.Questions)
+                    .ThenInclude(qq => qq.Question)
+                        .ThenInclude(q => q.Answers)
+                .FirstOrDefaultAsync(q => q.Id == quizId && !q.IsDeleted);
+
+            if (quiz == null)
+                throw new Exception("Không tìm thấy bài kiểm tra");
+
+            var dto = _mapper.Map<QuizDto>(quiz);
+            dto.TotalPoints = quiz.Questions.Sum(q => q.Points);
+
+            dto.TotalQuestions = quiz.Questions.Count;
+
+            var submissions = await _context.QuizSubmissions
+                .Where(s => s.QuizId == quizId)
+                .ToListAsync();
+
+            dto.TotalSubmissions = submissions.Count;
+            dto.CompletedSubmissions = submissions.Count(s => s.Status == "Graded");
+            dto.AverageScore = submissions.Count == 0
+                ? 0
+                : submissions.Average(s => s.Score);
+
+            dto.PassedCount = submissions.Count(s => s.Score >= dto.PassingScore);
+            dto.FailedCount = dto.CompletedSubmissions - dto.PassedCount;
+            dto.IsEssay = quiz.Questions.Any(qq => qq.Question.Type == QuestionType.Essay);
+
+            return dto;
+        }
+
+        public async Task<List<QuizDto>> GetQuizzesByChapterAsync(Guid chapterId)
+        {
+            var quizzes = await _context.Quizzes
+                .Where(q => q.ChapterId == chapterId && !q.IsDeleted)
+                .OrderBy(q => q.OrderIndex)
+                .ToListAsync();
+
+            return _mapper.Map<List<QuizDto>>(quizzes);
+        }
+
+        public async Task<List<QuizDto>> GetQuizzesByCourseAsync(Guid courseId)
+        {
+            var quizzes = await _context.Quizzes
+                .Include(q => q.Questions)
+                    .ThenInclude(k => k.Question)
+                .Where(q => q.Chapter.CourseId == courseId && !q.IsDeleted)
+                .OrderBy(q => q.Chapter.OrderIndex)
+                .ThenBy(q => q.OrderIndex)
+                .ToListAsync();
+
+            var dtos = _mapper.Map<List<QuizDto>>(quizzes);
+            foreach (var dto in dtos)
+            {
+                var quiz = quizzes.First(q => q.Id == dto.Id);
+                dto.IsEssay = quiz.Questions.Any(qq => qq.Question.Type == QuestionType.Essay);
+            }
+
+            return dtos;
+        }
+
+        public async Task<QuizDto> UpdateQuizAsync(Guid quizId, UpdateQuizDto dto)
+        {
+            var quiz = await _context.Quizzes.FindAsync(quizId)
+                ?? throw new Exception("Không tìm thấy bài kiểm tra");
+
+            _mapper.Map(dto, quiz);
+            quiz.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return await GetQuizByIdAsync(quizId);
+        }
+
+        public async Task DeleteQuizAsync(Guid quizId)
+        {
+            var quiz = await _context.Quizzes.FindAsync(quizId)
+                ?? throw new Exception("Không tìm thấy bài kiểm tra");
+
+            quiz.IsDeleted = true;
+            quiz.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<List<QuizSubmissionDto>> GetQuizSubmissionsAsync(Guid quizId)
+        {
+            var submissions = await _context.QuizSubmissions
+                .Include(s => s.Student)
+                .Where(s => s.QuizId == quizId)
+                .OrderByDescending(s => s.CreatedAt)
+                .ToListAsync();
+
+            return _mapper.Map<List<QuizSubmissionDto>>(submissions);
+        }
+
+        public async Task<QuizSubmissionDto> GetSubmissionByIdAsync(Guid submissionId)
+        {
+            var submission = await _context.QuizSubmissions
+                .Include(s => s.Student)
+                .Include(s => s.Quiz)
+                    .ThenInclude(q => q.Questions)
+                        .ThenInclude(qq => qq.Question)
+                .Include(s => s.Snapshots)
+                .FirstOrDefaultAsync(s => s.Id == submissionId);
+
+            if (submission == null)
+                throw new Exception("Không tìm thấy bài nộp");
+
+            return _mapper.Map<QuizSubmissionDto>(submission);
+        }
+
+        public async Task GradeSubmissionAsync(Guid submissionId, GradeSubmissionDto dto)
+        {
+            using var tx = await _context.Database.BeginTransactionAsync();
+
+            var submission = await _context.QuizSubmissions
+                .FirstOrDefaultAsync(s => s.Id == submissionId)
+                ?? throw new Exception("Không tìm thấy bài nộp");
+
+            submission.Score = dto.Score;
+            submission.Status = "Graded";
+            
+            // Store feedback in TempData
+            var metaData = new 
+            {
+                Feedback = dto.Feedback,
+                GradedAt = DateTime.UtcNow
+            };
+            submission.TempData = System.Text.Json.JsonSerializer.Serialize(metaData);
+
+            await _context.SaveChangesAsync();
+            await tx.CommitAsync();
+        }
+
+
+
+        //==================== COURSES ====================
+
+        public async Task<PaginatedResponse<CourseDto>> GetCoursesAsync(Guid lecturerId, CourseFilterDto filter)
+        {
+            var query = _context.Courses
+                .Include(c => c.Semester)
+                .Include(c => c.AcademicYear)
+                .Include(c => c.Major)
+                .Include(c => c.Students)
+                .Include(c => c.Chapters)
+                .Include(c => c.Chapters)
+                .ThenInclude(ch => ch.Contents)
+            .Include(c => c.Lecturers)
+            .Where(c =>
+                !c.IsDeleted &&
+                c.Lecturers.Any(cl => cl.LecturerId == lecturerId));
+
+            // Apply filters
+            if (filter.SemesterId.HasValue)
+                query = query.Where(c => c.SemesterId == filter.SemesterId.Value);
+
+            if (filter.AcademicYearId.HasValue)
+                query = query.Where(c => c.AcademicYearId == filter.AcademicYearId.Value);
+
+            if (!string.IsNullOrEmpty(filter.Search))
+                query = query.Where(c => c.Name.Contains(filter.Search) || c.CourseCode.Contains(filter.Search));
+
+            var total = await query.CountAsync();
+
+            // Apply pagination
+            var courses = await query
+                .Skip((filter.Page - 1) * filter.Limit)
+                .Take(filter.Limit)
+                .ToListAsync();
+
+            var courseDtos = _mapper.Map<List<CourseDto>>(courses);
+
+                // Calculate statistics for each course
+                foreach (var dto in courseDtos)
+                {
+                    var course = courses.First(c => c.Id == dto.Id);
+
+                    dto.TotalStudents = course.Students.Count;
+                    dto.TotalLessons = course.Chapters.SelectMany(ch => ch.Contents).Count(c => c is Lesson);
+                    dto.TotalQuizzes = course.Chapters.SelectMany(ch => ch.Contents).Count(c => c is Quiz);
+
+                    // Calculate average progress
+                    var studentProgresses = await CalculateCourseAverageProgressAsync(course.Id);
+                    dto.AverageProgress = studentProgresses;
+                }
+
+            return new PaginatedResponse<CourseDto>
+            {
+                Data = courseDtos,
+                Total = total,
+                Page = filter.Page,
+                Limit = filter.Limit,
+                TotalPages = (int)Math.Ceiling(total / (double)filter.Limit)
+            };
+        }
+
+        public async Task<CourseDto> GetCourseByIdAsync(Guid courseId)
+        {
+            var course = await _context.Courses
+                .Include(c => c.Semester)
+                .Include(c => c.AcademicYear)
+                .Include(c => c.Major)
+                .Include(c => c.Lecturers)
+                .ThenInclude(cl => cl.Lecturer)
+                .Include(c => c.Students)
+                .Include(c => c.Chapters)
+                    .ThenInclude(ch => ch.Contents)
+                .FirstOrDefaultAsync(c => c.Id == courseId && !c.IsDeleted);
+
+            if (course == null)
+                throw new Exception("Không tìm thấy khóa học");
+
+            var dto = _mapper.Map<CourseDto>(course);
+
+            // Calculate statistics
+            dto.TotalLessons = course.Chapters.SelectMany(ch => ch.Contents).Count(c => c is Lesson);
+            dto.TotalQuizzes = course.Chapters.SelectMany(ch => ch.Contents).Count(c => c is Quiz);
+            dto.AverageProgress = await CalculateCourseAverageProgressAsync(courseId);
+
+            return dto;
+        }
+
+        public async Task<CourseDto> CreateCourseAsync(Guid lecturerId, CreateCourseDtoLecturer dto)
+        {
+            // 1. Tạo course
+            var course = _mapper.Map<Course>(dto);
+
+            _context.Courses.Add(course);
+            await _context.SaveChangesAsync();
+            // 2. Gán giảng viên qua bảng trung gian
+            var courseLecturer = new CourseLecturer
+            {
+                CourseId = course.Id,
+                LecturerId = lecturerId
+            };
+
+            _context.CourseLecturers.Add(courseLecturer);
+            await _context.SaveChangesAsync();
+
+            return await GetCourseByIdAsync(course.Id);
+        }
+
+        public async Task<CourseDto> UpdateCourseAsync(Guid courseId, UpdateCourseDtoLecturer dto)
+        {
+            var course = await _context.Courses.FindAsync(courseId);
+            if (course == null)
+                throw new Exception("Không tìm thấy khóa học");
+
+            // Manually update fields to avoid AutoMapper issues with FKs
+            if (!string.IsNullOrEmpty(dto.Name)) course.Name = dto.Name;
+            if (!string.IsNullOrEmpty(dto.Description)) course.Description = dto.Description;
+            if (!string.IsNullOrEmpty(dto.CourseCode)) course.CourseCode = dto.CourseCode;
+            if (!string.IsNullOrEmpty(dto.ThumbnailUrl)) course.ThumbnailUrl = dto.ThumbnailUrl;
+            
+            // Only update FKs if they are provided and valid
+            if (dto.SemesterId.HasValue) course.SemesterId = dto.SemesterId.Value;
+            if (dto.AcademicYearId.HasValue) course.AcademicYearId = dto.AcademicYearId.Value;
+            if (dto.MajorId.HasValue) course.MajorId = dto.MajorId.Value;
+
+            course.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            return await GetCourseByIdAsync(courseId);
+        }
+
+        public async Task DeleteCourseAsync(Guid courseId)
+        {
+            var course = await _context.Courses.FindAsync(courseId);
+            if (course == null)
+                throw new Exception("Không tìm thấy khóa học");
+
+            course.IsDeleted = true;
+            course.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+        }
+
+        // ==================== HELPERS ====================
+
+        private async Task<double> CalculateCourseAverageProgressAsync(Guid courseId)
+        {
+            var course = await _context.Courses
+                .Include(c => c.Students)
+                .Include(c => c.Chapters)
+                    .ThenInclude(ch => ch.Contents)
+                .FirstOrDefaultAsync(c => c.Id == courseId);
+
+            if (course == null || course.Students.Count == 0)
+                return 0;
+
+            var totalContent = course.Chapters.SelectMany(ch => ch.Contents).Count();
+            if (totalContent == 0)
+                return 0;
+
+            double totalProgress = 0;
+
+            foreach (var enrollment in course.Students)
+            {
+                var completedLessons = await _context.LessonProgresses
+                    .CountAsync(lp => lp.UserId == enrollment.StudentId && lp.IsCompleted);
+
+                var completedQuizzes = await _context.QuizSubmissions
+                    .CountAsync(qs => qs.StudentId == enrollment.StudentId && qs.Status == "Graded");
+
+                var studentProgress = ((completedLessons + completedQuizzes) / (double)totalContent) * 100;
+                totalProgress += studentProgress;
+            }
+
+            return totalProgress / course.Students.Count;
+        }
+
+        public async Task<LessonDto> GetLessonByIdAsync(Guid lessonId)
+        {
+            var lesson = await _context.Lessons
+                .FirstOrDefaultAsync(l => l.Id == lessonId && !l.IsDeleted);
+
+            if (lesson == null)
+                throw new Exception("Không tìm thấy bài học");
+
+            var dto = _mapper.Map<LessonDto>(lesson);
+
+            // Statistics
+            dto.TotalViews = await _context.LessonProgresses
+                .CountAsync(lp => lp.LessonId == lessonId);
+
+            dto.CompletedStudents = await _context.LessonProgresses
+                .CountAsync(lp => lp.LessonId == lessonId && lp.IsCompleted);
+
+            dto.CompletionRate = dto.TotalViews == 0
+                ? 0
+                : dto.CompletedStudents * 100.0 / dto.TotalViews;
+
+            return dto;
+        }
+
+        public async Task<LessonDto> UpdateLessonAsync(Guid lessonId, UpdateLessonDto dto)
+        {
+            var lesson = await _context.Lessons.FindAsync(lessonId);
+            if (lesson == null || lesson.IsDeleted)
+                throw new Exception("Không tìm thấy bài học");
+
+            _mapper.Map(dto, lesson);
+            lesson.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return await GetLessonByIdAsync(lessonId);
+        }
+
+        public async Task DeleteLessonAsync(Guid lessonId)
+        {
+            var lesson = await _context.Lessons.FindAsync(lessonId);
+            if (lesson == null)
+                throw new Exception("Không tìm thấy bài học");
+
+            _context.Lessons.Remove(lesson);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<List<QuestionTopicDto>> GetQuestionTopicsAsync(Guid lecturerId)
+        {
+            var topics = await _context.QuestionTopics
+                .Where(t => t.LecturerId == lecturerId && !t.IsDeleted)
+                .OrderByDescending(t => t.CreatedAt)
+                .ToListAsync();
+
+            return _mapper.Map<List<QuestionTopicDto>>(topics);
+        }
+
+        public async Task<QuestionTopicDto> CreateQuestionTopicAsync(
+    Guid lecturerId, CreateQuestionTopicDto dto)
+        {
+            var topic = _mapper.Map<QuestionTopic>(dto);
+            topic.LecturerId = lecturerId;
+
+            _context.QuestionTopics.Add(topic);
+            await _context.SaveChangesAsync();
+
+            return _mapper.Map<QuestionTopicDto>(topic);
+        }
+
+        public async Task DeleteQuestionTopicAsync(Guid topicId)
+        {
+            var topic = await _context.QuestionTopics.FindAsync(topicId)
+                ?? throw new Exception("Không tìm thấy chủ đề câu hỏi");
+
+            topic.IsDeleted = true;
+            topic.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<List<QuestionDto>> GetQuestionsByTopicAsync(Guid topicId)
+        {
+            var questions = await _context.Questions
+                .Include(q => q.Answers)
+                .Where(q => q.TopicId == topicId && !q.IsDeleted)
+                .OrderByDescending(q => q.CreatedAt)
+                .ToListAsync();
+
+            return _mapper.Map<List<QuestionDto>>(questions);
+        }
+        public async Task<List<QuizQuestionDto>> GetQuestionsByQuizAsync(Guid quizId)
+        {
+            var quizQuestions = await _context.QuizQuestions
+                .Include(qq => qq.Question)
+                    .ThenInclude(q => q.Answers)
+                .Where(qq => qq.QuizId == quizId)
+                .ToListAsync();
+
+            return _mapper.Map<List<QuizQuestionDto>>(quizQuestions);
+        }
+
+        public async Task AddQuestionsToQuizAsync(Guid quizId, List<AddQuestionDto> questions)
+        {
+            var quiz = await _context.Quizzes
+                .Include(q => q.Questions)
+                .FirstOrDefaultAsync(q => q.Id == quizId);
+
+            if (quiz == null) throw new Exception("Bài kiểm tra không tồn tại");
+
+            // Remove existing links (Replace strategy)
+            _context.QuizQuestions.RemoveRange(quiz.Questions);
+
+            // Add new links
+            foreach (var q in questions)
+            {
+                _context.QuizQuestions.Add(new QuizQuestion
+                {
+                    QuizId = quizId,
+                    QuestionId = q.QuestionId,
+                    Points = q.Points
+                });
+            }
+
+            // Optional: Update TotalPoints based on questions?
+            // quiz.TotalPoints = questions.Sum(q => q.Points);
+
+            await _context.SaveChangesAsync();
+        }
+        public async Task<QuestionDto> CreateQuestionAsync(CreateQuestionDto dto)
+        {
+            if (dto.Type != QuestionType.Essay)
+            {
+                if (dto.Answers.Count <= 2)
+                {
+                    throw new Exception("Câu hỏi phải có nhiều hơn 2 đáp án.");
+                }
+
+                if (dto.Answers.Count(a => a.IsCorrect) != 1)
+                {
+                    throw new Exception("Phải chọn đúng 1 đáp án đúng.");
+                }
+            }
+
+            using var tx = await _context.Database.BeginTransactionAsync();
+
+            var question = new Question
+            {
+                TopicId = dto.TopicId,
+                ContentText = dto.ContentText,
+                MediaUrl = dto.MediaUrl,
+                Type = dto.Type
+            };
+
+            _context.Questions.Add(question);
+            await _context.SaveChangesAsync();
+
+            foreach (var ans in dto.Answers)
+            {
+                _context.Answers.Add(new Answer
+                {
+                    QuestionId = question.Id,
+                    ContentText = ans.ContentText,
+                    IsCorrect = ans.IsCorrect
+                });
+            }
+
+            await _context.SaveChangesAsync();
+            await tx.CommitAsync();
+
+            return _mapper.Map<QuestionDto>(question);
+        }
+
+        public async Task<QuestionDto> UpdateQuestionAsync(Guid questionId, UpdateQuestionDto dto)
+        {
+            if (dto.Type != QuestionType.Essay)
+            {
+                if (dto.Answers.Count <= 2)
+                    throw new Exception("Câu hỏi phải có nhiều hơn 2 đáp án.");
+
+                if (dto.Answers.Count(a => a.IsCorrect) != 1)
+                    throw new Exception("Phải chọn đúng 1 đáp án đúng.");
+            }
+
+            using var tx = await _context.Database.BeginTransactionAsync();
+
+            var question = await _context.Questions
+                .Include(q => q.Answers)
+                .FirstOrDefaultAsync(q => q.Id == questionId && !q.IsDeleted)
+                ?? throw new Exception("Không tìm thấy câu hỏi");
+
+            // Update Header
+            question.TopicId = dto.TopicId;
+            question.ContentText = dto.ContentText;
+            question.MediaUrl = dto.MediaUrl;
+            question.Type = dto.Type;
+            question.UpdatedAt = DateTime.UtcNow;
+
+            // Update Answer: Strategy -> Delete all existing, insert new ones
+            _context.Answers.RemoveRange(question.Answers);
+            await _context.SaveChangesAsync();
+
+            foreach (var ans in dto.Answers)
+            {
+                _context.Answers.Add(new Answer
+                {
+                    QuestionId = question.Id,
+                    ContentText = ans.ContentText,
+                    IsCorrect = ans.IsCorrect,
+                    CreatedAt = DateTime.UtcNow // Ensure created date is fresh
+                });
+            }
+
+            await _context.SaveChangesAsync();
+            await tx.CommitAsync();
+
+            // Reload to get fresh data
+            return _mapper.Map<QuestionDto>(question);
+        }
+
+        public async Task DeleteQuestionAsync(Guid questionId)
+        {
+            var question = await _context.Questions.FindAsync(questionId)
+                ?? throw new Exception("Không tìm thấy câu hỏi");
+
+            question.IsDeleted = true;
+            question.UpdatedAt = DateTime.UtcNow;
+
+            // Optionally delete answers? Or just leave them orphaned/soft-deleted by association (if cascading). 
+            // Usually Soft Delete on parent is enough if queries filter by parent.
+            
+            await _context.SaveChangesAsync();
+        }
+        public async Task EnrollStudentAsync(Guid courseId, string studentEmail)
+        {
+            var student = await _context.AppUsers
+                .FirstOrDefaultAsync(u => u.Email == studentEmail);
+
+            if (student == null)
+                throw new Exception("Không tìm thấy sinh viên");
+
+            var exists = await _context.CourseStudents
+                .AnyAsync(cs => cs.CourseId == courseId && cs.StudentId == student.Id);
+
+            if (exists)
+                throw new Exception("Sinh viên đã được ghi danh");
+
+            _context.CourseStudents.Add(new CourseStudent
+            {
+                CourseId = courseId,
+                StudentId = student.Id,
+                Source = "Manual"
+            });
+
+            await _context.SaveChangesAsync();
+        }
+        public async Task RemoveStudentAsync(Guid courseId, Guid studentId)
+        {
+            var enrollment = await _context.CourseStudents
+                .FirstOrDefaultAsync(cs =>
+                    cs.CourseId == courseId &&
+                    cs.StudentId == studentId);
+
+            if (enrollment == null)
+                throw new Exception("Sinh viên chưa được ghi danh");
+
+            _context.CourseStudents.Remove(enrollment);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<List<QuizSubmissionDto>> GetSubmissionsByCourseAsync(Guid courseId)
+        {
+            var submissions = await _context.QuizSubmissions
+                .Include(s => s.Student)
+                .Include(s => s.Quiz)
+                    .ThenInclude(q => q.Chapter)
+                .Where(s => s.Quiz.Chapter.CourseId == courseId)
+                .OrderByDescending(s => s.UpdatedAt)
+                .ToListAsync();
+
+            return _mapper.Map<List<QuizSubmissionDto>>(submissions);
+        }
+
+
+
+        public async Task<StudentDetailReportDto> GetStudentCourseDetailAsync(Guid courseId, Guid studentId)
+        {
+            // 1. Verify Enrollment
+            var enrollment = await _context.CourseStudents
+                .Include(cs => cs.Student)
+                .FirstOrDefaultAsync(cs => cs.CourseId == courseId && cs.StudentId == studentId);
+
+            if (enrollment == null)
+                throw new Exception("Sinh viên không thuộc khóa học này");
+
+            // 2. Get All Course Lessons & Quizzes
+            var chapters = await _context.Chapters
+                .Include(c => c.Contents)
+                .Where(c => c.CourseId == courseId)
+                .OrderBy(c => c.OrderIndex)
+                .ToListAsync();
+
+            var allLessons = chapters.SelectMany(c => c.Contents.Where(x => x is Lesson).Cast<Lesson>()).ToList();
+            var allQuizzes = chapters.SelectMany(c => c.Contents.Where(x => x is Quiz).Cast<Quiz>()).ToList();
+
+            // 3. Get Student Progress
+            var lessonIds = allLessons.Select(l => l.Id).ToList();
+            var progressMap = await _context.LessonProgresses
+                .Where(p => p.UserId == studentId && lessonIds.Contains(p.LessonId))
+                .ToDictionaryAsync(p => p.LessonId);
+
+            // 4. Get Quiz Submissions (Get highest score per quiz)
+            var quizIds = allQuizzes.Select(q => q.Id).ToList();
+            var submissions = await _context.QuizSubmissions
+                .Where(s => s.StudentId == studentId && quizIds.Contains(s.QuizId))
+                .ToListAsync();
+
+            // 5. Build DTO
+            var lessonDtos = new List<LessonDetailDto>();
+            foreach (var chapter in chapters)
+            {
+                var chapterLessons = chapter.Contents.Where(x => x is Lesson).OrderBy(x => x.OrderIndex).Cast<Lesson>();
+                foreach (var lesson in chapterLessons) // Order by Chapter -> Lesson Order
+                {
+                    var isCompleted = progressMap.TryGetValue(lesson.Id, out var prog) && prog.IsCompleted;
+                    lessonDtos.Add(new LessonDetailDto
+                    {
+                        Id = lesson.Id,
+                        Title = lesson.Title,
+                        IsCompleted = isCompleted,
+                        LastAccess = progressMap.ContainsKey(lesson.Id) ? progressMap[lesson.Id].LastAccess : null,
+                        ChapterTitle = chapter.Title
+                    });
+                }
+            }
+
+            var quizDtos = new List<QuizResultDto>();
+            foreach (var quiz in allQuizzes)
+            {
+                // Find best submission
+                var quizSubs = submissions.Where(s => s.QuizId == quiz.Id).OrderByDescending(s => s.Score).FirstOrDefault();
+                
+                quizDtos.Add(new QuizResultDto
+                {
+                    Id = quiz.Id,
+                    Title = quiz.Title,
+                    Score = quizSubs?.Score,
+                    MaxScore = 10, // Assuming 10 for now
+                    SubmittedAt = quizSubs?.EndTime ?? quizSubs?.StartTime,
+                    Status = quizSubs?.Status ?? "NotStarted"
+                });
+            }
+
+            // Calc summary stats
+            var completedCount = lessonDtos.Count(l => l.IsCompleted);
+            var totalProgress = allLessons.Count > 0 ? (double)completedCount / allLessons.Count * 100 : 0;
+            
+            var gradedQuizzes = quizDtos.Where(q => q.Score.HasValue).ToList();
+            var avgQuiz = gradedQuizzes.Any() ? gradedQuizzes.Average(q => q.Score!.Value) : 0;
+
+            return new StudentDetailReportDto
+            {
+                StudentId = studentId,
+                FullName = enrollment.Student?.FullName ?? "Unknown",
+                StudentCode = enrollment.Student?.StudentCode ?? "",
+                Progress = Math.Round(totalProgress, 1),
+                AvgQuizScore = Math.Round(avgQuiz, 1),
+                ParticipationRate = 0, // Placeholder
+                Lessons = lessonDtos,
+                Quizzes = quizDtos
+            };
+        }
+    }
+}
+

@@ -1,4 +1,4 @@
-import { User } from '../../App';
+﻿import { User } from '../../App';
 import { Header } from '../shared/Header';
 import { BookOpen, TrendingUp, ClipboardList, Award, CheckCircle2, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';

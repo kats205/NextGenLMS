@@ -1,13 +1,17 @@
-﻿using LMS.Application.Admin;
-using LMS.Application.Common;
+using LMS.Application.DTOs.Admin;
+using LMS.Application.DTOs.Common;
+using LMS.Application.Interfaces;
 using LMS.Domain.Entities.Users;
 using LMS.Infrastructure.Data;
+using LMS.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using OfficeOpenXml;
 
 namespace LMS.Infrastructure.Services
 {
@@ -20,7 +24,9 @@ namespace LMS.Infrastructure.Services
 
         public async Task<PagedResultDto<UserListItemDto>> GetUserAsync(UserQueryParams q)
         {
-            var query = _db.AppUsers.AsQueryable();
+            var query = _db.AppUsers
+                .Where(u => !u.IsDeleted)
+                .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(q.Search))
             {
@@ -69,7 +75,7 @@ namespace LMS.Infrastructure.Services
             var user = await _db.AppUsers
                 .Include(u => u.Role)
                 .Include(u => u.Department)
-                .FirstOrDefaultAsync(u => u.Id == userId);
+                .FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted);
 
             if (user == null)
             {
@@ -82,6 +88,7 @@ namespace LMS.Infrastructure.Services
                 Email = user.Email,
                 FullName = user.FullName,
                 Phone = user.Phone,
+                DateOfBirth = user.DateOfBirth,
                 AvatarUrl = user.AvatarUrl,
                 StudentCode = user.StudentCode,
                 TeacherCode = user.TeacherCode,
@@ -123,16 +130,36 @@ namespace LMS.Infrastructure.Services
                 }
             }
 
-            // Generate password if not provided
-            var password = dto.Password ?? GenerateRandomPassword();
-            var passwordHash = BCrypt.Net.BCrypt.HashPassword(password);
-
-            var newUser = new AppUser
+            // Generate password if not provided.
+            // If client provided DateOfBirth use it to create default password in dd/MM/yyyy format.
+            var id = Guid.NewGuid();
+            string password;
+            if (!string.IsNullOrWhiteSpace(dto.Password))
             {
-                Id = Guid.NewGuid(),
+                password = dto.Password!;
+            }
+            else if (dto.DateOfBirth.HasValue)
+            {
+                // format as dd/MM/yyyy
+                password = dto.DateOfBirth.Value.ToString("dd/MM/yyyy");
+            }
+            else
+            {
+                // Fallback: try to derive from DB (for reset scenarios) or generate a simple random 8-char string
+                var derived = GenerateDoBToPasswordById(id);
+                if (!string.IsNullOrEmpty(derived)) password = derived;
+                else password = Guid.NewGuid().ToString("N").Substring(0, 8);
+            }
+
+            var passwordHash = PasswordHelper.Hash(password);
+
+            var newUser = new Domain.Entities.Users.AppUser
+            {
+                Id = id,
                 Email = dto.Email,
                 FullName = dto.FullName,
                 Phone = dto.Phone,
+                DateOfBirth = dto.DateOfBirth,
                 PasswordHash = passwordHash,
                 RoleId = role.Id,
                 DepartmentId = dto.DepartmentId,
@@ -209,6 +236,7 @@ namespace LMS.Infrastructure.Services
             user.Email = dto.Email;
             user.FullName = dto.FullName;
             user.Phone = dto.Phone;
+            user.DateOfBirth = dto.DateOfBirth;
             user.RoleId = role.Id;
             user.DepartmentId = dto.DepartmentId;
             user.StudentCode = dto.StudentCode;
@@ -293,8 +321,12 @@ namespace LMS.Infrastructure.Services
             {
                 return ServiceResult<string>.Failure("Không tìm thấy người dùng");
             }
-
-            var newPassword = GenerateRandomPassword();
+            var newPassword = GenerateDoBToPasswordById(user.Id);
+            if (string.IsNullOrEmpty(newPassword))
+            {
+                // fallback random
+                newPassword = Guid.NewGuid().ToString("N").Substring(0, 8);
+            }
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
             user.MustChangePassword = true;
             user.UpdatedAt = DateTime.UtcNow;
@@ -304,13 +336,216 @@ namespace LMS.Infrastructure.Services
             return ServiceResult<string>.Success(newPassword, "Reset mật khẩu thành công");
         }
 
-        private string GenerateRandomPassword()
+        private string GenerateDoBToPasswordById(Guid userId)
         {
             // Generate 8-character password with letters and numbers
-            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-            var random = new Random();
-            return new string(Enumerable.Repeat(chars, 8)
-                .Select(s => s[random.Next(s.Length)]).ToArray());
+            var doB = _db.AppUsers.Where(u => u.Id == userId).Select(u => u.DateOfBirth).FirstOrDefault();
+            if (doB.HasValue)
+            {
+                return doB.Value.ToString("dd/MM/yyyy");
+            }
+            return null;
+        }
+
+        public async Task<ServiceResult<ImportUserResultDto>> ImportUsersFromExcelAsync(Stream fileStream)
+        {
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
+            var result = new ImportUserResultDto();
+            var usersToCreate = new List<Domain.Entities.Users.AppUser>();
+            var usersToUpdate = new List<Domain.Entities.Users.AppUser>();
+
+            using (var package = new OfficeOpenXml.ExcelPackage(fileStream))
+            {
+                var worksheet = package.Workbook.Worksheets.FirstOrDefault();
+                if (worksheet == null)
+                    return ServiceResult<ImportUserResultDto>.Failure("File Excel không hợp lệ hoặc không có sheet nào.");
+
+                var rowCount = worksheet.Dimension.Rows;
+
+                // Load lookup data for performance
+                var existingUsers = await _db.AppUsers.ToDictionaryAsync(u => u.Email.ToLower());
+                var roles = await _db.AppRoles.ToDictionaryAsync(r => r.RoleName.ToLower());
+                var departments = await _db.Departments.ToDictionaryAsync(d => d.Code.ToLower());
+
+                for (int row = 2; row <= rowCount; row++)
+                {
+                    try
+                    {
+                        var email = worksheet.Cells[row, 1].Value?.ToString()?.Trim();
+                        var fullName = worksheet.Cells[row, 2].Value?.ToString()?.Trim();
+                        var roleName = worksheet.Cells[row, 3].Value?.ToString()?.Trim();
+                        var deptCode = worksheet.Cells[row, 4].Value?.ToString()?.Trim();
+                        var dobString = worksheet.Cells[row, 5].Value?.ToString()?.Trim();
+                        var studentCode = worksheet.Cells[row, 6].Value?.ToString()?.Trim();
+
+                        if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(fullName) || string.IsNullOrEmpty(roleName))
+                        {
+                            result.Errors.Add($"Dòng {row}: Thiếu thông tin bắt buộc (Email, FullName, Role).");
+                            continue;
+                        }
+
+                        if (!roles.TryGetValue(roleName.ToLower(), out var role))
+                        {
+                            result.Errors.Add($"Dòng {row}: Role '{roleName}' không tồn tại.");
+                            continue;
+                        }
+
+                        Guid? deptId = null;
+                        if (!string.IsNullOrEmpty(deptCode) && departments.TryGetValue(deptCode.ToLower(), out var dept))
+                        {
+                            deptId = dept.Id;
+                        }
+                        else if (!string.IsNullOrEmpty(deptCode))
+                        {
+                            result.Errors.Add($"Dòng {row}: Mã khoa '{deptCode}' không tồn tại.");
+                            continue;
+                        }
+
+                        DateTime? dob = null;
+                        if (DateTime.TryParse(dobString, out var date))
+                        {
+                            dob = date;
+                        }
+
+                        if (existingUsers.TryGetValue(email.ToLower(), out var existingUser))
+                        {
+                            // Update
+                            existingUser.FullName = fullName;
+                            existingUser.RoleId = role.Id;
+                            existingUser.DepartmentId = deptId;
+                            existingUser.DateOfBirth = dob;
+                            existingUser.IsDeleted = false; // Re-activate if was deleted
+                            existingUser.IsActive = true;
+                            if (!string.IsNullOrEmpty(studentCode)) existingUser.StudentCode = studentCode;
+                            existingUser.UpdatedAt = DateTime.UtcNow;
+                            
+                            // Track for update (EF Core tracks automatically, but we can verify)
+                            result.UpdatedCount++;
+                        }
+                        else
+                        {
+                            // Create
+                            var password = dob?.ToString("ddMMyyyy") ?? "12345678"; // Default password
+                            var newUser = new Domain.Entities.Users.AppUser
+                            {
+                                Id = Guid.NewGuid(),
+                                Email = email,
+                                FullName = fullName,
+                                PasswordHash = BCrypt.Net.BCrypt.HashPassword(password), // Should inject PasswordHelper but using BCrypt as before
+                                RoleId = role.Id,
+                                DepartmentId = deptId,
+                                DateOfBirth = dob,
+                                StudentCode = studentCode,
+                                MustChangePassword = true,
+                                IsActive = true,
+                                CreatedAt = DateTime.UtcNow
+                            };
+                            usersToCreate.Add(newUser);
+                            existingUsers.Add(email.ToLower(), newUser); // Prevent duplicates in same file
+                            result.CreatedCount++;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        result.Errors.Add($"Dòng {row}: Lỗi xử lý - {ex.Message}");
+                    }
+                }
+            }
+
+            if (usersToCreate.Any())
+            {
+                await _db.AppUsers.AddRangeAsync(usersToCreate);
+            }
+
+            await _db.SaveChangesAsync(); // Saves both updates and inserts
+
+            return ServiceResult<ImportUserResultDto>.Success(result, $"Import hoàn tất. Thêm mới: {result.CreatedCount}, Cập nhật: {result.UpdatedCount}, Lỗi: {result.Errors.Count}");
+        }
+        public async Task<ServiceResult<DashboardStatsDto>> GetDashboardStatsAsync()
+        {
+            try
+            {
+                var stats = new DashboardStatsDto();
+
+                // 1. Stats Counts
+                stats.TotalUsers = await _db.AppUsers.CountAsync(u => !u.IsDeleted);
+                stats.TotalLecturers = await _db.AppUsers.CountAsync(u => !u.IsDeleted && u.Role.RoleName == "Lecturer");
+                stats.TotalStudents = await _db.AppUsers.CountAsync(u => !u.IsDeleted && u.Role.RoleName == "Student");
+                stats.TotalCourses = await _db.Courses.CountAsync(c => !c.IsDeleted);
+                // Assuming active means not deleted for now. Or check Semester is current? Keep simple: Not Deleted
+                stats.ActiveCourses = stats.TotalCourses; 
+
+                // 2. Recent Activities (Mock by querying latest CreatedAt)
+                var activities = new List<RecentActivityDto>();
+
+                // Latest Users
+                var recentUsers = await _db.AppUsers
+                    .Include(u => u.Role)
+                    .Where(u => !u.IsDeleted)
+                    .OrderByDescending(u => u.CreatedAt)
+                    .Take(5)
+                    .Select(u => new 
+                    { 
+                        u.FullName, 
+                        u.Role.RoleName, 
+                        u.CreatedAt 
+                    })
+                    .ToListAsync();
+
+                foreach (var u in recentUsers)
+                {
+                    var roleText = u.RoleName == "Student" ? "sinh viên" : (u.RoleName == "Lecturer" ? "giảng viên" : "người dùng");
+                    activities.Add(new RecentActivityDto
+                    {
+                        Type = "user",
+                        Action = $"Thêm {roleText} mới: {u.FullName}",
+                        Time = u.CreatedAt,
+                        TimeFormatted = CalculateTimeAgo(u.CreatedAt)
+                    });
+                }
+
+                // Latest Courses
+                var recentCourses = await _db.Courses
+                    .Where(c => !c.IsDeleted)
+                    .OrderByDescending(c => c.CreatedAt)
+                    .Take(5)
+                    .Select(c => new { c.Name, c.CreatedAt })
+                    .ToListAsync();
+
+                foreach (var c in recentCourses)
+                {
+                    activities.Add(new RecentActivityDto
+                    {
+                        Type = "course",
+                        Action = $"Tạo khóa học \"{c.Name}\"",
+                        Time = c.CreatedAt,
+                        TimeFormatted = CalculateTimeAgo(c.CreatedAt)
+                    });
+                }
+
+                // Mix and sort
+                stats.RecentActivities = activities
+                    .OrderByDescending(a => a.Time)
+                    .Take(10)
+                    .ToList();
+
+                return ServiceResult<DashboardStatsDto>.Success(stats);
+            }
+            catch (Exception ex)
+            {
+                return ServiceResult<DashboardStatsDto>.Failure("Lỗi khi lấy dữ liệu thống kê", ex.Message);
+            }
+        }
+
+        private string CalculateTimeAgo(DateTime dateTime)
+        {
+            var span = DateTime.UtcNow - dateTime;
+            if (span.TotalMinutes < 1) return "Vừa xong";
+            if (span.TotalMinutes < 60) return $"{(int)span.TotalMinutes} phút trước";
+            if (span.TotalHours < 24) return $"{(int)span.TotalHours} giờ trước";
+            if (span.TotalDays < 30) return $"{(int)span.TotalDays} ngày trước";
+            return dateTime.ToString("dd/MM/yyyy");
         }
     }
 }

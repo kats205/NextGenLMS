@@ -1,26 +1,47 @@
-﻿using LMS.Application.Admin;
+using LMS.Application.DTOs.Admin;
+using LMS.Application.DTOs.Common;
+using LMS.Application.Interfaces;
 using LMS.Domain.Constant;
 using LMS.Infrastructure.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using static LMS.Application.Common.ServiceResult;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using static LMS.Application.DTOs.Common.ServiceResult;
 
 namespace LMS.API.Controllers
 {
-    [Authorize(Roles = UserRoles.Admin)]
     [ApiController]
-    [Route("api/admin/users")]
-    public class AdminController: ControllerBase
+    [Route("api/admin")]
+    [Authorize(Policy = "AdminOnly")]
+    public class AdminController : ControllerBase
     {
         private readonly IAdminUserService _service;
 
         public AdminController(IAdminUserService service) => _service = service;
 
-        [HttpGet]
+        [HttpGet("stats")]
+        public async Task<IActionResult> GetDashboardStats()
+        {
+            var result = await _service.GetDashboardStatsAsync();
+            if (!result.IsSuccess)
+            {
+                return BadRequest(new ApiResponse<DashboardStatsDto> { Success = false, Message = result.Message });
+            }
+            return Ok(new ApiResponse<DashboardStatsDto> { Success = true, Data = result.Data });
+        }
+
+        [HttpGet("users")]
         public async Task<IActionResult> GetUsers([FromQuery] UserQueryParams query)
         {
             var result = await _service.GetUserAsync(query);
-            return Ok(result);
+            return Ok(new ApiResponse<PagedResultDto<UserListItemDto>>
+            {
+                Success = true,
+                Data = result
+            });
         }
         [HttpGet("{userId}")]
         public async Task<IActionResult> GetUserById(Guid userId)
@@ -48,14 +69,7 @@ namespace LMS.API.Controllers
         public async Task<IActionResult> CreateUser([FromBody] CreateUserDto dto)
         {
             if (!ModelState.IsValid)
-            {
-                return BadRequest(new ApiResponse<object>
-                {
-                    Success = false,
-                    Message = "Dữ liệu không hợp lệ",
-                    Errors = ModelState
-                });
-            }
+                return BadRequest(new ApiResponse<object> { Success = false, Message = "D? li?u kh�ng h?p l?", Errors = ModelState });
 
             var result = await _service.CreateUserAsync(dto);
 
@@ -76,6 +90,29 @@ namespace LMS.API.Controllers
             });
         }
 
+        [HttpPost("users/import")]
+        public async Task<IActionResult> ImportUsers(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest(new ApiResponse<object> { Success = false, Message = "Vui l�ng ch?n file Excel." });
+
+            if (!file.FileName.EndsWith(".xlsx"))
+                return BadRequest(new ApiResponse<object> { Success = false, Message = "Ch? ch?p nh?n file .xlsx" });
+
+            using var stream = file.OpenReadStream();
+            var result = await _service.ImportUsersFromExcelAsync(stream);
+
+            if (!result.IsSuccess)
+                return BadRequest(new ApiResponse<object> { Success = false, Message = result.Message });
+
+            return Ok(new ApiResponse<ImportUserResultDto>
+            {
+                Success = true,
+                Message = result.Message,
+                Data = result.Data
+            });
+        }
+
         [HttpPut("{userId}")]
         public async Task<IActionResult> UpdateUser(Guid userId, [FromBody] UpdateUserDto dto)
         {
@@ -89,25 +126,12 @@ namespace LMS.API.Controllers
             }
 
             if (!ModelState.IsValid)
-            {
-                return BadRequest(new ApiResponse<object>
-                {
-                    Success = false,
-                    Message = "Dữ liệu không hợp lệ",
-                    Errors = ModelState
-                });
-            }
+                return BadRequest(new ApiResponse<object> { Success = false, Message = "Dữ liệu không hợp lệ", Errors = ModelState });
 
             var result = await _service.UpdateUserAsync(dto);
 
             if (!result.IsSuccess)
-            {
-                return BadRequest(new ApiResponse<UserDetailDto>
-                {
-                    Success = false,
-                    Message = result.Message
-                });
-            }
+            return BadRequest(new ApiResponse<object> { Success = false, Message = result.Message });
 
             return Ok(new ApiResponse<UserDetailDto>
             {
@@ -116,6 +140,7 @@ namespace LMS.API.Controllers
                 Data = result.Data
             });
         }
+
 
         [HttpDelete("{userId}")]
         public async Task<IActionResult> DeleteUser(Guid userId)
@@ -131,11 +156,10 @@ namespace LMS.API.Controllers
                 });
             }
 
-            return Ok(new ApiResponse<bool>
+            return Ok(new ApiResponse<object>
             {
                 Success = true,
-                Message = result.Message,
-                Data = true
+                Message = result.Message
             });
         }
 
@@ -152,21 +176,13 @@ namespace LMS.API.Controllers
             }
 
             var result = await _service.ToggleUserStatusAsync(dto);
-
             if (!result.IsSuccess)
-            {
-                return BadRequest(new ApiResponse<bool>
-                {
-                    Success = false,
-                    Message = result.Message
-                });
-            }
+                return BadRequest(new ApiResponse<object> { Success = false, Message = result.Message });
 
-            return Ok(new ApiResponse<bool>
+            return Ok(new ApiResponse<object>
             {
                 Success = true,
-                Message = result.Message,
-                Data = true
+                Message = result.Message
             });
         }
 
@@ -188,8 +204,461 @@ namespace LMS.API.Controllers
             {
                 Success = true,
                 Message = result.Message,
-                Data = result.Data // New password
+                Data = result.Data // M?t kh?u m?i
             });
         }
+
+    }
+    [Route("api/admin/system-config")]
+    [ApiController]
+    [Authorize(Roles = "Admin")]
+    public class SystemConfigController : ControllerBase
+    {
+        private readonly ISystemConfigService _configService;
+        private readonly IBackUpService _backupService;
+
+        public SystemConfigController(ISystemConfigService configService, IBackUpService backupService)
+        {
+            _configService = configService;
+            _backupService = backupService;
+        }
+
+        /// <summary>
+        /// Lấy tất cả cấu hình hệ thống
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetAllConfigs()
+        {
+            var result = await _configService.GetAllConfigsAsync();
+
+            if (!result.IsSuccess)
+            {
+                return BadRequest(new ApiResponse<SystemConfigResponse>
+                {
+                    Success = false,
+                    Message = result.Message,
+                    Errors = result.Errors
+                });
+            }
+
+            return Ok(new ApiResponse<SystemConfigResponse>
+            {
+                Success = true,
+                Message = "Lấy cấu hình thành công",
+                Data = result.Data
+            });
+        }
+
+        /// <summary>
+        /// Lấy cấu hình theo key
+        /// </summary>
+        [HttpGet("{key}")]
+        public async Task<IActionResult> GetConfigByKey(string key)
+        {
+            var result = await _configService.GetConfigByKeyAsync(key);
+
+            if (!result.IsSuccess)
+            {
+                return NotFound(new ApiResponse<SystemConfigDto>
+                {
+                    Success = false,
+                    Message = result.Message
+                });
+            }
+
+            return Ok(new ApiResponse<SystemConfigDto>
+            {
+                Success = true,
+                Message = "Lấy cấu hình thành công",
+                Data = result.Data
+            });
+        }
+
+        /// <summary>
+        /// Cập nhật cấu hình hệ thống
+        /// </summary>
+        [HttpPut]
+        public async Task<IActionResult> UpdateConfigs([FromBody] SystemConfigUpdateRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Dữ liệu không hợp lệ",
+                    Errors = ModelState
+                });
+            }
+
+            var result = await _configService.UpdateMultipleConfigsAsync(request);
+
+            if (!result.IsSuccess)
+            {
+                return BadRequest(new ApiResponse<bool>
+                {
+                    Success = false,
+                    Message = result.Message,
+                    Errors = result.Errors
+                });
+            }
+
+            return Ok(new ApiResponse<bool>
+            {
+                Success = true,
+                Message = result.Message,
+                Data = true
+            });
+        }
+
+        /// <summary>
+        /// Lấy danh sách năm học
+        /// </summary>
+        [HttpGet("academic-years")]
+        public async Task<IActionResult> GetAcademicYears()
+        {
+            var result = await _configService.GetAcademicYearsAsync();
+
+            if (!result.IsSuccess)
+            {
+                return BadRequest(new ApiResponse<List<AcademicYearDto>>
+                {
+                    Success = false,
+                    Message = result.Message
+                });
+            }
+
+            return Ok(new ApiResponse<List<AcademicYearDto>>
+            {
+                Success = true,
+                Message = "Lấy danh sách năm học thành công",
+                Data = result.Data
+            });
+        }
+
+        /// <summary>
+        /// Lấy danh sách học kỳ
+        /// </summary>
+        [HttpGet("semesters")]
+        public async Task<IActionResult> GetSemesters()
+        {
+            var result = await _configService.GetSemestersAsync();
+
+            if (!result.IsSuccess)
+            {
+                return BadRequest(new ApiResponse<List<SemesterDto>>
+                {
+                    Success = false,
+                    Message = result.Message
+                });
+            }
+
+            return Ok(new ApiResponse<List<SemesterDto>>
+            {
+                Success = true,
+                Message = "Lấy danh sách học kỳ thành công",
+                Data = result.Data
+            });
+        }
+
+        /// <summary>
+        /// Sao lưu dữ liệu ngay
+        /// </summary>
+        [HttpPost("backup")]
+        public async Task<IActionResult> BackupNow()
+        {
+            var result = await _configService.BackupNowAsync();
+
+            if (!result.IsSuccess)
+            {
+                return BadRequest(new ApiResponse<string>
+                {
+                    Success = false,
+                    Message = result.Message
+                });
+            }
+
+            var filePath = result.Data;
+            if (!System.IO.File.Exists(filePath))
+            {
+                return NotFound(new ApiResponse<string>
+                {
+                     Success = false,
+                     Message = "File backup không tồn tại"
+                });
+            }
+
+            var fileBytes = await System.IO.File.ReadAllBytesAsync(filePath);
+            var fileName = System.IO.Path.GetFileName(filePath);
+
+            return File(fileBytes, "application/octet-stream", fileName);
+        }
+
+        /// <summary>
+        /// Test cấu hình email
+        /// </summary>
+        [HttpPost("test-email")]
+        public async Task<IActionResult> TestEmail()
+        {
+            var result = await _configService.TestEmailConfigAsync();
+
+            if (!result.IsSuccess)
+            {
+                return BadRequest(new ApiResponse<bool>
+                {
+                    Success = false,
+                    Message = result.Message
+                });
+            }
+
+            return Ok(new ApiResponse<bool>
+            {
+                Success = true,
+                Message = result.Message,
+                Data = true
+            });
+        }
+        [HttpPost("trigger-backup")]
+        public async Task<IActionResult> TriggerBackup()
+        {
+            try
+            {
+                var fileName = await _backupService.PerformBackupAsync();
+                return Ok(new { message = "Sao lưu thành công!", file = fileName });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Lỗi sao lưu: " + ex.Message });
+            }
+        }
+    }
+    [ApiController]
+    [Route("api/admin/[controller]")]
+    [Authorize(Roles = "Admin")]
+    public class CoursesController : ControllerBase
+    {
+        private readonly IAdminCourseService _courseService;
+        private readonly ICourseConfigService _ccfs;
+        public CoursesController(IAdminCourseService courseService, ICourseConfigService ccfs)
+        {
+            _courseService = courseService;
+            _ccfs = ccfs;
+        }
+
+        /// <summary>
+        /// Lấy danh sách khóa học với phân trang và tìm kiếm
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetCourses([FromQuery] CourseFilterDto filter)
+        {
+            var result = await _courseService.GetCoursesAsync(filter);
+            var response = ApiResponse<PagedResultDto<CourseDto>>.FromServiceResult(result);
+
+            return result.IsSuccess ? Ok(response) : BadRequest(response);
+        }
+        
+        [HttpPost("export-students")]
+        public async Task<IActionResult> ExportStudents([FromBody] ExportStudentsRequestDto request)
+        {
+            var result = await _courseService.ExportStudentsExcelAsync(request);
+            if (!result.IsSuccess)
+            {
+                return BadRequest(new ApiResponse<string> { Success = false, Message = result.Message });
+            }
+
+            var fileName = $"Danh_sach_sinh_vien_{DateTime.UtcNow:yyyyMMddHHmmss}.xlsx";
+            return File(result.Data, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+        }
+
+        /// <summary>
+        /// Lấy chi tiết khóa học theo ID
+        /// </summary>
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetCourseById(Guid id)
+        {
+            var result = await _courseService.GetCourseByIdAsync(id);
+            var response = ApiResponse<CourseDetailDto>.FromServiceResult(result);
+
+            return result.IsSuccess ? Ok(response) : NotFound(response);
+        }
+
+        /// <summary>
+        /// Tạo khóa học mới
+        /// </summary>
+        [HttpPost]
+        [Authorize(Roles = UserRoles.Admin)]
+        public async Task<IActionResult> CreateCourse([FromBody] CreateCourseDto dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ApiResponse<CourseDto>.FailureResponse(
+                    "Dữ liệu không hợp lệ",
+                    ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList()
+                ));
+            }
+
+            var result = await _courseService.CreateCourseAsync(dto);
+            var response = ApiResponse<CourseDto>.FromServiceResult(result);
+
+            if (result.IsSuccess)
+            {
+                return CreatedAtAction(
+                    nameof(GetCourseById),
+                    new { id = result.Data!.Id },
+                    response
+                );
+            }
+
+            return BadRequest(response);
+        }
+
+        /// <summary>
+        /// Cập nhật thông tin khóa học
+        /// </summary>
+        [HttpPut("{id}")]
+        [Authorize(Roles = "Admin,lecturer")]
+        public async Task<IActionResult> UpdateCourse(Guid id, [FromBody] UpdateCourseDto dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ApiResponse<CourseDto>.FailureResponse(
+                    "Dữ liệu không hợp lệ",
+                    ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList()
+                ));
+            }
+
+            var result = await _courseService.UpdateCourseAsync(id, dto);
+            var response = ApiResponse<CourseDto>.FromServiceResult(result);
+
+            return result.IsSuccess ? Ok(response) : BadRequest(response);
+        }
+
+        /// <summary>
+        /// Xóa khóa học (soft delete)
+        /// </summary>
+        [HttpDelete("{id}")]
+        [Authorize(Roles = UserRoles.Admin)]
+        public async Task<IActionResult> DeleteCourse(Guid id)
+        {
+            var result = await _courseService.DeleteCourseAsync(id);
+            var response = ApiResponse.SuccessResponse(result.Message);
+
+            if (!result.IsSuccess)
+            {
+                response = ApiResponse.FailureResponse(result.Message, result.Errors);
+            }
+
+            return result.IsSuccess ? Ok(response) : NotFound(response);
+        }
+
+        /// <summary>
+        /// Phân quyền giảng viên cho khóa học
+        /// </summary>
+        [HttpPut("{courseId}/lecturer/{lecturerId}")]
+        [Authorize(Roles = UserRoles.Admin)]
+        public async Task<IActionResult> AssignLecturer(Guid courseId, Guid LecturerId)
+        {
+            var result = await _courseService.AssignLecturerAsync(courseId, LecturerId);
+            var response = ApiResponse.SuccessResponse(result.Message);
+
+            if (!result.IsSuccess)
+            {
+                response = ApiResponse.FailureResponse(result.Message, result.Errors);
+            }
+
+            return result.IsSuccess ? Ok(response) : BadRequest(response);
+        }
+
+        [HttpDelete("{courseId}/lecturer/{lecturerId}")]
+        [Authorize(Roles = UserRoles.Admin)]
+        public async Task<IActionResult> RemoveLecturer(Guid courseId, Guid lecturerId)
+        {
+            var result = await _courseService.RemoveLecturerAsync(courseId, lecturerId);
+            var response = ApiResponse.SuccessResponse(result.Message);
+
+            if (!result.IsSuccess)
+            {
+                response = ApiResponse.FailureResponse(result.Message, result.Errors);
+            }
+
+            return result.IsSuccess ? Ok(response) : BadRequest(response);
+        }
+
+        [HttpPut("{courseId}/lecturer/{lecturerId}/primary")]
+        [Authorize(Roles = UserRoles.Admin)]
+        public async Task<IActionResult> SetPrimaryLecturer(Guid courseId, Guid lecturerId)
+        {
+            var result = await _courseService.SetPrimaryLecturerAsync(courseId, lecturerId);
+            var response = ApiResponse.SuccessResponse(result.Message);
+
+            if (!result.IsSuccess)
+            {
+                response = ApiResponse.FailureResponse(result.Message, result.Errors);
+            }
+
+            return result.IsSuccess ? Ok(response) : BadRequest(response);
+        }
+
+        /// <summary>
+        /// Lấy báo cáo thống kê khóa học
+        /// </summary>
+        [HttpGet("{id}/statistics")]
+        public async Task<IActionResult> GetCourseStatistics(Guid id)
+        {
+            var result = await _courseService.GetCourseStatisticsAsync(id);
+            var response = ApiResponse<CourseStatisticsDto>.FromServiceResult(result);
+
+            return result.IsSuccess ? Ok(response) : BadRequest(response);
+        }
+
+        /// <summary>
+        /// Lấy danh sach khoa
+        /// </summary>
+        /// 
+        [HttpGet("departments")]
+        [Authorize(Roles = UserRoles.Admin + "," + UserRoles.Lecturer + "," + UserRoles.Student)]
+        public async Task<IActionResult> GetDepartmentList()
+        {
+            var result = await _ccfs.getDepartmentList();
+
+            if (result.IsSuccess) {
+                return Ok(new ApiResponse<List<DepartmentDto>>
+                {
+                    Data = result.Data,
+                    Success = true
+                });
+            }
+            return BadRequest(new ApiResponse<List<DepartmentDto>>
+            {
+                Success = false,
+                Message = result.Message
+            });
+            
+        }
+
+        /// <summary>
+        /// Lấy danh sách ngành
+        /// </summary>
+
+        [HttpGet("majors")]
+        [Authorize(Roles = UserRoles.Admin + "," + UserRoles.Lecturer + "," + UserRoles.Student )]
+        public async Task<IActionResult> GetMajorList()
+        {
+            var result = await _ccfs.getMajorList();
+            if (result.IsSuccess)
+            {
+                return Ok(new ApiResponse<List<MajorDto>>
+                {
+                    Data = result.Data,
+                    Success = true
+                });
+            }
+            return BadRequest(new ApiResponse<List<MajorDto>>
+            {
+                Success = false,
+                Message = result.Message
+            });
+        }
+
+        
     }
 }

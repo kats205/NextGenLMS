@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using LMS.Domain.Entities.System;
 using LMS.Domain.Entities.Users;
 using LMS.Domain.Entities.Courses;
@@ -31,6 +31,7 @@ namespace LMS.Infrastructure.Data
         public DbSet<AppUser> AppUsers { get; set; } 
         public DbSet<AppRole> AppRoles { get; set; }
         public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
 
         // Courses
         public DbSet<Course> Courses { get; set; }
@@ -116,6 +117,9 @@ namespace LMS.Infrastructure.Data
                 .WithMany(qs => qs.Snapshots)
                 .HasForeignKey(s => s.QuizSubmissionId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // Seed Data
+            modelBuilder.Seed();
         }
     }
 }
