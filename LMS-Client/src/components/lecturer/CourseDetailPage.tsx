@@ -9,7 +9,8 @@ import { CourseNav } from "./CourseNav";
 import { CourseQuizzes } from "./CourseQuizzes";
 import { CourseGrading } from "./CourseGrading";
 import { CourseReport } from "./CourseReport";
-import { ChevronDown, ChevronRight, FileText, ClipboardList, Plus, FileVideo, File, Edit, Trash2, X, Upload, Link as LinkIcon } from "lucide-react";
+import { CourseDetailSkeleton } from "./CourseDetailSkeleton";
+import { ChevronDown, ChevronRight, FileText, ClipboardList, Plus, FileVideo, File, Edit, Trash2, X, Upload, Link as LinkIcon, Download } from "lucide-react";
 import { Button } from "../ui/button";
 
 type User = {
@@ -65,6 +66,9 @@ const CourseDetailPage = () => {
     const [showDeleteChapterModal, setShowDeleteChapterModal] = useState(false);
     const [chapterToDelete, setChapterToDelete] = useState<Chapter | null>(null);
     const [deletingChapter, setDeletingChapter] = useState(false);
+
+    // Export State
+    const [exportingId, setExportingId] = useState<string | null>(null);
 
     const user: User = JSON.parse(localStorage.getItem("user") || "{}");
 
@@ -344,8 +348,68 @@ const CourseDetailPage = () => {
         }
     };
 
+    const handleExportQuiz = async (quiz: Quiz) => {
+        try {
+            setExportingId(quiz.id);
+            const blob = await lecturerApi.exportQuizScore(quiz.id);
+
+            // Create safe filename from Vietnamese title
+            const toSafeFileName = (str: string) => {
+                // Manually map Vietnamese characters to ASCII
+                const map: Record<string, string> = {
+                    'a': 'a|á|à|ả|ã|ạ|ă|ắ|ằ|ẳ|ẵ|ặ|â|ấ|ầ|ẩ|ẫ|ậ',
+                    'A': 'A|Á|À|Ả|Ã|Ạ|Ă|Ắ|Ằ|Ẳ|Ẵ|Ặ|Â|Ấ|Ầ|Ẩ|Ẫ|Ậ',
+                    'd': 'd|đ',
+                    'D': 'D|Đ',
+                    'e': 'e|é|è|ẻ|ẽ|ẹ|ê|ế|ề|ể|ễ|ệ',
+                    'E': 'E|É|È|Ẻ|Ẽ|Ẹ|Ê|Ế|Ề|Ể|Ễ|Ệ',
+                    'i': 'i|í|ì|ỉ|ĩ|ị',
+                    'I': 'I|Í|Ì|Ỉ|Ĩ|Ị',
+                    'o': 'o|ó|ò|ỏ|õ|ọ|ô|ố|ồ|ổ|ỗ|ộ|ơ|ớ|ờ|ở|ỡ|ợ',
+                    'O': 'O|Ó|Ò|Ỏ|Õ|Ọ|Ô|Ố|Ồ|Ổ|Ỗ|Ộ|Ơ|Ớ|Ờ|Ở|Ỡ|Ợ',
+                    'u': 'u|ú|ù|ủ|ũ|ụ|ư|ứ|ừ|ử|ữ|ự',
+                    'U': 'U|Ú|Ù|Ủ|Ũ|Ụ|Ư|Ứ|Ừ|Ử|Ữ|Ự',
+                    'y': 'y|ý|ỳ|ỷ|ỹ|ỵ',
+                    'Y': 'Y|Ý|Ỳ|Ỷ|Ỹ|Ỵ'
+                };
+
+                let result = str;
+                for (const [replacement, pattern] of Object.entries(map)) {
+                    result = result.replace(new RegExp(pattern, 'g'), replacement);
+                }
+
+                // Keep alphanumeric, spaces, hyphens, underscores
+                result = result.replace(/[^a-zA-Z0-9\s-_]/g, '');
+                // Replace spaces with underscores
+                result = result.replace(/\s+/g, '_');
+                return result;
+            };
+
+            const safeTitle = toSafeFileName(quiz.title);
+
+            // Create object URL for download
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `Bang_diem_${safeTitle}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+
+            // Cleanup
+            link.parentNode?.removeChild(link);
+            window.URL.revokeObjectURL(url);
+
+            toast.success("Xuất bảng điểm thành công!");
+        } catch (error) {
+            console.error("Export failed:", error);
+            toast.error("Không thể xuất bảng điểm. Vui lòng thử lại.");
+        } finally {
+            setExportingId(null);
+        }
+    };
+
     if (loading) {
-        return <div className="text-center py-12">Đang tải...</div>;
+        return <CourseDetailSkeleton />;
     }
 
     if (!course) {
@@ -506,19 +570,46 @@ const CourseDetailPage = () => {
 
                                                         {/* Quizzes List */}
                                                         {content?.quizzes && content.quizzes.length > 0 && (
-                                                            <div className="divide-y border-t border-gray-100">
-                                                                {content.quizzes.map((quiz, quizIndex) => (
-                                                                    <div key={quiz.id} className="flex items-center justify-between p-3 px-6 hover:bg-gray-100 transition">
-                                                                        <div className="flex items-center gap-3">
-                                                                            <ClipboardList className="w-4 h-4 text-orange-500" />
-                                                                            <span className="text-sm">
-                                                                                Bài kiểm tra: {quiz.title}
-                                                                            </span>
-                                                                            {quiz.timeLimit && (
-                                                                                <span className="text-xs text-gray-400">
-                                                                                    ({quiz.timeLimit} phút)
+                                                            <div className="divide-y border-t border-gray-100 bg-gray-50/30">
+                                                                {content.quizzes.map((quiz) => (
+                                                                    <div key={quiz.id} className="group flex items-center justify-between p-4 px-6 hover:bg-white hover:shadow-sm transition-all duration-200">
+                                                                        <div className="flex items-center gap-4 flex-1">
+                                                                            <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
+                                                                                <ClipboardList className="w-5 h-5 text-orange-600" />
+                                                                            </div>
+                                                                            <div className="flex flex-col">
+                                                                                <span className="text-sm font-medium text-gray-900 group-hover:text-primary-600 transition-colors">
+                                                                                    {quiz.title}
                                                                                 </span>
-                                                                            )}
+                                                                                {quiz.timeLimit && (
+                                                                                    <span className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                                                                                        <span>⏱ {quiz.timeLimit} phút</span>
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+
+                                                                        <div className="flex items-center gap-3">
+                                                                            <Button
+                                                                                variant="outline"
+                                                                                size="sm"
+                                                                                className="h-9 border-green-200 text-green-700 hover:bg-green-50 hover:text-green-800 hover:border-green-300 transition-all shadow-sm"
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    handleExportQuiz(quiz);
+                                                                                }}
+                                                                                disabled={exportingId === quiz.id}
+                                                                            >
+                                                                                <Download className={`w-3.5 h-3.5 mr-2 ${exportingId === quiz.id ? 'animate-bounce' : ''}`} />
+                                                                                Bảng điểm
+                                                                            </Button>
+
+                                                                            {/* Placeholder for other actions */}
+                                                                            {/* 
+                                                                            <Button variant="ghost" size="sm" className="text-gray-400 hover:text-gray-600">
+                                                                                <Edit className="w-4 h-4" />
+                                                                            </Button>
+                                                                            */}
                                                                         </div>
                                                                     </div>
                                                                 ))}

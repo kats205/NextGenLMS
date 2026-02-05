@@ -17,6 +17,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 // EPPlus license (non-commercial use)
 ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+// QuestPDF license (Community)
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -136,6 +138,7 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
     });
 builder.Services.AddScoped<IBackUpService, BackupService>();
+builder.Services.AddScoped<IScoreExportService, ScoreExportService>();
 builder.Services.AddHostedService<BackupWorker>();
 
 
