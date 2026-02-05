@@ -33,7 +33,7 @@ export function CourseNav({ courseName }: CourseNavProps) {
             <div className="flex items-center gap-4 mb-4">
                 <Button
                     variant="ghost"
-                    className="text-gray-600 hover:text-blue-600"
+                    className="text-gray-600 hover:text-red-600"
                     onClick={() => navigate("/lecturer/dashboard")}
                 >
                     <ArrowLeft className="w-4 h-4 mr-2" />
@@ -57,9 +57,10 @@ export function CourseNav({ courseName }: CourseNavProps) {
                             key={tab.id}
                             variant={active ? "default" : "ghost"}
                             className={active
-                                ? "bg-blue-600 text-white"
-                                : "text-gray-600 hover:text-blue-600 hover:bg-blue-50"
+                                ? "!bg-red-600 !text-white hover:!bg-red-700"
+                                : "text-gray-600 hover:text-red-600 hover:bg-red-50"
                             }
+                            style={active ? { backgroundColor: '#dc2626', color: 'white' } : {}}
                             onClick={() => navigate(tab.path)}
                         >
                             <Icon className="w-4 h-4 mr-2" />

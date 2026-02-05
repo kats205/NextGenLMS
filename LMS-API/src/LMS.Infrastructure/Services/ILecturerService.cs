@@ -53,6 +53,8 @@ namespace LMS.Infrastructure.Services
         Task<List<QuestionDto>> GetQuestionsByTopicAsync(Guid topicId);
         Task<List<QuizQuestionDto>> GetQuestionsByQuizAsync(Guid quizId);
         Task<QuestionDto> CreateQuestionAsync(CreateQuestionDto dto);
+        Task<QuestionDto> UpdateQuestionAsync(Guid questionId, UpdateQuestionDto dto);
+        Task DeleteQuestionAsync(Guid questionId);
         Task AddQuestionsToQuizAsync(Guid quizId, List<AddQuestionDto> questions);
 
         // Students

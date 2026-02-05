@@ -6,6 +6,9 @@ import lecturerApi from "../../api/lecturerApi";
 import type { LecturerDashboard as DashboardType } from "./lecturer.types";
 import { LecturerNav } from "./LecturerNav";
 import { LecturerHeader } from "./LecturerHeader";
+import { X, Edit } from "lucide-react";
+import type { Course } from "./lecturer.types";
+
 
 export type User = {
     fullName: string;
@@ -29,6 +32,19 @@ const LecturerDashboard: React.FC = () => {
 
     const user: User = JSON.parse(localStorage.getItem("user") || "{}");
 
+
+    const [showEditModal, setShowEditModal] = useState(false);
+
+    const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+    const [isLoadingAction, setIsLoadingAction] = useState(false);
+
+    // Form states
+    const [formData, setFormData] = useState({
+        name: "",
+        description: "",
+        courseCode: "",
+    });
+
     useEffect(() => {
         loadDashboard();
     }, []);
@@ -48,6 +64,48 @@ const LecturerDashboard: React.FC = () => {
             setLoading(false);
         }
     };
+
+    const handleEditClick = (course: Course) => {
+        setSelectedCourse(course);
+        setFormData({
+            name: course.name,
+            description: course.description || "",
+            courseCode: course.courseCode,
+        });
+        setShowEditModal(true);
+    };
+
+
+
+    const handleUpdateCourse = async () => {
+        if (!selectedCourse) return;
+        if (!formData.name.trim()) {
+            toast.error("Vui lòng nhập tên khóa học");
+            return;
+        }
+
+        try {
+            setIsLoadingAction(true);
+            await lecturerApi.updateCourse({
+                id: selectedCourse.id,
+                name: formData.name,
+                description: formData.description,
+            });
+            toast.success("Cập nhật khóa học thành công");
+            setShowEditModal(false);
+            loadDashboard();
+        } catch (error: any) {
+            console.error("Failed to update course:", error);
+            toast.error("Không thể cập nhật khóa học");
+        } finally {
+            setIsLoadingAction(false);
+        }
+    };
+
+
+
+    // Placeholder for Create Course - In a real app, this would need Semester/year selection
+
 
     // Calculate totals from courses
     const totalStudents = dashboard?.courses.reduce((sum, c) => sum + c.totalStudents, 0) || 0;
@@ -71,7 +129,9 @@ const LecturerDashboard: React.FC = () => {
             <LecturerHeader user={user} />
 
             <div className="mx-auto" style={{ maxWidth: '1400px', padding: '24px' }}>
-                <LecturerNav />
+                <div className="flex justify-between items-center mb-6">
+                    <LecturerNav />
+                </div>
 
                 {/* Top Statistics Row - Grid 4 columns */}
                 <div style={{
@@ -88,16 +148,6 @@ const LecturerDashboard: React.FC = () => {
                             <svg style={{ width: '20px', height: '20px' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                 <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
                                 <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-                            </svg>
-                        }
-                    />
-                    <StatCard
-                        title="Tổng sinh viên"
-                        value={totalStudents}
-                        color={colors.orange}
-                        icon={
-                            <svg style={{ width: '20px', height: '20px' }} viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
                             </svg>
                         }
                     />
@@ -152,31 +202,31 @@ const LecturerDashboard: React.FC = () => {
                                         {course.courseCode} • {course.semesterName} {course.academicYearName}
                                     </p>
                                 </div>
-                                <button
-                                    style={{
-                                        padding: '8px',
-                                        color: '#9CA3AF',
-                                        backgroundColor: 'transparent',
-                                        border: 'none',
-                                        borderRadius: '8px',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s',
-                                    }}
-                                    onClick={() => navigate(`/lecturer/courses/${course.id}/edit`)}
-                                    title="Chỉnh sửa"
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.color = '#2563EB';
-                                        e.currentTarget.style.backgroundColor = '#EFF6FF';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.color = '#9CA3AF';
-                                        e.currentTarget.style.backgroundColor = 'transparent';
-                                    }}
-                                >
-                                    <svg style={{ width: '20px', height: '20px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                    </svg>
-                                </button>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <button
+                                        style={{
+                                            padding: '8px',
+                                            color: '#6B7280',
+                                            backgroundColor: 'transparent',
+                                            border: 'none',
+                                            borderRadius: '8px',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s',
+                                        }}
+                                        onClick={() => handleEditClick(course)}
+                                        title="Chỉnh sửa"
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.color = '#2563EB';
+                                            e.currentTarget.style.backgroundColor = '#EFF6FF';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.color = '#6B7280';
+                                            e.currentTarget.style.backgroundColor = 'transparent';
+                                        }}
+                                    >
+                                        <Edit size={18} />
+                                    </button>
+                                </div>
                             </div>
 
                             {/* Metrics - Colored boxes */}
@@ -295,6 +345,83 @@ const LecturerDashboard: React.FC = () => {
                     ))}
                 </div>
             </div>
+
+
+
+            {/* Edit Course Modal */}
+            {showEditModal && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 9999
+                    }}
+                >
+                    <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-bold text-gray-900">Chỉnh sửa khóa học</h3>
+                            <button onClick={() => setShowEditModal(false)} className="text-gray-400 hover:text-gray-600">
+                                <X size={24} />
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Tên khóa học</label>
+                                <input
+                                    type="text"
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Mã khóa học</label>
+                                <input
+                                    type="text"
+                                    value={formData.courseCode}
+                                    disabled
+                                    className="w-full px-3 py-2 border rounded-lg bg-gray-50 text-gray-500 outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả</label>
+                                <textarea
+                                    value={formData.description}
+                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                    rows={3}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3 justify-end mt-6">
+                            <button
+                                onClick={() => setShowEditModal(false)}
+                                className="px-4 py-2 border rounded-lg hover:bg-gray-50 font-medium"
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                onClick={handleUpdateCourse}
+                                disabled={isLoadingAction}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50"
+                            >
+                                {isLoadingAction ? 'Đang lưu...' : 'Lưu thay đổi'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+
         </div>
     );
 };
