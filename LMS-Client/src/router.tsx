@@ -15,6 +15,8 @@ const ProgressPage = lazy(() => import('./components/student/ProgressPage').then
 const AssessmentListPage = lazy(() => import('./components/student/AssessmentListPage').then(module => ({ default: module.AssessmentListPage })));
 const AssessmentAttemptPage = lazy(() => import('./components/student/AssessmentAttemptPage').then(module => ({ default: module.AssessmentAttemptPage })));
 const CoursePlayerPage = lazy(() => import('./components/student/CoursePlayerPage').then(module => ({ default: module.CoursePlayerPage })));
+const QuizViewerPage = lazy(() => import('./components/student/QuizViewerPage').then(module => ({ default: module.QuizViewerPage })));
+const QuizResult = lazy(() => import('./components/student/QuizResult').then(module => ({ default: module.QuizResult })));
 
 // Lecturer
 const LecturerDashboard = lazy(() =>
@@ -128,6 +130,22 @@ export const router: ReturnType<typeof createBrowserRouter> = createBrowserRoute
                 element: (
                     <SuspenseLayout>
                         <CoursePlayerPage user={getStoredUser()} />
+                    </SuspenseLayout>
+                ),
+            },
+            {
+                path: '/student/quiz/:quizId',
+                element: (
+                    <SuspenseLayout>
+                        <QuizViewerPage />
+                    </SuspenseLayout>
+                ),
+            },
+            {
+                path: '/student/quiz-result/:submissionId',
+                element: (
+                    <SuspenseLayout>
+                        <QuizResult />
                     </SuspenseLayout>
                 ),
             },

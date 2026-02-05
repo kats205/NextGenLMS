@@ -6,8 +6,8 @@ namespace LMS.Domain.Entities.Content
     public enum ContentType
     {
         Lesson = 1,
-        Quiz = 2,
-        Assignment = 3,
+        Assignment = 2,  // Tự luận
+        Quiz = 3,        // Trắc nghiệm  
         Announcement = 4
     }
 
@@ -48,6 +48,20 @@ namespace LMS.Domain.Entities.Content
         public DateTime? DueDate { get; set; }
         public int MaxScore { get; set; }
         public string? Description { get; set; }
+        public string? Instructions { get; set; }
+        public string? AttachmentsJson { get; set; } // JSON array of reference files
+        public bool AllowLateSubmission { get; set; } = true;
+        public int LatePenaltyPercent { get; set; } = 0; // Percentage penalty per day late
+        public int MaxAttempts { get; set; } = 1; // -1 for unlimited
+        public bool RequireTextSubmission { get; set; } = false;
+        public bool AllowFileSubmission { get; set; } = true;
+        public bool AllowLinkSubmission { get; set; } = true;
+        public string? AllowedFileTypes { get; set; } // JSON array of allowed file extensions
+        public long MaxFileSize { get; set; } = 10485760; // 10MB default
+
+        // We'll use EssaySubmission table for assignment submissions
+        // Each assignment will have a corresponding "virtual question" for submissions
+        public Guid? VirtualQuestionId { get; set; } // Links to a Question that represents this assignment
     }
 
     public class Announcement : CourseContent

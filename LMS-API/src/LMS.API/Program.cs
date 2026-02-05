@@ -141,6 +141,11 @@ builder.Services.AddScoped<IBackUpService, BackupService>();
 builder.Services.AddScoped<IScoreExportService, ScoreExportService>();
 builder.Services.AddHostedService<BackupWorker>();
 
+builder.Services.AddScoped<ICourseService, CourseService>();
+builder.Services.AddScoped<IAssignmentService, AssignmentService>();
+builder.Services.AddScoped<ILessonProgressService, LessonProgressService>();
+builder.Services.AddScoped<ICourseProgressService, CourseProgressService>();
+builder.Services.AddScoped<IQuizService, QuizService>();
 
 var app = builder.Build();
 

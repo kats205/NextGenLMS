@@ -6,7 +6,7 @@ namespace LMS.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+    [AllowAnonymous]
     public class UploadController : ControllerBase
     {
         private readonly IFileStorageService _fileStorageService;
@@ -23,6 +23,7 @@ namespace LMS.API.Controllers
         /// <param name="folder">Optional folder name (default: images)</param>
         /// <returns>The URL of the uploaded image</returns>
         [HttpPost("image")]
+        [AllowAnonymous]
         public async Task<IActionResult> UploadImage(IFormFile file, [FromQuery] string folder = "images")
         {
             try
@@ -61,6 +62,7 @@ namespace LMS.API.Controllers
         /// <param name="folder">Optional folder name (default: videos)</param>
         /// <returns>The URL of the uploaded video</returns>
         [HttpPost("video")]
+        [AllowAnonymous]
         public async Task<IActionResult> UploadVideo(IFormFile file, [FromQuery] string folder = "videos")
         {
             try
@@ -99,6 +101,7 @@ namespace LMS.API.Controllers
         /// <param name="folder">Optional folder name (default: documents)</param>
         /// <returns>The URL of the uploaded file</returns>
         [HttpPost("document")]
+        [AllowAnonymous]
         public async Task<IActionResult> UploadDocument(IFormFile file, [FromQuery] string folder = "documents")
         {
             try
@@ -144,6 +147,7 @@ namespace LMS.API.Controllers
         /// </summary>
         /// <param name="publicId">The Cloudinary public ID of the file</param>
         [HttpDelete]
+        [AllowAnonymous]
         public async Task<IActionResult> DeleteFile([FromQuery] string publicId)
         {
             try
