@@ -1,5 +1,6 @@
 using LMS.Application.Common;
-using static LMS.Application.Common.ServiceResult;
+using LMS.Application.DTOs.Common;
+
 
 namespace LMS.Application.Interfaces
 {

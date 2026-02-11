@@ -448,10 +448,10 @@ namespace LMS.API.Controllers
         /// Lấy danh sách khóa học với phân trang và tìm kiếm
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetCourses([FromQuery] CourseFilterDto filter)
+        public async Task<IActionResult> GetCourses([FromQuery] AdminCourseFilterDto filter)
         {
             var result = await _courseService.GetCoursesAsync(filter);
-            var response = ApiResponse<PagedResultDto<CourseDto>>.FromServiceResult(result);
+            var response = ApiResponse<PagedResultDto<AdminCourseDto>>.FromServiceResult(result);
 
             return result.IsSuccess ? Ok(response) : BadRequest(response);
         }
@@ -476,7 +476,7 @@ namespace LMS.API.Controllers
         public async Task<IActionResult> GetCourseById(Guid id)
         {
             var result = await _courseService.GetCourseByIdAsync(id);
-            var response = ApiResponse<CourseDetailDto>.FromServiceResult(result);
+            var response = ApiResponse<AdminCourseDetailDto>.FromServiceResult(result);
 
             return result.IsSuccess ? Ok(response) : NotFound(response);
         }
@@ -486,18 +486,18 @@ namespace LMS.API.Controllers
         /// </summary>
         [HttpPost]
         [Authorize(Roles = UserRoles.Admin)]
-        public async Task<IActionResult> CreateCourse([FromBody] CreateCourseDto dto)
+        public async Task<IActionResult> CreateCourse([FromBody] AdminCreateCourseDto dto)
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ApiResponse<CourseDto>.FailureResponse(
+                return BadRequest(ApiResponse<AdminCourseDto>.FailureResponse(
                     "Dữ liệu không hợp lệ",
                     ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList()
                 ));
             }
 
             var result = await _courseService.CreateCourseAsync(dto);
-            var response = ApiResponse<CourseDto>.FromServiceResult(result);
+            var response = ApiResponse<AdminCourseDto>.FromServiceResult(result);
 
             if (result.IsSuccess)
             {
@@ -516,18 +516,18 @@ namespace LMS.API.Controllers
         /// </summary>
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin,lecturer")]
-        public async Task<IActionResult> UpdateCourse(Guid id, [FromBody] UpdateCourseDto dto)
+        public async Task<IActionResult> UpdateCourse(Guid id, [FromBody] AdminUpdateCourseDto dto)
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ApiResponse<CourseDto>.FailureResponse(
+                return BadRequest(ApiResponse<AdminCourseDto>.FailureResponse(
                     "Dữ liệu không hợp lệ",
                     ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList()
                 ));
             }
 
             var result = await _courseService.UpdateCourseAsync(id, dto);
-            var response = ApiResponse<CourseDto>.FromServiceResult(result);
+            var response = ApiResponse<AdminCourseDto>.FromServiceResult(result);
 
             return result.IsSuccess ? Ok(response) : BadRequest(response);
         }
@@ -605,7 +605,7 @@ namespace LMS.API.Controllers
         public async Task<IActionResult> GetCourseStatistics(Guid id)
         {
             var result = await _courseService.GetCourseStatisticsAsync(id);
-            var response = ApiResponse<CourseStatisticsDto>.FromServiceResult(result);
+            var response = ApiResponse<AdminCourseStatisticsDto>.FromServiceResult(result);
 
             return result.IsSuccess ? Ok(response) : BadRequest(response);
         }

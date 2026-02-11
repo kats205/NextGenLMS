@@ -8,6 +8,7 @@ using LMS.Infrastructure.Data;
 using LMS.Domain.Entities.Content;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using LMS.Application.DTOs.Common;
 
 namespace LMS.Infrastructure.Services
 {

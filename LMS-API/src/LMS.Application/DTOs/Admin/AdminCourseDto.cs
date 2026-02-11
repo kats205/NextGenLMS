@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace LMS.Application.DTOs.Admin
 {
-    public class CourseLecturerDto
+    public class AdminCourseLecturerDto
     {
         public Guid Id { get; set; }
         public string FullName { get; set; } = string.Empty;
@@ -16,7 +16,7 @@ namespace LMS.Application.DTOs.Admin
         public bool IsPrimary { get; set; }
     }
 
-    public class CourseDto
+    public class AdminCourseDto
     {
         public Guid Id { get; set; }
         public string CourseCode { get; set; } = string.Empty;
@@ -31,19 +31,19 @@ namespace LMS.Application.DTOs.Admin
         public string MajorName { get; set; } = string.Empty;
         public Guid? PrimaryLecturerId { get; set; }
         public string? PrimaryLecturerName { get; set; }
-        public List<CourseLecturerDto> Lecturers { get; set; } = new();
+        public List<AdminCourseLecturerDto> Lecturers { get; set; } = new();
         public int StudentCount { get; set; }
         public DateTime CreatedAt { get; set; }
     }
 
-    public class CourseDetailDto : CourseDto
+    public class AdminCourseDetailDto : AdminCourseDto
     {
-        public List<StudentDto> Students { get; set; } = new();
+        public List<AdminStudentDto> Students { get; set; } = new();
         public int ChapterCount { get; set; }
         public int ContentCount { get; set; }
     }
 
-    public class StudentDto
+    public class AdminStudentDto
     {
         public Guid Id { get; set; }
         public string FullName { get; set; } = string.Empty;
@@ -52,7 +52,7 @@ namespace LMS.Application.DTOs.Admin
         public DateTime EnrolledDate { get; set; }
     }
 
-    public class CreateCourseDto
+    public class AdminCreateCourseDto
     {
         public string CourseCode { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
@@ -64,7 +64,7 @@ namespace LMS.Application.DTOs.Admin
         public List<Guid>? LecturerId { get; set; }
     }
 
-    public class UpdateCourseDto
+    public class AdminUpdateCourseDto
     {
         public string? Name { get; set; }
         public string? Description { get; set; }
@@ -73,7 +73,7 @@ namespace LMS.Application.DTOs.Admin
         public Guid? MajorId { get; set; }
     }
 
-    public class CourseFilterDto
+    public class AdminCourseFilterDto
     {
         public string? SearchTerm { get; set; }
         public Guid? SemesterId { get; set; }
@@ -84,7 +84,7 @@ namespace LMS.Application.DTOs.Admin
         public int PageSize { get; set; } = 10;
     }
 
-    public class CourseStatisticsDto
+    public class AdminCourseStatisticsDto
     {
         public Guid CourseId { get; set; }
         public string CourseName { get; set; } = string.Empty;

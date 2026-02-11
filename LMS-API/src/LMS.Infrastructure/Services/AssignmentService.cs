@@ -6,7 +6,7 @@ using LMS.Domain.Entities.Assessment;
 using LMS.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
-using static LMS.Application.Common.ServiceResult;
+using LMS.Application.DTOs.Common;
 
 namespace LMS.Infrastructure.Services
 {

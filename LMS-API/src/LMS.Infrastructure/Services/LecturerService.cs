@@ -305,6 +305,7 @@ namespace LMS.Infrastructure.Services
         public async Task<LessonDto> CreateLessonAsync(CreateLessonDto dto)
         {
             var lesson = _mapper.Map<Lesson>(dto);
+            lesson.Type = ContentType.Lesson; // Set Type = 1 (Bài giảng)
 
             _context.Add(lesson);
             await _context.SaveChangesAsync();
@@ -327,6 +328,8 @@ namespace LMS.Infrastructure.Services
         public async Task<QuizDto> CreateQuizAsync(CreateQuizDto dto)
         {
             var quiz = _mapper.Map<Quiz>(dto);
+            quiz.Type = ContentType.Quiz; // Set Type = 3 (Trắc nghiệm)
+            
             _context.Add(quiz);
             await _context.SaveChangesAsync();
 
@@ -1108,6 +1111,183 @@ namespace LMS.Infrastructure.Services
                 Lessons = lessonDtos,
                 Quizzes = quizDtos
             };
+        }
+
+        // ==================== ASSIGNMENTS ====================
+
+        public async Task<List<AssignmentDto>> GetAssignmentsByChapterAsync(Guid chapterId)
+        {
+            var assignments = await _context.Assignments
+                .Where(a => a.ChapterId == chapterId && !a.IsDeleted)
+                .OrderBy(a => a.OrderIndex)
+                .ToListAsync();
+
+            var result = _mapper.Map<List<AssignmentDto>>(assignments);
+
+            // Calculate statistics for each assignment
+            foreach (var dto in result)
+            {
+                var assignmentId = dto.Id;
+                var submissions = await _context.EssaySubmissions
+                    .Include(es => es.QuizSubmission)
+                    .Where(es => es.QuizSubmission != null && 
+                                _context.Assignments.Any(a => a.VirtualQuestionId == es.QuestionId && a.Id == assignmentId))
+                    .ToListAsync();
+
+                dto.TotalSubmissions = submissions.Count;
+                dto.CompletedSubmissions = submissions.Count(s => s.QuizSubmission!.Status == "Submitted");
+                dto.AverageScore = submissions.Any() ? submissions.Where(s => s.Score.HasValue).Average(s => s.Score ?? 0) : 0;
+                dto.PassedCount = submissions.Count(s => s.Score >= dto.MaxScore * 0.5); // 50% pass rate
+                dto.FailedCount = dto.CompletedSubmissions - dto.PassedCount;
+            }
+
+            return result;
+        }
+
+        public async Task<List<AssignmentDto>> GetAssignmentsByCourseAsync(Guid courseId)
+        {
+            var assignments = await _context.Assignments
+                .Where(a => a.Chapter.CourseId == courseId && !a.IsDeleted)
+                .OrderBy(a => a.Chapter.OrderIndex)
+                .ThenBy(a => a.OrderIndex)
+                .ToListAsync();
+
+            return _mapper.Map<List<AssignmentDto>>(assignments);
+        }
+
+        public async Task<AssignmentDto> GetAssignmentByIdAsync(Guid assignmentId)
+        {
+            var assignment = await _context.Assignments
+                .FirstOrDefaultAsync(a => a.Id == assignmentId && !a.IsDeleted);
+
+            if (assignment == null)
+                throw new Exception("Không tìm thấy bài tập");
+
+            var dto = _mapper.Map<AssignmentDto>(assignment);
+
+            // Calculate statistics
+            var submissions = await _context.EssaySubmissions
+                .Include(es => es.QuizSubmission)
+                .Where(es => es.QuizSubmission != null && 
+                            _context.Assignments.Any(a => a.VirtualQuestionId == es.QuestionId && a.Id == assignmentId))
+                .ToListAsync();
+
+            dto.TotalSubmissions = submissions.Count;
+            dto.CompletedSubmissions = submissions.Count(s => s.QuizSubmission!.Status == "Submitted");
+            dto.AverageScore = submissions.Any() ? submissions.Where(s => s.Score.HasValue).Average(s => s.Score ?? 0) : 0;
+            dto.PassedCount = submissions.Count(s => s.Score >= dto.MaxScore * 0.5);
+            dto.FailedCount = dto.CompletedSubmissions - dto.PassedCount;
+
+            return dto;
+        }
+
+        public async Task<AssignmentDto> CreateAssignmentAsync(CreateAssignmentDto dto)
+        {
+            var assignment = _mapper.Map<Assignment>(dto);
+            assignment.Type = ContentType.Assignment; // Set Type = 2 (Tự luận)
+
+            _context.Add(assignment);
+            await _context.SaveChangesAsync();
+
+            return _mapper.Map<AssignmentDto>(assignment);
+        }
+
+        public async Task<AssignmentDto> UpdateAssignmentAsync(Guid assignmentId, UpdateAssignmentDto dto)
+        {
+            var assignment = await _context.Assignments.FindAsync(assignmentId);
+            if (assignment == null || assignment.IsDeleted)
+                throw new Exception("Không tìm thấy bài tập");
+
+            _mapper.Map(dto, assignment);
+            assignment.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return await GetAssignmentByIdAsync(assignmentId);
+        }
+
+        public async Task DeleteAssignmentAsync(Guid assignmentId)
+        {
+            var assignment = await _context.Assignments.FindAsync(assignmentId);
+            if (assignment == null)
+                throw new Exception("Không tìm thấy bài tập");
+
+            assignment.IsDeleted = true;
+            assignment.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+        }
+
+        // ==================== ANNOUNCEMENTS ====================
+
+        public async Task<List<AnnouncementDto>> GetAnnouncementsByChapterAsync(Guid chapterId)
+        {
+            var announcements = await _context.Announcements
+                .Where(a => a.ChapterId == chapterId && !a.IsDeleted)
+                .OrderBy(a => a.OrderIndex)
+                .ToListAsync();
+
+            return _mapper.Map<List<AnnouncementDto>>(announcements);
+        }
+
+        public async Task<List<AnnouncementDto>> GetAnnouncementsByCourseAsync(Guid courseId)
+        {
+            var announcements = await _context.Announcements
+                .Where(a => a.Chapter.CourseId == courseId && !a.IsDeleted)
+                .OrderBy(a => a.Chapter.OrderIndex)
+                .ThenBy(a => a.OrderIndex)
+                .ToListAsync();
+
+            return _mapper.Map<List<AnnouncementDto>>(announcements);
+        }
+
+        public async Task<AnnouncementDto> GetAnnouncementByIdAsync(Guid announcementId)
+        {
+            var announcement = await _context.Announcements
+                .FirstOrDefaultAsync(a => a.Id == announcementId && !a.IsDeleted);
+
+            if (announcement == null)
+                throw new Exception("Không tìm thấy thông báo");
+
+            var dto = _mapper.Map<AnnouncementDto>(announcement);
+
+            // Calculate view count (placeholder - would need a separate tracking table)
+            dto.ViewCount = 0;
+
+            return dto;
+        }
+
+        public async Task<AnnouncementDto> CreateAnnouncementAsync(CreateAnnouncementDto dto)
+        {
+            var announcement = _mapper.Map<Announcement>(dto);
+            announcement.Type = ContentType.Announcement; // Set Type = 4 (Thông báo)
+
+            _context.Add(announcement);
+            await _context.SaveChangesAsync();
+
+            return _mapper.Map<AnnouncementDto>(announcement);
+        }
+
+        public async Task<AnnouncementDto> UpdateAnnouncementAsync(Guid announcementId, UpdateAnnouncementDto dto)
+        {
+            var announcement = await _context.Announcements.FindAsync(announcementId);
+            if (announcement == null || announcement.IsDeleted)
+                throw new Exception("Không tìm thấy thông báo");
+
+            _mapper.Map(dto, announcement);
+            announcement.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return await GetAnnouncementByIdAsync(announcementId);
+        }
+
+        public async Task DeleteAnnouncementAsync(Guid announcementId)
+        {
+            var announcement = await _context.Announcements.FindAsync(announcementId);
+            if (announcement == null)
+                throw new Exception("Không tìm thấy thông báo");
+
+            announcement.IsDeleted = true;
+            announcement.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
         }
     }
 }

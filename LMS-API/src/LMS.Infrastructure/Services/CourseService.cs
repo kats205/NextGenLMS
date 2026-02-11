@@ -5,7 +5,8 @@ using LMS.Domain.Entities.Courses;
 using LMS.Domain.Entities.Content;
 using LMS.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using static LMS.Application.Common.ServiceResult;
+
+using LMS.Application.DTOs.Common;
 
 namespace LMS.Infrastructure.Services
 {
