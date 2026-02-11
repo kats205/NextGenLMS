@@ -1,4 +1,5 @@
 using LMS.Application.Common;
+using LMS.Application.DTOs.Common;
 
 namespace LMS.Application.Interfaces
 {

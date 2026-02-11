@@ -26,7 +26,7 @@ namespace LMS.Infrastructure.Services
             _emailService = emailService;
         }
 
-        public async Task<ServiceResult<PagedResultDto<CourseDto>>> GetCoursesAsync(CourseFilterDto filter)
+        public async Task<ServiceResult<PagedResultDto<AdminCourseDto>>> GetCoursesAsync(AdminCourseFilterDto filter)
         {
             try
             {
@@ -68,7 +68,7 @@ namespace LMS.Infrastructure.Services
                     .OrderByDescending(c => c.CreatedAt)
                     .Skip((filter.PageNumber - 1) * filter.PageSize)
                     .Take(filter.PageSize)
-                    .Select(c => new CourseDto
+                    .Select(c => new AdminCourseDto
                     {
                         Id = c.Id,
                         CourseCode = c.CourseCode,
@@ -94,7 +94,7 @@ namespace LMS.Infrastructure.Services
                         Lecturers = c.Lecturers
                             .Where(cl => !cl.IsDeleted)
                             .OrderByDescending(cl => cl.IsPrimary)
-                            .Select(cl => new CourseLecturerDto
+                            .Select(cl => new AdminCourseLecturerDto
                             {
                                 Id = cl.LecturerId,
                                 FullName = cl.Lecturer!.FullName,
@@ -109,7 +109,7 @@ namespace LMS.Infrastructure.Services
                     })
                     .ToListAsync();
 
-                var result = new PagedResultDto<CourseDto>
+                var result = new PagedResultDto<AdminCourseDto>
                 {
                     Items = items,
                     Page = filter.PageNumber,
@@ -117,18 +117,18 @@ namespace LMS.Infrastructure.Services
                     TotalItems = totalCount
                 };
 
-                return ServiceResult<PagedResultDto<CourseDto>>.Success(result, "Lấy danh sách khóa học thành công");
+                return ServiceResult<PagedResultDto<AdminCourseDto>>.Success(result, "Lấy danh sách khóa học thành công");
             }
             catch (Exception ex)
             {
-                return ServiceResult<PagedResultDto<CourseDto>>.Failure(
+                return ServiceResult<PagedResultDto<AdminCourseDto>>.Failure(
                     "Lỗi khi lấy danh sách khóa học",
                     ex.Message
                 );
             }
         }
 
-        public async Task<ServiceResult<CourseDetailDto>> GetCourseByIdAsync(Guid id)
+        public async Task<ServiceResult<AdminCourseDetailDto>> GetCourseByIdAsync(Guid id)
         {
             try
             {
@@ -147,10 +147,10 @@ namespace LMS.Infrastructure.Services
 
                 if (course == null)
                 {
-                    return ServiceResult<CourseDetailDto>.Failure("Không tìm thấy khóa học");
+                    return ServiceResult<AdminCourseDetailDto>.Failure("Không tìm thấy khóa học");
                 }
 
-                var courseDetail = new CourseDetailDto
+                var courseDetail = new AdminCourseDetailDto
                 {
                     Id = course.Id,
                     CourseCode = course.CourseCode,
@@ -176,7 +176,7 @@ namespace LMS.Infrastructure.Services
                     Lecturers = course.Lecturers
                         .Where(cl => !cl.IsDeleted)
                         .OrderByDescending(cl => cl.IsPrimary)
-                        .Select(cl => new CourseLecturerDto
+                        .Select(cl => new AdminCourseLecturerDto
                         {
                             Id = cl.LecturerId,
                             FullName = cl.Lecturer!.FullName,
@@ -189,7 +189,7 @@ namespace LMS.Infrastructure.Services
                     CreatedAt = course.CreatedAt,
                     Students = course.Students
                         .Where(cs => !cs.IsDeleted)
-                        .Select(cs => new StudentDto
+                        .Select(cs => new AdminStudentDto
                         {
                             Id = cs.StudentId,
                             FullName = cs.Student!.FullName,
@@ -204,18 +204,18 @@ namespace LMS.Infrastructure.Services
                         .Count(c => !c.IsDeleted)
                 };
 
-                return ServiceResult<CourseDetailDto>.Success(courseDetail, "Lấy thông tin khóa học thành công");
+                return ServiceResult<AdminCourseDetailDto>.Success(courseDetail, "Lấy thông tin khóa học thành công");
             }
             catch (Exception ex)
             {
-                return ServiceResult<CourseDetailDto>.Failure(
+                return ServiceResult<AdminCourseDetailDto>.Failure(
                     "Lỗi khi lấy thông tin khóa học",
                     ex.Message
                 );
             }
         }
 
-        public async Task<ServiceResult<CourseDto>> CreateCourseAsync(CreateCourseDto dto)
+        public async Task<ServiceResult<AdminCourseDto>> CreateCourseAsync(AdminCreateCourseDto dto)
         {
             try
             {
@@ -225,26 +225,26 @@ namespace LMS.Infrastructure.Services
 
                 if (existingCourse)
                 {
-                    return ServiceResult<CourseDto>.Failure("Mã khóa học đã tồn tại");
+                    return ServiceResult<AdminCourseDto>.Failure("Mã khóa học đã tồn tại");
                 }
 
                 // Validate foreign keys
                 var semester = await _context.Semesters.FindAsync(dto.SemesterId);
                 if (semester == null || semester.IsDeleted)
                 {
-                    return ServiceResult<CourseDto>.Failure("Học kỳ không tồn tại");
+                    return ServiceResult<AdminCourseDto>.Failure("Học kỳ không tồn tại");
                 }
 
                 var academicYear = await _context.AcademicYears.FindAsync(dto.AcademicYearId);
                 if (academicYear == null || academicYear.IsDeleted)
                 {
-                    return ServiceResult<CourseDto>.Failure("Năm học không tồn tại");
+                    return ServiceResult<AdminCourseDto>.Failure("Năm học không tồn tại");
                 }
 
                 var major = await _context.Majors.FindAsync(dto.MajorId);
                 if (major == null || major.IsDeleted)
                 {
-                    return ServiceResult<CourseDto>.Failure("Ngành học không tồn tại");
+                    return ServiceResult<AdminCourseDto>.Failure("Ngành học không tồn tại");
                 }
 
                 if (dto.LecturerId != null && dto.LecturerId.Any())
@@ -257,7 +257,7 @@ namespace LMS.Infrastructure.Services
 
                     if (lecturers.Count != distinctLecturerIds.Count)
                     {
-                        return ServiceResult<CourseDto>.Failure("Giảng viên không tồn tại");
+                        return ServiceResult<AdminCourseDto>.Failure("Giảng viên không tồn tại");
                     }
 
                     var roleIds = lecturers.Select(l => l.RoleId).Distinct().ToList();
@@ -273,7 +273,7 @@ namespace LMS.Infrastructure.Services
 
                     if (invalid.Any())
                     {
-                        return ServiceResult<CourseDto>.Failure("Danh sách giảng viên không hợp lệ (chỉ chấp nhận Lecturer/Admin)");
+                        return ServiceResult<AdminCourseDto>.Failure("Danh sách giảng viên không hợp lệ (chỉ chấp nhận Lecturer/Admin)");
                     }
                 }
 
@@ -329,25 +329,25 @@ namespace LMS.Infrastructure.Services
                 }
 
                 var createdCourse = await GetCourseDtoAsync(course.Id);
-                return ServiceResult<CourseDto>.Success(createdCourse, "Tạo khóa học thành công");
+                return ServiceResult<AdminCourseDto>.Success(createdCourse, "Tạo khóa học thành công");
             }
             catch (Exception ex)
             {
-                return ServiceResult<CourseDto>.Failure(
+                return ServiceResult<AdminCourseDto>.Failure(
                     "Lỗi khi tạo khóa học",
                     ex.Message
                 );
             }
         }
 
-        public async Task<ServiceResult<CourseDto>> UpdateCourseAsync(Guid id, UpdateCourseDto dto)
+        public async Task<ServiceResult<AdminCourseDto>> UpdateCourseAsync(Guid id, AdminUpdateCourseDto dto)
         {
             try
             {
                 var course = await _context.Courses.FindAsync(id);
                 if (course == null || course.IsDeleted)
                 {
-                    return ServiceResult<CourseDto>.Failure("Không tìm thấy khóa học");
+                    return ServiceResult<AdminCourseDto>.Failure("Không tìm thấy khóa học");
                 }
 
                 // Validate foreign keys if provided
@@ -356,7 +356,7 @@ namespace LMS.Infrastructure.Services
                     var semester = await _context.Semesters.FindAsync(dto.SemesterId.Value);
                     if (semester == null || semester.IsDeleted)
                     {
-                        return ServiceResult<CourseDto>.Failure("Học kỳ không tồn tại");
+                        return ServiceResult<AdminCourseDto>.Failure("Học kỳ không tồn tại");
                     }
                     course.SemesterId = dto.SemesterId.Value;
                 }
@@ -366,7 +366,7 @@ namespace LMS.Infrastructure.Services
                     var academicYear = await _context.AcademicYears.FindAsync(dto.AcademicYearId.Value);
                     if (academicYear == null || academicYear.IsDeleted)
                     {
-                        return ServiceResult<CourseDto>.Failure("Năm học không tồn tại");
+                        return ServiceResult<AdminCourseDto>.Failure("Năm học không tồn tại");
                     }
                     course.AcademicYearId = dto.AcademicYearId.Value;
                 }
@@ -376,7 +376,7 @@ namespace LMS.Infrastructure.Services
                     var major = await _context.Majors.FindAsync(dto.MajorId.Value);
                     if (major == null || major.IsDeleted)
                     {
-                        return ServiceResult<CourseDto>.Failure("Ngành học không tồn tại");
+                        return ServiceResult<AdminCourseDto>.Failure("Ngành học không tồn tại");
                     }
                     course.MajorId = dto.MajorId.Value;
                 }
@@ -392,11 +392,11 @@ namespace LMS.Infrastructure.Services
                 await _context.SaveChangesAsync();
 
                 var updatedCourse = await GetCourseDtoAsync(course.Id);
-                return ServiceResult<CourseDto>.Success(updatedCourse, "Cập nhật khóa học thành công");
+                return ServiceResult<AdminCourseDto>.Success(updatedCourse, "Cập nhật khóa học thành công");
             }
             catch (Exception ex)
             {
-                return ServiceResult<CourseDto>.Failure(
+                return ServiceResult<AdminCourseDto>.Failure(
                     "Lỗi khi cập nhật khóa học",
                     ex.Message
                 );
@@ -577,7 +577,7 @@ namespace LMS.Infrastructure.Services
             }
         }
 
-        public async Task<ServiceResult<CourseStatisticsDto>> GetCourseStatisticsAsync(Guid courseId)
+        public async Task<ServiceResult<AdminCourseStatisticsDto>> GetCourseStatisticsAsync(Guid courseId)
         {
             try
             {
@@ -590,7 +590,7 @@ namespace LMS.Infrastructure.Services
 
                 if (course == null)
                 {
-                    return ServiceResult<CourseStatisticsDto>.Failure("Không tìm thấy khóa học");
+                    return ServiceResult<AdminCourseStatisticsDto>.Failure("Không tìm thấy khóa học");
                 }
 
                 var contents = course.Chapters
@@ -599,7 +599,7 @@ namespace LMS.Infrastructure.Services
                     .Where(c => !c.IsDeleted)
                     .ToList();
 
-                var statistics = new CourseStatisticsDto
+                var statistics = new AdminCourseStatisticsDto
                 {
                     CourseId = course.Id,
                     CourseName = course.Name,
@@ -612,18 +612,18 @@ namespace LMS.Infrastructure.Services
                     CompletedStudents = 0 // TODO: Calculate based on completion criteria
                 };
 
-                return ServiceResult<CourseStatisticsDto>.Success(statistics, "Lấy thống kê khóa học thành công");
+                return ServiceResult<AdminCourseStatisticsDto>.Success(statistics, "Lấy thống kê khóa học thành công");
             }
             catch (Exception ex)
             {
-                return ServiceResult<CourseStatisticsDto>.Failure(
+                return ServiceResult<AdminCourseStatisticsDto>.Failure(
                     "Lỗi khi lấy thống kê khóa học",
                     ex.Message
                 );
             }
         }
 
-        private async Task<CourseDto> GetCourseDtoAsync(Guid id)
+        private async Task<AdminCourseDto> GetCourseDtoAsync(Guid id)
         {
             return await _context.Courses
                 .Include(c => c.Semester)
@@ -633,7 +633,7 @@ namespace LMS.Infrastructure.Services
                     .ThenInclude(cl => cl.Lecturer)
                 .Include(c => c.Students)
                 .Where(c => c.Id == id && !c.IsDeleted)
-                .Select(c => new CourseDto
+                .Select(c => new AdminCourseDto
                 {
                     Id = c.Id,
                     CourseCode = c.CourseCode,
@@ -659,7 +659,7 @@ namespace LMS.Infrastructure.Services
                     Lecturers = c.Lecturers
                         .Where(cl => !cl.IsDeleted)
                         .OrderByDescending(cl => cl.IsPrimary)
-                        .Select(cl => new CourseLecturerDto
+                        .Select(cl => new AdminCourseLecturerDto
                         {
                             Id = cl.LecturerId,
                             FullName = cl.Lecturer!.FullName,

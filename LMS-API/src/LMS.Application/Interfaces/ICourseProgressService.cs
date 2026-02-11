@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using LMS.Application.Common;
+using LMS.Application.DTOs.Common;
 
 namespace LMS.Application.Interfaces
 {

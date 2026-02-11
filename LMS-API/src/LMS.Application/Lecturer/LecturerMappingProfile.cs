@@ -125,6 +125,32 @@ namespace LMS.Application.Lecturer
                  .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
             CreateMap<CreateQuestionDto, Question>();
             CreateMap<CreateAnswerDto, Answer>();
+            // Assignment mappings
+            CreateMap<Assignment, AssignmentDto>()
+                .IncludeBase<CourseContent, CourseContentDto>()
+                .ForMember(dest => dest.ContentType, opt => opt.MapFrom(src => "Assignment"))
+                .ForMember(dest => dest.TotalSubmissions, opt => opt.Ignore())
+                .ForMember(dest => dest.CompletedSubmissions, opt => opt.Ignore())
+                .ForMember(dest => dest.AverageScore, opt => opt.Ignore())
+                .ForMember(dest => dest.PassedCount, opt => opt.Ignore())
+                .ForMember(dest => dest.FailedCount, opt => opt.Ignore());
+            
+            CreateMap<CreateAssignmentDto, Assignment>()
+                .ForMember(dest => dest.IsDeleted, opt => opt.MapFrom(src => false));
+            CreateMap<UpdateAssignmentDto, Assignment>()
+                .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
+
+            // Announcement mappings
+            CreateMap<Announcement, AnnouncementDto>()
+                .IncludeBase<CourseContent, CourseContentDto>()
+                .ForMember(dest => dest.ContentType, opt => opt.MapFrom(src => "Announcement"))
+                .ForMember(dest => dest.ViewCount, opt => opt.Ignore());
+            
+            CreateMap<CreateAnnouncementDto, Announcement>()
+                .ForMember(dest => dest.IsDeleted, opt => opt.MapFrom(src => false));
+            CreateMap<UpdateAnnouncementDto, Announcement>()
+                .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
+
             CreateMap<CourseContent, CourseContentDto>();
         }
     }

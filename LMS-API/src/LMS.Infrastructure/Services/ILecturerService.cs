@@ -46,6 +46,22 @@ namespace LMS.Infrastructure.Services
         Task<QuizDto> UpdateQuizAsync(Guid quizId, UpdateQuizDto dto);
         Task DeleteQuizAsync(Guid quizId);
 
+        // Assignments
+        Task<List<AssignmentDto>> GetAssignmentsByChapterAsync(Guid chapterId);
+        Task<List<AssignmentDto>> GetAssignmentsByCourseAsync(Guid courseId);
+        Task<AssignmentDto> GetAssignmentByIdAsync(Guid assignmentId);
+        Task<AssignmentDto> CreateAssignmentAsync(CreateAssignmentDto dto);
+        Task<AssignmentDto> UpdateAssignmentAsync(Guid assignmentId, UpdateAssignmentDto dto);
+        Task DeleteAssignmentAsync(Guid assignmentId);
+
+        // Announcements
+        Task<List<AnnouncementDto>> GetAnnouncementsByChapterAsync(Guid chapterId);
+        Task<List<AnnouncementDto>> GetAnnouncementsByCourseAsync(Guid courseId);
+        Task<AnnouncementDto> GetAnnouncementByIdAsync(Guid announcementId);
+        Task<AnnouncementDto> CreateAnnouncementAsync(CreateAnnouncementDto dto);
+        Task<AnnouncementDto> UpdateAnnouncementAsync(Guid announcementId, UpdateAnnouncementDto dto);
+        Task DeleteAnnouncementAsync(Guid announcementId);
+
         // Questions
         Task<List<QuestionTopicDto>> GetQuestionTopicsAsync(Guid LecturerId);
         Task<QuestionTopicDto> CreateQuestionTopicAsync(Guid LecturerId, CreateQuestionTopicDto dto);

@@ -2,6 +2,7 @@ using AutoMapper;
 using LMS.Application.Interfaces;
 using LMS.Application.Lecturer;
 using LMS.Application.Interfaces;
+using LMS.Infrastructure.Data;
 using LMS.Domain.Constant;
 using LMS.Infrastructure.Data;
 using LMS.Infrastructure.Services;
@@ -25,6 +26,9 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
+    // Sử dụng fully qualified name để tránh xung đột schema
+    options.CustomSchemaIds(type => type.FullName);
+    
     options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
         Name = "Authorization",

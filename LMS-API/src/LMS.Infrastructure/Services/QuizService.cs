@@ -1,5 +1,6 @@
 using System.Text.Json;
 using LMS.Application.Common;
+using LMS.Application.DTOs.Common;
 using LMS.Application.Interfaces;
 using LMS.Domain.Entities.Assessment;
 using LMS.Domain.Entities.Content;

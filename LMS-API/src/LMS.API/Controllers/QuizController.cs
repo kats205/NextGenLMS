@@ -6,7 +6,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
-using static LMS.Application.Common.ServiceResult;
+using static LMS.Application.DTOs.Common.ServiceResult;
+
 
 namespace LMS.API.Controllers
 {

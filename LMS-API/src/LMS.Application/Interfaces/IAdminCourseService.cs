@@ -8,13 +8,13 @@ namespace LMS.Application.Interfaces
 {
     public interface IAdminCourseService
     {
-        Task<ServiceResult<PagedResultDto<CourseDto>>> GetCoursesAsync(CourseFilterDto filter);
-        Task<ServiceResult<CourseDetailDto>> GetCourseByIdAsync(Guid id);
-        Task<ServiceResult<CourseDto>> CreateCourseAsync(CreateCourseDto dto);
-        Task<ServiceResult<CourseDto>> UpdateCourseAsync(Guid id, UpdateCourseDto dto);
+        Task<ServiceResult<PagedResultDto<AdminCourseDto>>> GetCoursesAsync(AdminCourseFilterDto filter);
+        Task<ServiceResult<AdminCourseDetailDto>> GetCourseByIdAsync(Guid id);
+        Task<ServiceResult<AdminCourseDto>> CreateCourseAsync(AdminCreateCourseDto dto);
+        Task<ServiceResult<AdminCourseDto>> UpdateCourseAsync(Guid id, AdminUpdateCourseDto dto);
         Task<ServiceResult> DeleteCourseAsync(Guid id);
         Task<ServiceResult> AssignLecturerAsync(Guid courseId, Guid lecturerId);
-        Task<ServiceResult<CourseStatisticsDto>> GetCourseStatisticsAsync(Guid courseId);
+        Task<ServiceResult<AdminCourseStatisticsDto>> GetCourseStatisticsAsync(Guid courseId);
         Task<ServiceResult> RemoveLecturerAsync(Guid courseId, Guid lecturerId);
         Task<ServiceResult> SetPrimaryLecturerAsync(Guid courseId, Guid lecturerId);
         Task<ServiceResult<byte[]>> ExportStudentsExcelAsync(LMS.Application.DTOs.Admin.ExportStudentsRequestDto request);

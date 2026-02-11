@@ -4,6 +4,7 @@ using LMS.Infrastructure.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using LMS.Application.Common;
 
 namespace LMS.API.Controllers
 {
@@ -76,7 +77,7 @@ namespace LMS.API.Controllers
                 var lecturerId = GetCurrentLecturerId();
                 var result = await _lecturerService.GetCoursesAsync(lecturerId, filter);
 
-                return Ok(new ApiResponse<PaginatedResponse<CourseDto>>
+                return Ok(new ApiResponse<PaginatedResponse<Application.Lecturer.CourseDto>>
                 {
                     Success = true,
                     Data = result
@@ -100,7 +101,7 @@ namespace LMS.API.Controllers
             {
                 var course = await _lecturerService.GetCourseByIdAsync(id);
 
-                return Ok(new ApiResponse<CourseDto>
+                return Ok(new ApiResponse<Application.Lecturer.CourseDto>
                 {
                     Success = true,
                     Data = course
@@ -125,7 +126,7 @@ namespace LMS.API.Controllers
                 var course = await _lecturerService.CreateCourseAsync(lecturerId, dto);
 
                 return CreatedAtAction(nameof(GetCourseById), new { id = course.Id },
-                    new ApiResponse<CourseDto>
+                    new ApiResponse<Application.Lecturer.CourseDto>
                     {
                         Success = true,
                         Message = "Tạo khóa học thành công",
@@ -150,7 +151,7 @@ namespace LMS.API.Controllers
             {
                 var course = await _lecturerService.UpdateCourseAsync(id, dto);
 
-                return Ok(new ApiResponse<CourseDto>
+                return Ok(new ApiResponse<Application.Lecturer.CourseDto>
                 {
                     Success = true,
                     Message = "Cập nhật khóa học thành công",
@@ -200,7 +201,7 @@ namespace LMS.API.Controllers
             {
                 var chapters = await _lecturerService.GetChaptersByCourseAsync(courseId);
 
-                return Ok(new ApiResponse<List<ChapterDto>>
+                return Ok(new ApiResponse<List<Application.Lecturer.ChapterDto>>
                 {
                     Success = true,
                     Data = chapters
@@ -224,7 +225,7 @@ namespace LMS.API.Controllers
             {
                 var chapter = await _lecturerService.GetChapterByIdAsync(id);
 
-                return Ok(new ApiResponse<ChapterDto>
+                return Ok(new ApiResponse<Application.Lecturer.ChapterDto>
                 {
                     Success = true,
                     Data = chapter
@@ -248,7 +249,7 @@ namespace LMS.API.Controllers
                 var chapter = await _lecturerService.CreateChapterAsync(dto);
 
                 return CreatedAtAction(nameof(GetChapterById), new { id = chapter.Id },
-                    new ApiResponse<ChapterDto>
+                    new ApiResponse<Application.Lecturer.ChapterDto>
                     {
                         Success = true,
                         Message = "Tạo chương thành công",
@@ -273,7 +274,7 @@ namespace LMS.API.Controllers
             {
                 var chapter = await _lecturerService.UpdateChapterAsync(id, dto);
 
-                return Ok(new ApiResponse<ChapterDto>
+                return Ok(new ApiResponse<Application.Lecturer.ChapterDto>
                 {
                     Success = true,
                     Message = "Cập nhật chương thành công",
@@ -372,7 +373,7 @@ namespace LMS.API.Controllers
             {
                 var quizzes = await _lecturerService.GetQuizzesByChapterAsync(chapterId);
 
-                return Ok(new ApiResponse<List<QuizDto>>
+                return Ok(new ApiResponse<List<Application.Lecturer.QuizDto>>
                 {
                     Success = true,
                     Data = quizzes
@@ -396,7 +397,7 @@ namespace LMS.API.Controllers
             {
                 var quizzes = await _lecturerService.GetQuizzesByCourseAsync(courseId);
 
-                return Ok(new ApiResponse<List<QuizDto>>
+                return Ok(new ApiResponse<List<Application.Lecturer.QuizDto>>
                 {
                     Success = true,
                     Data = quizzes
@@ -419,7 +420,7 @@ namespace LMS.API.Controllers
                 {
                     var submissions = await _lecturerService.GetSubmissionsByCourseAsync(courseId);
 
-                    return Ok(new ApiResponse<List<QuizSubmissionDto>>
+                    return Ok(new ApiResponse<List<Application.Lecturer.QuizSubmissionDto>>
                     {
                         Success = true,
                         Data = submissions
@@ -568,7 +569,7 @@ namespace LMS.API.Controllers
             {
                 var quiz = await _lecturerService.GetQuizByIdAsync(id);
 
-                return Ok(new ApiResponse<QuizDto>
+                return Ok(new ApiResponse<Application.Lecturer.QuizDto>
                 {
                     Success = true,
                     Data = quiz
@@ -591,7 +592,7 @@ namespace LMS.API.Controllers
             {
                 var quiz = await _lecturerService.CreateQuizAsync(dto);
 
-                return Ok(new ApiResponse<QuizDto>
+                return Ok(new ApiResponse<Application.Lecturer.QuizDto>
                 {
                     Success = true,
                     Message = "Tạo quiz thành công",
@@ -616,7 +617,7 @@ namespace LMS.API.Controllers
             {
                 var quiz = await _lecturerService.UpdateQuizAsync(id, dto);
 
-                return Ok(new ApiResponse<QuizDto>
+                return Ok(new ApiResponse<Application.Lecturer.QuizDto>
                 {
                     Success = true,
                     Message = "Cập nhật quiz thành công",
@@ -670,7 +671,7 @@ namespace LMS.API.Controllers
             try
             {
                 var questions = await _lecturerService.GetQuestionsByQuizAsync(quizId);
-                return Ok(new ApiResponse<List<QuizQuestionDto>>
+                return Ok(new ApiResponse<List<Application.Lecturer.QuizQuestionDto>>
                 {
                     Success = true,
                     Data = questions
@@ -904,7 +905,7 @@ namespace LMS.API.Controllers
         }
 
         [HttpPost("courses/{courseId}/students")]
-        public async Task<IActionResult> EnrollStudent(Guid courseId, [FromBody] EnrollStudentDto dto)
+        public async Task<IActionResult> EnrollStudent(Guid courseId, [FromBody] Application.Lecturer.EnrollStudentDto dto)
         {
             await _lecturerService.EnrollStudentAsync(courseId, dto.StudentEmail);
 
@@ -926,6 +927,300 @@ namespace LMS.API.Controllers
                 Message = "Xóa sinh viên khỏi khóa học thành công"
             });
         }
+        //========== ASSIGNMENTS ==========
+
+        [HttpGet("chapters/{chapterId}/assignments")]
+        public async Task<IActionResult> GetAssignmentsByChapter(Guid chapterId)
+        {
+            try
+            {
+                var assignments = await _lecturerService.GetAssignmentsByChapterAsync(chapterId);
+
+                return Ok(new ApiResponse<List<AssignmentDto>>
+                {
+                    Success = true,
+                    Data = assignments
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Lỗi khi tải danh sách bài tập",
+                    Errors = ex.Message
+                });
+            }
+        }
+
+        [HttpGet("courses/{courseId}/assignments")]
+        public async Task<IActionResult> GetAssignmentsByCourse(Guid courseId)
+        {
+            try
+            {
+                var assignments = await _lecturerService.GetAssignmentsByCourseAsync(courseId);
+
+                return Ok(new ApiResponse<List<AssignmentDto>>
+                {
+                    Success = true,
+                    Data = assignments
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Lỗi khi tải danh sách bài tập của khóa học",
+                    Errors = ex.Message
+                });
+            }
+        }
+
+        [HttpGet("assignments/{id}")]
+        public async Task<IActionResult> GetAssignmentById(Guid id)
+        {
+            try
+            {
+                var assignment = await _lecturerService.GetAssignmentByIdAsync(id);
+
+                return Ok(new ApiResponse<AssignmentDto>
+                {
+                    Success = true,
+                    Data = assignment
+                });
+            }
+            catch (Exception ex)
+            {
+                return NotFound(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
+        }
+
+        [HttpPost("assignments")]
+        public async Task<IActionResult> CreateAssignment([FromBody] CreateAssignmentDto dto)
+        {
+            try
+            {
+                var assignment = await _lecturerService.CreateAssignmentAsync(dto);
+
+                return Ok(new ApiResponse<AssignmentDto>
+                {
+                    Success = true,
+                    Message = "Tạo bài tập thành công",
+                    Data = assignment
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Lỗi khi tạo bài tập",
+                    Errors = ex.Message
+                });
+            }
+        }
+
+        [HttpPut("assignments/{id}")]
+        public async Task<IActionResult> UpdateAssignment(Guid id, [FromBody] UpdateAssignmentDto dto)
+        {
+            try
+            {
+                var assignment = await _lecturerService.UpdateAssignmentAsync(id, dto);
+
+                return Ok(new ApiResponse<AssignmentDto>
+                {
+                    Success = true,
+                    Message = "Cập nhật bài tập thành công",
+                    Data = assignment
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Lỗi khi cập nhật bài tập",
+                    Errors = ex.Message
+                });
+            }
+        }
+
+        [HttpDelete("assignments/{id}")]
+        public async Task<IActionResult> DeleteAssignment(Guid id)
+        {
+            try
+            {
+                await _lecturerService.DeleteAssignmentAsync(id);
+
+                return Ok(new ApiResponse<object>
+                {
+                    Success = true,
+                    Message = "Xóa bài tập thành công"
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Lỗi khi xóa bài tập",
+                    Errors = ex.Message
+                });
+            }
+        }
+
+        //========== ANNOUNCEMENTS ==========
+
+        [HttpGet("chapters/{chapterId}/announcements")]
+        public async Task<IActionResult> GetAnnouncementsByChapter(Guid chapterId)
+        {
+            try
+            {
+                var announcements = await _lecturerService.GetAnnouncementsByChapterAsync(chapterId);
+
+                return Ok(new ApiResponse<List<AnnouncementDto>>
+                {
+                    Success = true,
+                    Data = announcements
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Lỗi khi tải danh sách thông báo",
+                    Errors = ex.Message
+                });
+            }
+        }
+
+        [HttpGet("courses/{courseId}/announcements")]
+        public async Task<IActionResult> GetAnnouncementsByCourse(Guid courseId)
+        {
+            try
+            {
+                var announcements = await _lecturerService.GetAnnouncementsByCourseAsync(courseId);
+
+                return Ok(new ApiResponse<List<AnnouncementDto>>
+                {
+                    Success = true,
+                    Data = announcements
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Lỗi khi tải danh sách thông báo của khóa học",
+                    Errors = ex.Message
+                });
+            }
+        }
+
+        [HttpGet("announcements/{id}")]
+        public async Task<IActionResult> GetAnnouncementById(Guid id)
+        {
+            try
+            {
+                var announcement = await _lecturerService.GetAnnouncementByIdAsync(id);
+
+                return Ok(new ApiResponse<AnnouncementDto>
+                {
+                    Success = true,
+                    Data = announcement
+                });
+            }
+            catch (Exception ex)
+            {
+                return NotFound(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
+        }
+
+        [HttpPost("announcements")]
+        public async Task<IActionResult> CreateAnnouncement([FromBody] CreateAnnouncementDto dto)
+        {
+            try
+            {
+                var announcement = await _lecturerService.CreateAnnouncementAsync(dto);
+
+                return Ok(new ApiResponse<AnnouncementDto>
+                {
+                    Success = true,
+                    Message = "Tạo thông báo thành công",
+                    Data = announcement
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Lỗi khi tạo thông báo",
+                    Errors = ex.Message
+                });
+            }
+        }
+
+        [HttpPut("announcements/{id}")]
+        public async Task<IActionResult> UpdateAnnouncement(Guid id, [FromBody] UpdateAnnouncementDto dto)
+        {
+            try
+            {
+                var announcement = await _lecturerService.UpdateAnnouncementAsync(id, dto);
+
+                return Ok(new ApiResponse<AnnouncementDto>
+                {
+                    Success = true,
+                    Message = "Cập nhật thông báo thành công",
+                    Data = announcement
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Lỗi khi cập nhật thông báo",
+                    Errors = ex.Message
+                });
+            }
+        }
+
+        [HttpDelete("announcements/{id}")]
+        public async Task<IActionResult> DeleteAnnouncement(Guid id)
+        {
+            try
+            {
+                await _lecturerService.DeleteAnnouncementAsync(id);
+
+                return Ok(new ApiResponse<object>
+                {
+                    Success = true,
+                    Message = "Xóa thông báo thành công"
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Lỗi khi xóa thông báo",
+                    Errors = ex.Message
+                });
+            }
+        }
+
         [HttpPost("upload")]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> UploadFile([FromForm] UploadFileRequest request)

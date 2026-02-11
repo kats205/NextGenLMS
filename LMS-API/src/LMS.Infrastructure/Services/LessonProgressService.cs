@@ -1,9 +1,9 @@
 using LMS.Application.Common;
+using LMS.Application.DTOs.Common;
 using LMS.Application.Interfaces;
 using LMS.Domain.Entities.Assessment;
 using LMS.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using static LMS.Application.Common.ServiceResult;
 
 namespace LMS.Infrastructure.Services
 {
